@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FinEcho (development)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "--flavor",
+        "development",
+        "--dart-define=ENVIRONMENT=development"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "FinEcho (staging)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "--flavor",
+        "staging",
+        "--dart-define=ENVIRONMENT=staging"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "FinEcho (production)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "--flavor",
+        "production",
+        "--dart-define=ENVIRONMENT=production"
+      ],
+      "flutterMode": "release"
+    }
+  ]
+}
