@@ -4,8 +4,10 @@ void main() {
   runApp(const MyApp());
 }
 
+/// The root application widget for the FinEcho app.
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  /// Creates the FinEcho root application widget.
+  const new({super.key});
 
   // This widget is the root of your application.
   @override
@@ -35,8 +37,10 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// A temporary application home page used by the current template.
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  /// Creates the temporary application home page.
+  const new({required this.title, super.key});
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -47,6 +51,7 @@ class MyHomePage extends StatefulWidget {
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
 
+  /// The title displayed by the application home page.
   final String title;
 
   @override
