@@ -168,7 +168,9 @@ FinEcho supports the following account types:
 | `savings` | Savings |
 | `other` | Other |
 
-Balances are stored as integer minor units or a dedicated money type, never as floating-point values. Credit cards track `creditLimit` and `outstandingBalance`; available credit is derived. Prepaid/Mezza accounts are stored-value balances and support top-ups. Card and sender linking applies to debit, credit, and prepaid/Mezza accounts.
+Balances are stored as a decimal value (using integer minor units or a dedicated money type) to avoid floating-point inaccuracies. Credit cards track `creditLimit` and `outstandingBalance`; available credit is derived. Prepaid/Mezza accounts are stored-value balances and support top-ups. Card and sender linking applies to debit, credit, and prepaid/Mezza accounts.
+The system supports multiple currencies. Each account has a currency field, and all monetary values are stored in the account's currency. Currency conversion is handled at the service layer when needed.
+
 
 ## Dedicated feature modules
 

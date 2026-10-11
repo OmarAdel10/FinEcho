@@ -27,7 +27,7 @@ FinEcho is an offline-first personal-finance tracker for Flutter. It helps an in
 8. Statistics screen for spending, income, budgets, recurring charges, and trends.
 9. Settings and profile screen for security, permissions, automation, exports, reminders, and data controls.
 
-The launcher and splash visuals use the shared icon package in `assets/icon/`; the animated splash uses `assets/icon/splash_mark_1024.png` as its native mark.
+The launcher and splash visuals use the shared icon package in `assets/icon/`; the animated splash uses `assets/gif/finecho_splash_animated.gif` as its native mark.
 
 The current visual reference is the generated Stitch bundle under `deliverables/stitch/`; its design-system definitions live in `deliverables/stitch/editorial_ledger/DESIGN.md`.
 

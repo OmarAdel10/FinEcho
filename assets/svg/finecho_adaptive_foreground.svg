@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img"><title>Adaptive foreground</title>
+<g transform="translate(512 512) scale(5.9) translate(-69 -63)">
+<path d="M36 32 Q36 24 44 24 H56 V96 L51 102 L46 96 L41 102 L36 96 Z" fill="#FFFFFF"/>
+<rect x="36" y="24" width="46" height="18" rx="9" fill="#FFFFFF"/>
+<rect x="62" y="56" width="6" height="12" rx="3" fill="#FFFFFF"/>
+<rect x="70" y="51" width="6" height="22" rx="3" fill="#FF7759"/>
+<rect x="78" y="56" width="6" height="12" rx="3" fill="#FFFFFF"/>
+<circle cx="94" cy="33" r="8" fill="#FF7759"/>
+</g>
+</svg>
