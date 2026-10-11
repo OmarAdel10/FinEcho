@@ -3,18 +3,19 @@
 ## Navigation map
 
 ```text
-Splash -> Onboarding (first run) -> Lock/Profile Setup -> Home
+Splash -> Welcome -> Onboarding (first run) -> Lock/Profile Setup -> Home
 Splash -> Lock -> Home
 Home <-> Accounts | Statistics | Settings
 Home -> Voice Review -> Confirm Transaction -> Home
+Home -> Add Transaction -> Confirm Transaction -> Home
 Notification -> Lock (if needed) -> Accounts Card Link or Budget Detail
 ```
 
 ## Onboarding and access
 
 1. User opens FinEcho.
-2. Splash initializes local services without blocking the animation unnecessarily and uses `assets/icon/splash_mark_1024.png` as the native mark.
-3. First-time users see three onboarding pages, then create a local profile and choose biometric/PIN protection.
+2. The native animated splash initializes local services without blocking the animation unnecessarily and uses `assets/icon/splash_mark_1024.png` as its native mark.
+3. First-time users see the welcome screen, then three onboarding pages, then create a local profile and choose biometric/PIN protection.
 4. Returning users unlock with biometrics or the fallback PIN.
 5. On failure, the user receives a clear retry path; no financial data is displayed before unlock.
 
@@ -36,7 +37,7 @@ Notification -> Lock (if needed) -> Accounts Card Link or Budget Detail
 ## Android SMS and card linking
 
 1. In Settings or Accounts, the user learns why SMS access is requested and may grant or decline it.
-2. A locally received supported SMS is parsed against enabled sender rules.
+2. A locally received supported SMS is scraped against enabled sender rules.
 3. If its card digits map to an account, the app creates a reviewable transaction according to the user preference.
 4. If no mapping exists, a local notification opens an account-linking sheet with masked digits and sender details.
 5. Permission denial preserves manual entry and shows instructions for enabling automation later.
@@ -47,6 +48,16 @@ Notification -> Lock (if needed) -> Accounts Card Link or Budget Detail
 2. When a threshold is crossed, FinEcho creates one throttled local notification.
 3. Tapping it opens the category budget detail after unlock.
 4. The user can change the amount, snooze alerts, review transactions, or keep the plan unchanged.
+
+## UI and motion flow
+
+1. The app shell uses animated navigation transitions that are short, consistent, and interruptible.
+2. Primary buttons use a small press-scale animation and remain at least 44px by 44px.
+3. Dialogs and bottom sheets use simple fade-and-scale open/close transitions.
+4. The voice feature opens a live waveform overlay, then transitions into a thinking/analyzing dialog until the editable draft is ready.
+5. Search controls expand from an icon into a text field with a compact “exploding” transition.
+6. Confirmations, permission changes, and automation toggles use dismissible top snackbars.
+7. All motion respects reduced-motion settings and never hides a balance, amount, or required action.
 
 ## Exception principles
 

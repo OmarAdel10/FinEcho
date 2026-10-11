@@ -7,8 +7,9 @@
 - Xcode and CocoaPods on macOS for iOS builds.
 - Git and GitHub repository access.
 - JDK version required by the selected Flutter/Android Gradle Plugin pairing.
+- VS Code with the Flutter and Dart extensions.
 
-Record exact versions in `.tool-versions` or CI configuration once the team selects them. Use `flutter doctor` before starting work.
+Record exact versions in `.tool-versions` once the team selects them. Use `flutter doctor` before starting work.
 
 ## Project setup
 
@@ -21,7 +22,34 @@ flutter test
 
 Keep secrets out of the repository. Use local environment files ignored by Git for signing and release credentials.
 
-Add `flutter_bloc` before implementing feature state. Keep feature ViewModels, Models, and Services colocated under their feature directory; do not split them into a separate layered architecture tree.
+FinEcho is currently **specification-only**. Do not add runtime dependencies, platform configuration, or application code until the user has reviewed and approved these specs.
+
+## Planned runtime packages
+
+Add these packages when implementation begins:
+
+| Package | Purpose |
+|---|---|
+| `flutter_bloc` | MVVM ViewModels implemented as `Bloc` or `Cubit`. |
+| `flutter_screenutil` | Responsive sizing for phone-first layouts. |
+| `pinput` | Six-digit PIN fallback. |
+| `another_flutter_splash_screen` | Native animated splash behavior. |
+| `lottie` | Lightweight motion and repeated state animations. |
+| `sqflite_sqlcipher` | Encrypted local SQLite storage. |
+
+Do not install them during the specification phase.
+
+## Stitch design reference
+
+The generated Stitch export is stored directly under `deliverables/stitch/`:
+
+- Design system: `deliverables/stitch/editorial_ledger/DESIGN.md`
+- Screen folders: `deliverables/stitch/01_animated_splash/` through `deliverables/stitch/10_settings_system/`
+- Extra splash reference: `deliverables/stitch/splash_screen/`
+
+Use `screen.png` as the visual source of truth and `code.html` only as a layout reference. Do not copy its HTML into the Flutter implementation.
+
+The current export is incomplete: the `screen.png` files for `04_onboarding_automation`, `06_home_ledger`, `08_accounts_vaults`, `09_statistics_analytics`, and `10_settings_system` are placeholder text rather than images. Re-export those five screens before implementation. Until then, `docs/DESIGN_PROMPT.md` is the canonical design specification and `editorial_ledger/DESIGN.md` is reference-only.
 
 ## Build flavors
 
@@ -85,8 +113,6 @@ Keep `.vscode/launch.json` aligned with these three flavors so they can be start
 
 If `launch.json` already exists, add these configurations alongside the existing ones rather than replacing unrelated debugger entries.
 
-Commit `.vscode/launch.json` so the team shares the same flavor launch targets.
-
 ## App icon and splash assets
 
 The production icon package is stored under `assets/icon/`. These files are the source assets for launcher-icon and native-splash generation:
@@ -101,95 +127,120 @@ The production icon package is stored under `assets/icon/`. These files are the 
 
 Use the same icon package for all three flavors. If a flavor later needs a distinct launcher treatment, add flavor-specific generated outputs through Android `productFlavors` or iOS schemes rather than replacing the shared source assets.
 
-Add `flutter_launcher_icons` and `flutter_native_splash` as dev dependencies, then generate the platform outputs with:
-
-```bash
-dart run flutter_launcher_icons
-dart run flutter_native_splash:create
-```
-
-Configure the generators with these paths:
-
-```yaml
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/icon/app_icon_dark_1024.png"
-  adaptive_icon_background: "assets/icon/adaptive_background_1024.png"
-  adaptive_icon_foreground: "assets/icon/adaptive_foreground_1024.png"
-  adaptive_icon_monochrome: "assets/icon/monochrome_1024.png"
-  remove_alpha_ios: true
-
-flutter_native_splash:
-  color: "#FFFFFF"
-  image: "assets/icon/splash_mark_1024.png"
-  android_12:
-    color: "#FFFFFF"
-    image: "assets/icon/splash_mark_1024.png"
-```
-
-Keep the source PNGs in `assets/icon/`; do not edit generated Android or iOS launcher resources directly.
+These source files are intentionally not yet declared in `pubspec.yaml` because FinEcho is specification-only. Declare the `assets/icon/` directory and configure the icon generators when implementation begins.
 
 ## Suggested repository layout
 
 ```text
 lib/
-  app/                  # app bootstrap, routing, theme, dependency injection
-    flavor/            # build-flavor and environment configuration
+  app/
+    bootstrap/
+    di/
+    router/
+    theme/
+    widgets/
+  core/
+    database/
+      schema/
+      migrations/
+    repositories/
+      contracts/
+      implementations/
+    models/
+    widgets/
+      finance/
+      feedback/
+      overlays/
+      motion/
+    utils/
+  platform/
+    speech/
+    android_sms/
+    notifications/
+    security/
   features/
     transaction/
-      views/           # screens and widgets
-      viewmodels/      # Bloc/Cubit classes, events, and states
-      models/          # feature-specific data classes
-      services/        # transaction rules, persistence, and integrations
+      data/
+        models/
+        repositories/
+      view/
+        screens/
+        widgets/
+      view_model/
+        models/
+        services/
     account/
-      views/
-      viewmodels/
-      models/
-      services/
+      data/
+      view/
+      view_model/
+        models/
+        services/
     budget/
-      views/
-      viewmodels/
-      models/
-      services/
+      data/
+      view/
+      view_model/
+        models/
+        services/
     analytics/
-      views/
-      viewmodels/
-      models/
-      services/
+      data/
+      view/
+      view_model/
+        models/
+        services/
+    speech_to_text/
+      data/
+      view/
+      view_model/
+        models/
+        services/
+    sms_ingestion/
+      data/
+      view/
+      view_model/
+        models/
+        services/
+    notifications/
+      data/
+      view/
+      view_model/
+        models/
+        services/
     onboarding/
-      views/
-      viewmodels/
-      models/
-      services/
+      data/
+      view/
+      view_model/
+        models/
+        services/
     settings/
-      views/
-      viewmodels/
-      models/
-      services/
-  core/                 # shared theme, utils, errors, routing helpers, design tokens
-  platform/             # native channel adapters and device-service interfaces
+      data/
+      view/
+      view_model/
+        models/
+        services/
 assets/
-  icon/                 # launcher and splash source PNGs
+  icon/
+deliverables/
+  stitch/
 test/
 integration_test/
 android/
 ios/
-.github/workflows/
 docs/
 ```
+
+The same `data`, `view`, and `view_model` structure applies to `security` and any future feature.
 
 ## Team workflow
 
 - Create a feature branch per independently reviewable change.
 - Keep commits small and use imperative messages such as `feat: add transaction review sheet`.
 - Open pull requests into the default branch; require CI before merge.
-- Keep each feature's View, ViewModel, Model, and Service changes together in the same branch.
+- Keep each feature’s View, ViewModel, Model, and Service changes together in the same branch.
 - Use `git worktree` only when parallel feature work makes it useful, and keep each worktree on its own branch.
 
 ## CI/CD
 
-GitHub Actions should run `flutter pub get`, `dart format --set-exit-if-changed lib test`, `flutter analyze`, and `flutter test --coverage` for pushes and pull requests. Add separate build jobs for the `development`, `staging`, and `production` flavors once platform signing and scheme setup are complete. For iOS distribution, Codemagic may build and publish TestFlight artifacts for the `staging` or `production` flavor after the team configures Apple credentials.
+GitHub Actions should run `flutter pub get`, `dart format --set-exit-if-changed lib test`, `flutter analyze`, and `flutter test --coverage` for pushes and pull requests. Add separate build jobs for the `development`, `staging`, and `production` flavors once platform signing and scheme setup are complete.
 
 ## Platform permission notes
 

@@ -1,0 +1,284 @@
+<!DOCTYPE html><html lang="en" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&amp;family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "outline-variant": "#c0c8c5", "inverse-surface": "#303035", "on-primary-fixed": "#00201b", "on-tertiary-fixed-variant": "#00419d", "on-secondary": "#ffffff", "error-container": "#ffdad6", "on-primary-container": "#74a79b", "surface-variant": "#e4e1e8", "secondary-fixed": "#d4e4fc", "secondary-fixed-dim": "#b8c8df", "secondary": "#506074", "secondary-container": "#d1e1f9", "on-error-container": "#93000a", "surface-dim": "#dcd9e0", "surface-container-high": "#eae7ee", "background": "#fbf8ff", "on-surface": "#1b1b20", "on-surface-variant": "#404946", "on-tertiary-fixed": "#001945", "surface-tint": "#35675d", "primary-container": "#003c33", "surface": "#fbf8ff", "primary-fixed-dim": "#9dd1c4", "tertiary": "#001c4d", "inverse-on-surface": "#f3eff7", "surface-bright": "#fbf8ff", "tertiary-container": "#003077", "inverse-primary": "#9dd1c4", "surface-container-lowest": "#ffffff", "surface-container-highest": "#e4e1e8", "primary-fixed": "#b8ede0", "primary": "#00241e", "surface-container-low": "#f5f2fa", "tertiary-fixed-dim": "#b0c6ff", "on-primary": "#ffffff", "on-secondary-fixed-variant": "#38485b", "tertiary-fixed": "#d9e2ff", "on-secondary-fixed": "#0c1d2e", "on-error": "#ffffff", "on-tertiary": "#ffffff", "on-primary-fixed-variant": "#1b4f45", "on-secondary-container": "#546478", "outline": "#707976", "error": "#ba1a1a", "on-background": "#1b1b20", "surface-container": "#f0edf4", "on-tertiary-container": "#6d9aff" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin-lg": "1.5rem", "space-sm": "0.5rem", "space-xl": "2rem", "gutter-sm": "0.5rem", "space-lg": "1.5rem", "gutter": "1rem", "space-xs": "0.25rem", "margin": "1rem", "space-md": "1rem" }, "fontFamily": { "numeral-hero": ["JetBrains Mono"], "numeral-lg": ["JetBrains Mono"], "label-caps": ["Inter"], "headline-sm": ["Hanken Grotesk"], "label-status": ["JetBrains Mono"], "body-sm": ["Inter"], "body-lg": ["Inter"], "headline-lg": ["Hanken Grotesk"], "numeral-sm": ["JetBrains Mono"], "title-md": ["Inter"], "display-hero-mobile": ["Hanken Grotesk"], "display-hero": ["Hanken Grotesk"] }, "fontSize": { "numeral-hero": ["32px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "500" }], "numeral-lg": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "label-caps": ["11px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "600" }], "headline-sm": ["19px", { "lineHeight": "24px", "letterSpacing": "-0.015em", "fontWeight": "500" }], "label-status": ["11px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "500" }], "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0", "fontWeight": "400" }], "body-lg": ["15px", { "lineHeight": "22px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-lg": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "numeral-sm": ["13px", { "lineHeight": "16px", "letterSpacing": "0", "fontWeight": "400" }], "title-md": ["16px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "display-hero-mobile": ["32px", { "lineHeight": "36px", "letterSpacing": "-0.025em", "fontWeight": "600" }], "display-hero": ["40px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "600" }] } } } }</script><style>@layer base{html,body{width:100%;margin:0;padding:0;}body{overscroll-behavior-y:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/80 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.02)]"><div class="h-14 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-fixed/30"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span><span class="font-label-status text-label-status text-primary uppercase">Private</span></div><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface ml-1">Statistics</span></div><div class="flex items-center gap-space-xs"><div class="flex items-center gap-1 text-on-surface-variant mr-1"><span class="font-numeral-sm text-numeral-sm text-on-surface-variant">100%</span><span class="material-symbols-outlined text-[16px]">battery_full</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1WeEvHRRUGszMkT9NuhKJmuEM2FeX_fMHI1DQWjd8DI6EQj45BmNEzZnTcTmb8ek2LiZfPfexoAP76DT_SB1cWE1qrdweXU5_XNcrn9fWjuFlzbOMe6LaDlKKcFSo_5qrMpm_VpeW5y8KH5bf8Jtv8BAL8nkKOCAyiBGU5y8STa_y46tjYhMRWagKR4dA2xh6Z_y-DlGbQv9Ujap5eUfcKyDo7VIBGB4nkaBmBigTbvvm8tgC19gDBFO2g"></div></div></header><main class="flex-1 w-full bg-surface pt-14 pb-24"><div class="flex flex-col w-full px-margin pb-space-xl">
+<!-- Interactive View Script -->
+<script>
+    function switchTab(tabName, el) {
+      document.querySelectorAll('.tab-pill').forEach(btn => {
+        btn.className = 'tab-pill font-label-caps text-label-caps uppercase px-4 py-1.5 rounded-full text-secondary transition-all';
+      });
+      el.className = 'tab-pill font-label-caps text-label-caps uppercase px-4 py-1.5 rounded-full bg-on-surface text-surface-container-lowest shadow-sm transition-all';
+    }
+
+    function togglePeriodMenu() {
+      const menu = document.getElementById('period-popover');
+      if (menu) menu.classList.toggle('hidden');
+    }
+  </script>
+<!-- Sub-header & Period Selector -->
+<div class="flex items-center justify-between pt-space-xs pb-space-md relative">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-secondary uppercase tracking-widest">Your trends</span>
+<h1 class="font-headline-sm text-headline-sm text-on-surface tracking-tight mt-0.5">Your money trends</h1>
+</div>
+<!-- Period Selector Dropdown Trigger -->
+<div class="relative">
+<button aria-label="Choose month" class="flex items-center gap-1.5 bg-surface-container-high text-on-surface px-3 py-1.5 rounded-full active:scale-95 transition-transform" onclick="togglePeriodMenu()">
+<span class="font-numeral-sm text-numeral-sm text-on-surface">October 2024</span>
+<span class="material-symbols-outlined text-[16px] text-secondary">expand_more</span>
+</button>
+<!-- Submenu popover -->
+<div class="hidden absolute right-0 top-10 w-44 bg-surface-container-lowest rounded-xl shadow-xl z-30 p-1.5 flex flex-col gap-0.5" id="period-popover">
+<button class="text-left px-3 py-2 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm font-medium" onclick="togglePeriodMenu()">October 2024</button>
+<button class="text-left px-3 py-2 rounded-lg hover:bg-surface-container text-secondary font-body-sm text-body-sm" onclick="togglePeriodMenu()">September 2024</button>
+<button class="text-left px-3 py-2 rounded-lg hover:bg-surface-container text-secondary font-body-sm text-body-sm" onclick="togglePeriodMenu()">August 2024</button>
+</div>
+</div>
+</div>
+<!-- Segmented Control: 32px pill bar on mineral stone wash -->
+<div class="bg-surface-container-highest p-1 rounded-full flex items-center justify-between mb-space-lg shadow-sm">
+<button class="tab-pill font-label-caps text-label-caps uppercase px-4 py-1.5 rounded-full bg-on-surface text-surface-container-lowest shadow-sm transition-all flex-1 text-center" onclick="switchTab('spending', this)">
+      Spending
+    </button>
+<button class="tab-pill font-label-caps text-label-caps uppercase px-4 py-1.5 rounded-full text-secondary transition-all flex-1 text-center" onclick="switchTab('income', this)">
+      Income
+    </button>
+<button class="tab-pill font-label-caps text-label-caps uppercase px-4 py-1.5 rounded-full text-secondary transition-all flex-1 text-center" onclick="switchTab('patterns', this)">
+      Patterns
+    </button>
+</div>
+<!-- Monthly Breakdown Editorial Hero Card -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm mb-space-md relative overflow-hidden">
+<!-- Tactile background geometry accent -->
+<div class="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-primary-fixed/20 pointer-events-none"></div>
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-caps text-label-caps uppercase text-secondary">Money going out</span>
+<span class="flex items-center gap-1 font-label-status text-label-status text-primary-container bg-primary-fixed px-2 py-0.5 rounded-full"><span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span> Your records</span>
+</div>
+<div class="flex items-baseline gap-2 mb-3">
+<span class="font-numeral-hero text-numeral-hero text-on-surface">$3,379.85</span>
+<span class="font-label-caps text-label-caps text-secondary uppercase">USD</span>
+</div>
+<!-- Comparison Metric Badge -->
+<div class="inline-flex items-center gap-1.5 bg-primary-fixed/50 px-2.5 py-1 rounded-full">
+<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>
+<span class="font-numeral-sm text-numeral-sm text-primary-container font-medium">12% vs September</span>
+<span class="font-numeral-sm text-numeral-sm text-secondary">($3,840.00)</span>
+</div>
+</div>
+<!-- Budget Warning Status: Coral Attention Module -->
+<div class="bg-error-container/40 rounded-xl p-space-md mb-space-lg shadow-sm">
+<div class="flex items-start gap-space-sm">
+<div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-error text-[18px]">warning</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-title-md text-title-md text-on-error-container font-semibold">Dining budget is almost full</span>
+<span class="font-label-status text-label-status text-error bg-surface-container-lowest/80 px-2 py-0.5 rounded-full font-medium">93% Spent</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 leading-relaxed">$608.35 of $650.00 limit consumed. Try to spend about $14 a day for the next 9 days.</p>
+</div>
+</div>
+</div>
+<!-- Category Allocation Section: Integrated Cohere-Style Donut + Structural Bars -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm mb-space-lg">
+<div class="flex items-center justify-between mb-space-md">
+<div>
+<h2 class="font-title-md text-title-md text-on-surface">Where your money goes</h2>
+<p class="font-body-sm text-body-sm text-secondary">By category</p>
+</div>
+<span class="material-symbols-outlined text-secondary text-[20px]">pie_chart</span>
+</div>
+<!-- Editorial Ring & Center Metric Mosaic -->
+<div class="flex items-center justify-center gap-space-lg py-space-sm mb-space-md">
+<!-- High-precision SVG Donut (Cohere aesthetics: Deep Green, Navy, Cobalt, Mineral) -->
+<div class="relative w-32 h-32 shrink-0">
+<svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+<!-- Background track -->
+<circle class="text-surface-container" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="12"></circle>
+<!-- Segment 1: Groceries 38% (0.38 * 251.2 = 95.4) -->
+<circle class="text-primary-container" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="95.45 251.2" stroke-dashoffset="0" stroke-width="12"></circle>
+<!-- Segment 2: Housing 32% (0.32 * 251.2 = 80.38) offset -95.45 -->
+<circle class="text-tertiary" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="80.38 251.2" stroke-dashoffset="-95.45" stroke-width="12"></circle>
+<!-- Segment 3: Dining 18% (0.18 * 251.2 = 45.2) offset -175.83 -->
+<circle class="text-tertiary-container" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="45.21 251.2" stroke-dashoffset="-175.83" stroke-width="12"></circle>
+<!-- Segment 4: Health 12% (0.12 * 251.2 = 30.14) offset -221.04 -->
+<circle class="text-secondary" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="30.14 251.2" stroke-dashoffset="-221.04" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-label-caps text-label-caps text-secondary uppercase">Active</span>
+<span class="font-numeral-lg text-numeral-lg text-on-surface font-semibold">4 groups</span>
+</div>
+</div>
+<!-- Quick Index Legend -->
+<div class="flex flex-col gap-1.5 flex-1 min-w-0">
+<div class="flex items-center justify-between text-left">
+<div class="flex items-center gap-1.5 truncate">
+<span class="w-2 h-2 rounded-full bg-primary-container shrink-0"></span>
+<span class="font-body-sm text-body-sm text-on-surface truncate">Groceries</span>
+</div>
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-medium">38%</span>
+</div>
+<div class="flex items-center justify-between text-left">
+<div class="flex items-center gap-1.5 truncate">
+<span class="w-2 h-2 rounded-full bg-tertiary shrink-0"></span>
+<span class="font-body-sm text-body-sm text-on-surface truncate">Housing</span>
+</div>
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-medium">32%</span>
+</div>
+<div class="flex items-center justify-between text-left">
+<div class="flex items-center gap-1.5 truncate">
+<span class="w-2 h-2 rounded-full bg-tertiary-container shrink-0"></span>
+<span class="font-body-sm text-body-sm text-on-surface truncate">Dining</span>
+</div>
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-medium">18%</span>
+</div>
+<div class="flex items-center justify-between text-left">
+<div class="flex items-center gap-1.5 truncate">
+<span class="w-2 h-2 rounded-full bg-secondary shrink-0"></span>
+<span class="font-body-sm text-body-sm text-on-surface truncate">Health</span>
+</div>
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-medium">12%</span>
+</div>
+</div>
+</div>
+<!-- Distribution Structural Bars -->
+<div class="space-y-space-md pt-space-xs">
+<!-- Item 1: Groceries -->
+<div class="space-y-1">
+<div class="flex justify-between items-baseline">
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Groceries &amp; Essentials</span>
+<div class="flex items-baseline gap-1.5">
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-semibold">$1,284.34</span>
+<span class="font-label-status text-label-status text-secondary">38%</span>
+</div>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 38%"></div>
+</div>
+</div>
+<!-- Item 2: Housing & Utilities -->
+<div class="space-y-1">
+<div class="flex justify-between items-baseline">
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Housing &amp; Utilities</span>
+<div class="flex items-baseline gap-1.5">
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-semibold">$1,080.00</span>
+<span class="font-label-status text-label-status text-secondary">32%</span>
+</div>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 32%"></div>
+</div>
+</div>
+<!-- Item 3: Dining & Leisure -->
+<div class="space-y-1">
+<div class="flex justify-between items-baseline">
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Dining &amp; Leisure</span>
+<div class="flex items-baseline gap-1.5">
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-semibold">$608.35</span>
+<span class="font-label-status text-label-status text-secondary">18%</span>
+</div>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-tertiary-container rounded-full" style="width: 18%"></div>
+</div>
+</div>
+<!-- Item 4: Health & Wellness -->
+<div class="space-y-1">
+<div class="flex justify-between items-baseline">
+<span class="font-body-sm text-body-sm text-on-surface font-medium">Health &amp; Wellness</span>
+<div class="flex items-baseline gap-1.5">
+<span class="font-numeral-sm text-numeral-sm text-on-surface font-semibold">$407.16</span>
+<span class="font-label-status text-label-status text-secondary">12%</span>
+</div>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 12%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recurring Payments & Projected Trajectory Panel -->
+<div class="bg-surface-container-high rounded-xl p-space-lg shadow-sm mb-space-md">
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-primary-container">event_repeat</span>
+<h3 class="font-title-md text-title-md text-on-surface font-semibold">Bills coming soon</h3>
+</div>
+<span class="font-label-caps text-label-caps text-secondary uppercase">2 coming</span>
+</div>
+<!-- Recurring Line Items -->
+<div class="space-y-2 mb-space-md">
+<!-- Equinox -->
+<div class="flex items-center justify-between bg-surface-container-lowest p-3 rounded-xl shadow-sm">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]">fitness_center</span>
+</div>
+<div>
+<span class="font-title-md text-title-md text-on-surface block">Equinox Gym</span>
+<span class="font-label-status text-label-status text-secondary">Due in 4 days • Auto-pay</span>
+</div>
+</div>
+<span class="font-numeral-lg text-numeral-lg text-on-surface font-medium">$280.00</span>
+</div>
+<!-- Spotify HiFi -->
+<div class="flex items-center justify-between bg-surface-container-lowest p-3 rounded-xl shadow-sm">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]">graphic_eq</span>
+</div>
+<div>
+<span class="font-title-md text-title-md text-on-surface block">Spotify HiFi</span>
+<span class="font-label-status text-label-status text-secondary">Due in 9 days • Digital</span>
+</div>
+</div>
+<span class="font-numeral-lg text-numeral-lg text-on-surface font-medium">$16.99</span>
+</div>
+</div>
+<!-- End-of-Month Predictive Forecast Capsule -->
+<div class="bg-primary-container text-on-primary rounded-xl p-space-md shadow-sm flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed">insights</span>
+<span class="font-label-caps text-label-caps uppercase text-primary-fixed">What’s left this month</span>
+</div>
+<span class="font-label-status text-label-status bg-primary-fixed/20 text-primary-fixed px-2 py-0.5 rounded-full">On Track</span>
+</div>
+<div class="flex flex-col">
+<span class="font-numeral-lg text-numeral-lg font-semibold text-on-primary">About $4,120 this month</span>
+<span class="font-body-sm text-body-sm text-primary-fixed-dim mt-0.5">You're on track with your $4,500 monthly plan.</span>
+</div>
+</div>
+</div>
+<!-- Editorial Micro Footer: Local Vault Integrity -->
+<div class="flex items-center justify-center gap-2 py-space-sm">
+<span class="material-symbols-outlined text-[14px] text-primary-container">lock</span>
+<span class="font-label-status text-label-status text-secondary uppercase">Done on your phone • No tracking</span>
+</div>
+<!-- Script to enforce 'Statistics' nav tab activation -->
+<script>
+    (function highlightNavTab() {
+      const statsLink = document.querySelector('nav a[data-path="statistics"]');
+      if (statsLink) {
+        document.querySelectorAll('nav a').forEach(a => {
+          a.classList.remove('text-primary', 'font-semibold');
+          a.classList.add('text-on-surface-variant');
+        });
+        statsLink.classList.remove('text-on-surface-variant');
+        statsLink.classList.add('text-primary', 'font-semibold');
+      }
+    })();
+  </script>
+</div></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface-container-lowest/95 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.03)]" data-active-classes="text-primary font-semibold"><div class="h-16 px-gutter flex items-center justify-between"><a class="flex flex-col items-center justify-center min-w-[52px] h-11 text-on-surface-variant transition-colors hover:text-on-surface" data-path="home" href="#"><span class="material-symbols-outlined text-[22px]">account_balance_wallet</span><span class="font-label-caps text-label-caps uppercase mt-0.5">Home</span></a><a class="flex flex-col items-center justify-center min-w-[52px] h-11 text-on-surface-variant transition-colors hover:text-on-surface" data-path="accounts" href="#"><span class="material-symbols-outlined text-[22px]">credit_card</span><span class="font-label-caps text-label-caps uppercase mt-0.5">Accounts</span></a><div class="flex items-center justify-center"><a aria-label="Quick Capture" class="w-11 h-11 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-sm active:scale-95 transition-transform" data-path="voice-capture" href="#"><span class="material-symbols-outlined text-[22px]">mic</span></a></div><a aria-current="page" class="flex flex-col items-center justify-center min-w-[52px] h-11 transition-colors text-primary font-semibold" data-path="statistics" href="#"><span class="material-symbols-outlined text-[22px]">query_stats</span><span class="font-label-caps text-label-caps uppercase mt-0.5">Statistics</span></a><a class="flex flex-col items-center justify-center min-w-[52px] h-11 text-on-surface-variant transition-colors hover:text-on-surface" data-path="settings" href="#"><span class="material-symbols-outlined text-[22px]">settings</span><span class="font-label-caps text-label-caps uppercase mt-0.5">Settings</span></a></div></nav>
+
+
+
+
+
+</body></html>

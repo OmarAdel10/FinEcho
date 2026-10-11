@@ -5,9 +5,12 @@ Design a complete Flutter mobile app called **FinEcho**, an offline-first person
 ## Visual system
 
 - Canvas: `#FFFFFF`; ink: `#212121`; near-black: `#17171C`; deep green: `#003C33`; dark navy: `#071829`; soft stone: `#EEECE7`; pale green: `#EDFCE9`; blue: `#1863DC`; coral: `#FF7759`; dividers: `#D9D9DD`.
+- Treat this token list as canonical. The exported `editorial_ledger/DESIGN.md` may use slightly different provisional tokens; it is reference-only and does not override this spec.
 - Use a display font resembling Space Grotesk/CohereText for large headlines, Inter/system sans for UI copy, and a mono face for balances, dates, card digits, and technical labels.
+- Use Space Grotesk as the canonical display type. The exported `DESIGN.md` mentions Hanken Grotesk, but that is reference-only.
 - Use 8pt spacing. Cards have 16px or 22px radii. Primary CTAs use a 32px pill radius. Keep shadows nearly absent; use surface contrast and thin rules instead.
 - Include clear 44px minimum touch targets, visible focus states, semantic chart labels, and high contrast.
+- Use a provisional 390×844 responsive baseline with `flutter_screenutil`.
 
 ## Brand and icon assets
 
@@ -17,18 +20,41 @@ Design a complete Flutter mobile app called **FinEcho**, an offline-first person
 - Native splash mark: `assets/icon/splash_mark_1024.png`.
 - Keep the receipt-strip “F” mark, coral coin dot, deep-green/navy palette, and white splash canvas consistent across marketing, launcher, and in-app visuals.
 
+## Current Stitch export
+
+The current export lives directly under `deliverables/stitch/`:
+
+| # | Screen | Folder |
+|---|---|---|
+| 1 | Native splash reference | `splash_screen/` |
+| 2 | Welcome / onboarding entry | `01_animated_splash/` |
+| 3 | Onboarding: privacy | `02_onboarding_privacy/` |
+| 4 | Onboarding: voice logging | `03_onboarding_voice_logging/` |
+| 5 | Onboarding: automation | `04_onboarding_automation/` |
+| 6 | Security and lock setup | `05_security_lock_setup/` |
+| 7 | Home ledger | `06_home_ledger/` |
+| 8 | Add and review transaction | `07_add_review_transaction/` |
+| 9 | Accounts and vaults | `08_accounts_vaults/` |
+| 10 | Statistics and analytics | `09_statistics_analytics/` |
+| 11 | Settings and system | `10_settings_system/` |
+
+The `01_animated_splash/` folder name is historical; its content is the welcome/onboarding entry. `splash_screen/` is the actual native splash reference. Treat `screen.png` as the visual source of truth and `code.html` only as a layout reference.
+
+Current export status: `04_onboarding_automation`, `06_home_ledger`, `08_accounts_vaults`, `09_statistics_analytics`, and `10_settings_system` currently contain placeholder `screen.png` files rather than usable images. Until they are re-exported, this prompt is the canonical design specification and `editorial_ledger/DESIGN.md` is a reference-only export.
+
 ## Required mobile screens
 
-1. **Animated splash**: white canvas, centered FinEcho geometric echo/ledger mark, gentle pulse, mono label `FINECHO // PRIVATE ON DEVICE`.
-2. **Onboarding 1 - Privacy**: `01/03` marker, headline `Your money stays with you`, sparse line illustration, next CTA.
-3. **Onboarding 2 - Voice**: `02/03`, a deep-green card showing a waveform and local transcription, headline `Say it. We log it locally.`
-4. **Onboarding 3 - Automation**: `03/03`, SMS text transforming into a categorized ledger row, explain that Android SMS automation is optional.
-5. **Lock/profile setup**: biometric enablement, six-digit PIN fallback, no clutter.
-6. **Home**: greeting and settings icon; soft-stone net-worth card; income/expense metrics; deep-green hold-to-speak action; recent transactions as thin-rule rows with coral category tags and mono amounts; bottom navigation.
-7. **Add/review transaction**: form or bottom sheet with amount, category, account, date, note, confidence badge, and a single unmistakable confirm action.
-8. **Accounts**: dark-navy linked card cards with masked digits and parsing status; soft-stone cash/wallet cards; sender-pattern linking sheet.
-9. **Statistics**: spending/income/patterns segmented control; readable bar and ring charts; recurring-payment and forecast panels; budget status with coral used only for warning states.
-10. **Settings/profile**: grouped sections for security, Android automation, notifications, offline speech engine, exports, and data management. Show permission status plainly.
+1. **Native splash**: white canvas, centered FinEcho mark, gentle pulse, mono label `FINECHO // PRIVATE ON DEVICE`.
+2. **Welcome**: first-run privacy and setup entry with a clear primary CTA.
+3. **Onboarding 1 - Privacy**: `01/03` marker, headline `Your money stays with you`, sparse line illustration, next CTA.
+4. **Onboarding 2 - Voice**: `02/03`, a deep-green card showing a waveform and local transcription, headline `Say it. We log it locally.`
+5. **Onboarding 3 - Automation**: `03/03`, SMS text transforming into a categorized ledger row, explain that Android SMS automation is optional.
+6. **Lock/profile setup**: biometric enablement, six-digit PIN fallback, no clutter.
+7. **Home**: greeting and settings icon; soft-stone net-worth card; income/expense metrics; deep-green hold-to-speak action; recent transactions as thin-rule rows with coral category tags and mono amounts; bottom navigation.
+8. **Add/review transaction**: form or bottom sheet with amount, category, account, date, note, confidence badge, and a single unmistakable confirm action.
+9. **Accounts**: dark-navy linked card cards with masked digits and parsing status; soft-stone cash/wallet cards; distinct debit, credit, and prepaid/Mezza treatments; savings and bank account cards; sender-pattern linking sheet.
+10. **Statistics**: spending/income/patterns segmented control; readable bar and ring charts; recurring-payment and forecast panels; budget status with coral used only for warning states.
+11. **Settings/profile**: grouped sections for security, Android automation, notifications, offline speech engine, exports, and data management. Show permission status plainly.
 
 ## Environment indicator
 
@@ -36,8 +62,48 @@ Design a complete Flutter mobile app called **FinEcho**, an offline-first person
 - Keep it high contrast, 8pt-aligned, and never overlapping balances, CTAs, or chart labels.
 - Use the same badge treatment in light and dark surfaces so the active flavor remains obvious without interrupting the finance task.
 
-## Interaction direction
+## Interaction and motion direction
 
-The home screen is the primary daily task surface. Make manual entry, voice entry, and reviewing automated drafts fast. Use plain-language permission explanations. Present uncertainty with confidence labels and allow a quick correction. Never let a chart, animation, or dark panel obscure a financial amount or a required action. Produce phone-sized screen references with connected navigation states for light and dark accent surfaces.
+- The home screen is the primary daily task surface. Make manual entry, voice entry, and reviewing automated drafts fast.
+- Use plain-language permission explanations. Present uncertainty with confidence labels and allow a quick correction.
+- Use simple, short, interruptible motion:
+  - Navigation transitions.
+  - Button press scale.
+  - Dialog and bottom-sheet open/close fades and scale.
+  - Live waveform overlay open/close.
+  - Thinking and analyzing dialogs.
+  - Search icon to search-field “exploding” transition.
+- Use `flutter_screenutil` for responsive sizing, `pinput` for the six-digit PIN fallback, `another_flutter_splash_screen` for the native splash, and `lottie` for repeated lightweight animations.
+- Use dismissible custom snackbars as small banners at the top of the current screen for confirmations, permission changes, and automation toggles.
+- Respect reduced-motion settings. Never let a chart, animation, or dark panel obscure a financial amount or a required action.
 
-Design each screen as an MVVM View: keep visual states explicit and straightforward to bind to a BLoC/Cubit ViewModel, while leaving persistence and platform behavior to feature Services.
+### Motion tokens
+
+| Token | Duration | Curve | Usage |
+|---|---:|---|---|
+| micro | 120ms | `easeOutCubic` | Button press, chip selection, badge state changes |
+| control | 180ms | `easeOutCubic` | Search open, list reveal, chart draw-in |
+| open | 240ms | `easeOutCubic` | Dialogs, bottom sheets, overlays |
+| close | 180ms | `easeInCubic` | Dialogs, sheets, overlays |
+| route | 260ms | `easeOutQuart` | Main navigation transitions |
+| emphasized | 320ms | `easeOutQuart` | Splash exit and major state transitions |
+| loop | 600ms | `easeInOutSine` | Thinking pulse and lightweight Lottie loops |
+| waveform | 80ms | `easeOutCubic` | Live waveform bar updates |
+
+When reduced motion is enabled, use opacity-only transitions, do not loop animation, and preserve meaning through text, color, and layout.
+
+## Reusable core widget plan
+
+Place widgets shared by multiple features in `core/widgets`:
+
+| Group | Widgets |
+|---|---|
+| App shell and responsive primitives | `FinEchoScaffold`, `EnvironmentBadge`, `BottomNavigationShell`, `MotionScope`, `AnimatedNavigationShell`, `SectionCard` |
+| Finance primitives | `AmountText`, `AccountTypeIcon`, `CategoryChip`, `ConfidenceBadge`, `StatusPill`, `TransactionRow`, `AccountCard`, `MetricTile`, `SegmentedPeriodSelector` |
+| Feedback, overlays, and states | `AnimatedButton`, `AnimatedSearchField`, `TopSnackBar`, `AnimatedDialog`, `AnimatedBottomSheet`, `WaveformOverlay`, `ThinkingDialog`, `LoadingOverlay`, `SkeletonTile`, `EmptyState`, `ErrorState`, `PermissionCard` |
+| Charts and data visualization | `ChartCard`, `RingChart`, `CategoryBarChart`, `TrendChart`, `BudgetGauge`, `ChartLegend` |
+| Platform and sequence primitives | `SplashGate`, `PinEntryField`, `MotionIllustration` |
+
+Core widgets are presentational only: immutable state in, intent callbacks out, and no service, repository, or database imports.
+
+Design each screen as an MVVM View: keep visual states explicit and straightforward to bind to a BLoC/Cubit ViewModel, while leaving persistence and platform behavior to feature Services and core Repositories.

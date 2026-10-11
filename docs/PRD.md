@@ -9,46 +9,61 @@ FinEcho is an offline-first personal-finance tracker for Flutter. It helps an in
 - Make entering and reviewing transactions quick and understandable.
 - Support accounts, budgets, analytics, and reminders in one local app.
 - Convert voice entries and supported Android transaction SMS messages into reviewable transaction drafts.
-- Categorize transactions automatically, while letting the user correct every result.
+- Categorize transactions automatically while letting the user correct every result.
 - Keep financial data private through on-device processing and encrypted local storage.
+- Provide a polished, responsive experience with simple motion and reusable UI components.
 
 ## Scope
 
 ### Core screens
 
-1. Animated splash screen that initializes local services and checks the lock state.
-2. Three-screen onboarding covering privacy, voice entry, and SMS automation.
-3. Local sign-up or profile creation, biometric lock, and PIN fallback.
-4. Home dashboard with net worth, period totals, quick actions, voice entry, and recent transactions.
-5. Accounts screen for cash, wallet, bank, and card accounts, including Android SMS sender/card mapping.
-6. Statistics screen for spending, income, budgets, recurring charges, and trends.
-7. Settings and profile screen for security, permissions, automation, exports, reminders, and data controls.
+1. Native animated splash screen.
+2. Welcome and onboarding entry.
+3. Three onboarding pages covering privacy, voice entry, and Android SMS automation.
+4. Local profile creation, biometric lock, and PIN fallback.
+5. Home dashboard with net worth, period totals, quick actions, voice entry, and recent transactions.
+6. Add/review transaction sheet.
+7. Accounts screen for cash, wallet, bank, savings, debit-card, credit-card, and prepaid/Mezza accounts, including Android SMS sender/card mapping.
+8. Statistics screen for spending, income, budgets, recurring charges, and trends.
+9. Settings and profile screen for security, permissions, automation, exports, reminders, and data controls.
 
 The launcher and splash visuals use the shared icon package in `assets/icon/`; the animated splash uses `assets/icon/splash_mark_1024.png` as its native mark.
+
+The current visual reference is the generated Stitch bundle under `deliverables/stitch/`; its design-system definitions live in `deliverables/stitch/editorial_ledger/DESIGN.md`.
 
 ### Standout features
 
 - Offline speech-to-text for spoken transaction entry.
-- Android-only SMS parsing for locally received transactional messages, subject to user permission and platform policy.
+- Android-only SMS scraping for locally received transactional messages, subject to user permission and platform policy.
 - Rule-based and lightweight on-device auto-categorization.
 - Card linking based on sender patterns and masked card digits found in supported messages.
 - Budget recommendations based on prior local spending and a user savings target.
 - Local notifications for budgets, unlinked cards, recurring payments, and reminders.
+- A reusable component library for responsive finance UI, top snackbars, animated search, waveforms, dialogs, and thinking states.
 
 ## Functional requirements
 
 ### Account and transaction management
 
-- Users can create, edit, archive, and view cash, wallet, bank, and card accounts.
+- Users can create, edit, archive, and view the following account types:
+  - Cash
+  - Wallet
+  - Bank account
+  - Savings
+  - Debit card
+  - Credit card
+  - Prepaid / Mezza
+  - Other
 - Users can add income, expense, and transfer transactions manually.
 - Every transaction has an amount, date, type, account, category, source, and optional note/payee.
 - Account balances update atomically when a confirmed transaction is created, changed, or deleted.
 - Users can review and correct any automated transaction before it becomes final.
+- Credit cards expose available credit and outstanding balance; prepaid/Mezza accounts support top-ups.
 
 ### Automation
 
 - The voice flow captures speech locally, extracts an amount/payee/category/account, and asks for confirmation.
-- The SMS flow detects supported financial messages on Android, extracts available details using local rules, and creates a draft or confirmed transaction according to the user setting.
+- The Android SMS flow detects supported financial messages, extracts available details using local rules, and creates a draft or confirmed transaction according to the user setting.
 - When a supported message has no account mapping, FinEcho sends a local notification that deep-links to the card-linking screen.
 - Categorization evaluates an exact merchant rule, then a regular expression rule, then an optional local statistical classifier. Low-confidence results remain uncategorized.
 - Auto-budgeting proposes amounts; it never changes a user budget without confirmation.
@@ -59,6 +74,7 @@ The launcher and splash visuals use the shared icon package in `assets/icon/`; t
 - The dashboard and statistics screen show weekly, monthly, and yearly totals by category and account.
 - FinEcho identifies recurring transactions, unusual spikes, and projected month-end spending using local history.
 - Scheduled reminders respect device timezone and can be turned off at any time.
+- Notification payloads stay small, versioned, and free of sensitive raw message content.
 
 ### Security and privacy
 
@@ -66,6 +82,38 @@ The launcher and splash visuals use the shared icon package in `assets/icon/`; t
 - The database is encrypted and its key is held in OS secure storage.
 - App unlock uses device biometrics when available, with a six-digit PIN fallback.
 - Exports are initiated by the user and saved or shared through platform-controlled flows.
+- Raw SMS content and sensitive financial values are never logged in release builds.
+
+### UI, motion, and reusable components
+
+- Use `flutter_screenutil` for responsive sizing across phone layouts.
+- Use `pinput` for the six-digit PIN fallback.
+- Use `another_flutter_splash_screen` for the native animated splash sequence.
+- Use `lottie` for lightweight, repeated motion states.
+- Include simple animations for:
+  - Navigation transitions.
+  - Button taps.
+  - Dialog opening and closing.
+  - Bottom sheets.
+  - Live waveform overlay opening and closing.
+  - Thinking and analyzing state dialogs.
+  - Search icon to search-field “exploding” transitions.
+- Provide dismissible custom snackbars that appear as small banners at the top of the current screen.
+- Keep reusable cross-feature widgets in `core/widgets`, including:
+  - `AmountText`
+  - `AccountTypeIcon`
+  - `CategoryChip`
+  - `ConfidenceBadge`
+  - `SectionCard`
+  - `EmptyState`
+  - `LoadingOverlay`
+  - `TopSnackBar`
+  - `AnimatedSearchField`
+  - `WaveformOverlay`
+  - `ThinkingDialog`
+  - `AnimatedButton`
+
+Motion should remain simple, short, accessible, and interruptible. Respect reduced-motion settings and never obscure a financial amount or primary action.
 
 ### Environment indicators
 
@@ -75,11 +123,16 @@ The launcher and splash visuals use the shared icon package in `assets/icon/`; t
 
 ## Platform constraints
 
-- The implementation follows MVVM/BLoC: Views render state, ViewModels own feature state with `Bloc`/`Cubit`, and Services own persistence and platform integration.
+- The implementation follows **MVVM/BLoC** with a **repository pattern**:
+  - Views render state.
+  - ViewModels own feature state with `Bloc`/`Cubit`.
+  - Services own feature business rules and call repository contracts.
+  - Repositories in `core` are the only path to the encrypted local database.
 - The app provides three build flavors—`development`, `staging`, and `production`—with matching VS Code launch configurations.
 - SMS reading and automatic SMS ingestion are Android-only. iOS does not provide a general SMS inbox API; the iOS app provides manual entry, voice entry, budgets, analytics, notifications, and local data tools.
 - Offline STT model quality and download size must be selected for the target devices and languages.
 - Permission denial must leave manual tracking fully usable.
+- No application code, dependency installation, or platform configuration begins until the user approves these specs.
 
 ## Acceptance criteria
 
@@ -87,6 +140,8 @@ The launcher and splash visuals use the shared icon package in `assets/icon/`; t
 - A voice entry produces an editable review sheet before persistence.
 - A supported Android SMS can be parsed locally and routed to an account or an unlinked-card prompt.
 - Budget thresholds produce local notifications when permission is granted.
+- The app supports cash, wallet, bank, savings, debit-card, credit-card, and prepaid/Mezza accounts.
+- Shared UI widgets and motion behaviors behave consistently across features and respect accessibility settings.
 - CI verifies formatting, static analysis, and tests for every pull request.
 
 ## Out of scope for the first release

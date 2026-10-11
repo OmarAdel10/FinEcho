@@ -1,0 +1,210 @@
+<!DOCTYPE html><html lang="en" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_stack" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&amp;family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&amp;family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "outline-variant": "#c0c8c5", "inverse-surface": "#303035", "on-primary-fixed": "#00201b", "on-tertiary-fixed-variant": "#00419d", "on-secondary": "#ffffff", "error-container": "#ffdad6", "on-primary-container": "#74a79b", "surface-variant": "#e4e1e8", "secondary-fixed": "#d4e4fc", "secondary-fixed-dim": "#b8c8df", "secondary": "#506074", "secondary-container": "#d1e1f9", "on-error-container": "#93000a", "surface-dim": "#dcd9e0", "surface-container-high": "#eae7ee", "background": "#fbf8ff", "on-surface": "#1b1b20", "on-surface-variant": "#404946", "on-tertiary-fixed": "#001945", "surface-tint": "#35675d", "primary-container": "#003c33", "surface": "#fbf8ff", "primary-fixed-dim": "#9dd1c4", "tertiary": "#001c4d", "inverse-on-surface": "#f3eff7", "surface-bright": "#fbf8ff", "tertiary-container": "#003077", "inverse-primary": "#9dd1c4", "surface-container-lowest": "#ffffff", "surface-container-highest": "#e4e1e8", "primary-fixed": "#b8ede0", "primary": "#00241e", "surface-container-low": "#f5f2fa", "tertiary-fixed-dim": "#b0c6ff", "on-primary": "#ffffff", "on-secondary-fixed-variant": "#38485b", "tertiary-fixed": "#d9e2ff", "on-secondary-fixed": "#0c1d2e", "on-error": "#ffffff", "on-tertiary": "#ffffff", "on-primary-fixed-variant": "#1b4f45", "on-secondary-container": "#546478", "outline": "#707976", "error": "#ba1a1a", "on-background": "#1b1b20", "surface-container": "#f0edf4", "on-tertiary-container": "#6d9aff" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin-lg": "1.5rem", "space-sm": "0.5rem", "space-xl": "2rem", "gutter-sm": "0.5rem", "space-lg": "1.5rem", "gutter": "1rem", "space-xs": "0.25rem", "margin": "1rem", "space-md": "1rem" }, "fontFamily": { "numeral-hero": ["JetBrains Mono"], "numeral-lg": ["JetBrains Mono"], "label-caps": ["Inter"], "headline-sm": ["Hanken Grotesk"], "label-status": ["JetBrains Mono"], "body-sm": ["Inter"], "body-lg": ["Inter"], "headline-lg": ["Hanken Grotesk"], "numeral-sm": ["JetBrains Mono"], "title-md": ["Inter"], "display-hero-mobile": ["Hanken Grotesk"], "display-hero": ["Hanken Grotesk"] }, "fontSize": { "numeral-hero": ["32px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "500" }], "numeral-lg": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "label-caps": ["11px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "600" }], "headline-sm": ["19px", { "lineHeight": "24px", "letterSpacing": "-0.015em", "fontWeight": "500" }], "label-status": ["11px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "500" }], "body-sm": ["13px", { "lineHeight": "18px", "letterSpacing": "0", "fontWeight": "400" }], "body-lg": ["15px", { "lineHeight": "22px", "letterSpacing": "-0.005em", "fontWeight": "400" }], "headline-lg": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "numeral-sm": ["13px", { "lineHeight": "16px", "letterSpacing": "0", "fontWeight": "400" }], "title-md": ["16px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "display-hero-mobile": ["32px", { "lineHeight": "36px", "letterSpacing": "-0.025em", "fontWeight": "600" }], "display-hero": ["40px", { "lineHeight": "44px", "letterSpacing": "-0.03em", "fontWeight": "600" }] } } } }</script><style>@layer base{html,body{width:100%;margin:0;padding:0;}body{overscroll-behavior-y:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/80 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.02)]"><div class="h-14 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-xs"><button class="w-11 h-11 flex items-center justify-center text-on-surface active:opacity-60 transition-opacity" onclick="history.back()"><span class="material-symbols-outlined text-[20px]">arrow_back</span></button><h1 class="font-headline-sm text-headline-sm tracking-tight text-on-surface">Transaction Detail</h1></div><div class="flex items-center gap-space-sm"><div class="flex items-center gap-1 text-on-surface-variant"><span class="font-numeral-sm text-numeral-sm text-on-surface-variant">100%</span><span class="material-symbols-outlined text-[16px]">battery_full</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1WeEvHRRUGszMkT9NuhKJmuEM2FeX_fMHI1DQWjd8DI6EQj45BmNEzZnTcTmb8ek2LiZfPfexoAP76DT_SB1cWE1qrdweXU5_XNcrn9fWjuFlzbOMe6LaDlKKcFSo_5qrMpm_VpeW5y8KH5bf8Jtv8BAL8nkKOCAyiBGU5y8STa_y46tjYhMRWagKR4dA2xh6Z_y-DlGbQv9Ujap5eUfcKyDo7VIBGB4nkaBmBigTbvvm8tgC19gDBFO2g"></div></div></header><main class="flex-1 w-full bg-surface pt-14 pb-safe"><div class="flex flex-col w-full px-margin pb-space-xl">
+<!-- Voice Note Audio Source Pill Banner -->
+<div class="mt-space-sm w-full bg-primary-container text-on-primary rounded-xl p-space-md flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-full bg-on-primary/10 flex items-center justify-center shrink-0 text-primary-fixed">
+<span class="material-symbols-outlined text-[18px]">mic</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-caps text-label-caps text-on-primary-container tracking-wider uppercase">You said</span>
+<span class="font-body-sm text-body-sm text-on-primary font-medium truncate">“Spent forty two dollars at Trader Joe's”</span>
+</div>
+</div>
+<!-- Sound Waveform Graphic Pill -->
+<div class="flex items-center gap-[3px] bg-primary/40 px-space-sm py-1.5 rounded-full shrink-0">
+<div class="w-1 h-3 rounded-full bg-primary-fixed animate-pulse"></div>
+<div class="w-1 h-5 rounded-full bg-primary-fixed-dim"></div>
+<div class="w-1 h-2 rounded-full bg-primary-fixed"></div>
+<div class="w-1 h-6 rounded-full bg-primary-fixed animate-pulse"></div>
+<div class="w-1 h-4 rounded-full bg-primary-fixed-dim"></div>
+<div class="w-1 h-2 rounded-full bg-primary-fixed"></div>
+<span class="font-numeral-sm text-numeral-sm text-on-primary ml-1 font-medium">3s</span>
+</div>
+</div>
+<!-- Hero Ledger Amount Card -->
+<div class="mt-space-md w-full bg-surface-container-lowest rounded-xl p-space-lg flex flex-col items-center text-center shadow-sm relative overflow-hidden">
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-primary-fixed/20 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center gap-1.5 bg-surface-container px-space-sm py-1 rounded-full mb-space-sm">
+<span class="material-symbols-outlined text-[14px] text-surface-tint">Suggested for you</span>
+<span class="font-label-status text-label-status text-on-surface-variant">Understood from your voice</span>
+</div>
+<!-- Amount Hero -->
+<div class="font-numeral-hero text-display-hero-mobile text-on-surface tracking-tight my-1">
+      $42.00
+    </div>
+<div class="flex items-center gap-space-xs mt-0.5">
+<span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Trader Joe's</span>
+<button class="w-6 h-6 flex items-center justify-center text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+<!-- Editable Note -->
+<div class="mt-space-sm flex items-center gap-1.5 px-space-md py-1.5 bg-surface-container-low rounded-lg text-on-surface-variant max-w-full">
+<span class="material-symbols-outlined text-[15px] shrink-0">notes</span>
+<span class="font-body-sm text-body-sm truncate">Weekly grocery haul</span>
+</div>
+</div>
+<!-- Category Selection Section -->
+<div class="mt-space-lg flex flex-col w-full">
+<div class="flex items-center justify-between mb-space-sm px-0.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant tracking-wider uppercase">Category</span>
+<span class="font-label-status text-label-status text-surface-tint">Suggested for you</span>
+</div>
+<div class="grid grid-cols-2 gap-space-sm w-full" id="category-group">
+<!-- Active Pill -->
+<button class="category-chip flex items-center gap-space-sm p-space-sm bg-primary text-on-primary rounded-xl shadow-sm text-left transition-all active:scale-95" data-category="groceries" type="button">
+<div class="w-8 h-8 rounded-lg bg-on-primary/10 flex items-center justify-center text-primary-fixed shrink-0">
+<span class="material-symbols-outlined text-[18px]">shopping_cart</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="font-title-md text-title-md leading-tight text-on-primary font-medium truncate">Groceries</span>
+<span class="font-label-caps text-label-caps text-primary-fixed-dim">Selected</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-primary-fixed mr-1">check</span>
+</button>
+<!-- Dining -->
+<button class="category-chip flex items-center gap-space-sm p-space-sm bg-surface-container-lowest text-on-surface rounded-xl shadow-sm text-left transition-all active:scale-95 hover:bg-surface-container-high" data-category="dining" type="button">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[18px]">restaurant</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="font-title-md text-title-md leading-tight text-on-surface font-medium truncate">Dining</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Food &amp; Drinks</span>
+</div>
+</button>
+<!-- Household -->
+<button class="category-chip flex items-center gap-space-sm p-space-sm bg-surface-container-lowest text-on-surface rounded-xl shadow-sm text-left transition-all active:scale-95 hover:bg-surface-container-high" data-category="household" type="button">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[18px]">home</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="font-title-md text-title-md leading-tight text-on-surface font-medium truncate">Household</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Essentials</span>
+</div>
+</button>
+<!-- Pharmacy -->
+<button class="category-chip flex items-center gap-space-sm p-space-sm bg-surface-container-lowest text-on-surface rounded-xl shadow-sm text-left transition-all active:scale-95 hover:bg-surface-container-high" data-category="pharmacy" type="button">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[18px]">local_pharmacy</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="font-title-md text-title-md leading-tight text-on-surface font-medium truncate">Pharmacy</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Health &amp; Med</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Transaction Details & Ledger Parameters -->
+<div class="mt-space-lg flex flex-col w-full">
+<div class="flex items-center justify-between mb-space-sm px-0.5">
+<span class="font-label-caps text-label-caps text-on-surface-variant tracking-wider uppercase">Details</span>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col gap-space-md">
+<!-- Payment Method Row -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">credit_card</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Paid with</span>
+<span class="font-body-lg text-body-lg text-on-surface font-medium truncate">Chase Sapphire •••• 4012</span>
+</div>
+</div>
+<button class="w-8 h-8 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+<!-- Date & Time Row -->
+<div class="flex items-center justify-between pt-space-sm bg-surface-container-low/50 -mx-space-md px-space-md pb-space-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-caps text-label-caps text-on-surface-variant">When it happened</span>
+<span class="font-body-lg text-body-lg text-on-surface font-medium truncate">Today, Oct 24 • 12:45 PM</span>
+</div>
+</div>
+<span class="font-numeral-sm text-numeral-sm text-on-surface-variant">Now</span>
+</div>
+<!-- Device Privacy Banner -->
+<div class="rounded-lg bg-surface-container p-space-sm flex items-center gap-space-sm">
+<div class="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px]">verified_user</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-body-sm text-body-sm text-on-surface font-medium leading-tight">Checked on your phone</span>
+<span class="font-label-status text-label-status text-on-surface-variant">Nothing sent online • Fully private</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Primary and Secondary Actions -->
+<div class="mt-space-xl flex flex-col gap-space-sm w-full">
+<button class="w-full h-12 bg-primary text-on-primary rounded-full font-label-caps text-label-caps uppercase tracking-wider flex items-center justify-center gap-space-sm shadow-md active:scale-[0.98] transition-all" id="save-btn">
+<span class="material-symbols-outlined text-[20px] text-primary-fixed">check_circle</span>
+<span class="">Confirm &amp; Save</span>
+</button>
+<button class="w-full h-11 bg-surface-container-high text-on-surface rounded-full font-label-caps text-label-caps uppercase tracking-wider flex items-center justify-center gap-space-sm active:scale-[0.98] transition-all" id="discard-btn">
+<span class="material-symbols-outlined text-[18px] text-error">delete_outline</span>
+<span class="">Don't save</span>
+</button>
+<!-- Bottom Reassurance Hint -->
+<div class="mt-space-sm flex items-center justify-center gap-1 text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-surface-tint"></span>
+<span class="font-label-status text-label-status text-center">Saved right away • Works without internet</span>
+</div>
+</div>
+</div>
+<script>
+  // Simple micro-interaction for category switcher
+  const chips = document.querySelectorAll('.category-chip');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => {
+        c.className = 'category-chip flex items-center gap-space-sm p-space-sm bg-surface-container-lowest text-on-surface rounded-xl shadow-sm text-left transition-all active:scale-95 hover:bg-surface-container-high';
+        const iconWrap = c.querySelector('div:first-child');
+        if (iconWrap) iconWrap.className = 'w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0';
+        const label = c.querySelector('div:nth-child(2) span:nth-child(2)');
+        if (label) label.className = 'font-label-caps text-label-caps text-on-surface-variant';
+        const check = c.querySelector('span.material-symbols-outlined.text-primary-fixed');
+        if (check) check.remove();
+      });
+
+      chip.className = 'category-chip flex items-center gap-space-sm p-space-sm bg-primary text-on-primary rounded-xl shadow-sm text-left transition-all active:scale-95';
+      const iconWrap = chip.querySelector('div:first-child');
+      if (iconWrap) iconWrap.className = 'w-8 h-8 rounded-lg bg-on-primary/10 flex items-center justify-center text-primary-fixed shrink-0';
+      const label = chip.querySelector('div:nth-child(2) span:nth-child(2)');
+      if (label) {
+        label.className = 'font-label-caps text-label-caps text-primary-fixed-dim';
+        label.textContent = 'Selected';
+      }
+
+      const checkIcon = document.createElement('span');
+      checkIcon.className = 'material-symbols-outlined text-[18px] text-primary-fixed mr-1';
+      checkIcon.textContent = 'check';
+      chip.appendChild(checkIcon);
+    });
+  });
+
+  const saveBtn = document.getElementById('save-btn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      saveBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin text-primary-fixed">sync</span><span>Saving to Ledger...</span>';
+      setTimeout(() => {
+        saveBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] text-primary-fixed">task_alt</span><span>Saved Offline</span>';
+      }, 400);
+    });
+  }
+</script></main>
+
+
+</body></html>
