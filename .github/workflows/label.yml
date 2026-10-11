@@ -20,6 +20,9 @@ jobs:
     name: Apply path labels
     runs-on: ubuntu-latest
     steps:
+      - name: Check out base configuration
+        uses: actions/checkout@v4
+
       - name: Label pull request
         uses: actions/labeler@v5
         with:
