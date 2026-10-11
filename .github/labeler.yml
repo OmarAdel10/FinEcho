@@ -1,0 +1,45 @@
+# actions/labeler v5 configuration.
+flutter:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'lib/**'
+          - 'test/**'
+          - 'analysis_options.yaml'
+          - 'pubspec.yaml'
+          - 'pubspec.lock'
+          - '.metadata'
+
+android:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'android/**'
+          - '*.gradle.kts'
+          - '*.gradle'
+          - 'gradle.properties'
+
+ios:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'ios/**'
+          - 'Podfile'
+          - 'Podfile.lock'
+          - '*.xcconfig'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/labeler.yml'
+          - '.github/workflows/*.yml'
+          - '.github/workflows/*.yaml'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '**/*.md'
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'pubspec.yaml'
+          - 'pubspec.lock'
