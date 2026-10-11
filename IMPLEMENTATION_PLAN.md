@@ -1,22 +1,22 @@
 # FinEcho Implementation Plan
 
-> **Status**: Ready for execution  
-> **Architecture**: MVVM/BLoC with Repository Pattern  
-> **Flavors**: development, staging, production  
-> **Localization**: English (default), Arabic  
-> **CI/CD**: GitHub Actions + Shorebird OTA  
-> **Tracking**: Plane.so via `planecli`  
-> **Branching**: Per AGENTS.md — `development` is canonical integration branch; all work on feature branches  
+> **Status**: Ready for execution
+> **Architecture**: MVVM/BLoC with Repository Pattern
+> **Flavors**: development, staging, production
+> **Localization**: English (default), Arabic
+> **CI/CD**: GitHub Actions + Shorebird OTA
+> **Tracking**: Plane.so via `planecli`
+> **Branching**: Per AGENTS.md — `development` is canonical integration branch; all work on feature branches
 > **Merge Policy**: **PR-only to `development`; no direct merges; user approval required before merge**
 
 ---
 
 ## ✅ Already Completed (Do Not Execute)
 
-- [x] Flutter environment, tooling, VS Code setup
-- [x] Git repository initialized at `/mnt/ALL/Flutter Projects/FinEcho`
-- [x] On `development` branch (canonical integration branch)
-- [x] Specs finalized in `docs/` (ARCHITECTURE, DEVELOPMENT_ENVIRONMENT, DESIGN_PROMPT, USER_FLOW, PRD, PERFORMANCE_GUIDELINES)
+- [X] Flutter environment, tooling, VS Code setup
+- [X] Git repository initialized at `/mnt/ALL/Flutter Projects/FinEcho`
+- [X] On `development` branch (canonical integration branch)
+- [X] Specs finalized in `docs/` (ARCHITECTURE, DEVELOPMENT_ENVIRONMENT, DESIGN_PROMPT, USER_FLOW, PRD, PERFORMANCE_GUIDELINES)
 
 ---
 
@@ -30,13 +30,14 @@
 4. **STOP** — do not start next feature until user approves & merges the PR
 5. **Only after user merges**: `git checkout development && git pull` then create next feature branch
 
-> This applies to Phase 0 (core-infrastructure) through Phase 7. No exceptions.
+> This applies to Phase 0 (core-infrastructure) through Phase 6. No exceptions.
 
 ---
 
 ## Phase 0 — First Feature Branch & Core Dependencies
 
 ### 0.1 Create First Feature Branch
+
 ```bash
 git checkout development
 git pull origin development
@@ -44,6 +45,7 @@ git checkout -b feature/core-infrastructure
 ```
 
 ### 0.2 Add Dependencies & Configure Tooling
+
 - [ ] Update `pubspec.yaml` with all dependencies
 - [ ] Run `flutter pub get`
 - [ ] Configure `flutter_launcher_icons` and `flutter_native_splash`
@@ -53,6 +55,7 @@ git checkout -b feature/core-infrastructure
 **Commit**: `:package: add core dependencies and tooling config`
 
 ### 0.3 Create PR & Wait for Approval
+
 ```bash
 # Push branch
 git push origin feature/core-infrastructure
@@ -83,6 +86,7 @@ graph TD
 ```
 
 ## Data Flow
+
 ```mermaid
 sequenceDiagram
     participant View
@@ -101,17 +105,20 @@ sequenceDiagram
 ```
 
 ## Testing
+
 - Unit tests for all repository implementations
 - Widget tests for core widgets
 - Integration test for DB open/migration
 
 ## Checklist
+
 - [ ] FAST gate passes (format, analyze, no debugPrint)
 - [ ] FULL gate passes (test, build apk/ipa)
 - [ ] No secrets in diff
 - [ ] Scope limited to core infrastructure only
-EOF
-)"
+  EOF
+  )"
+
 ```
 
 ### 0.4 Watch CI & Fix Failures
@@ -128,11 +135,13 @@ gh run watch --repo $(gh repo view --json nameWithOwner -q .nameWithOwner) \
 ```
 
 ### 0.5 Report & Wait
+
 ```
 ✅ PR created: https://github.com/.../pull/X
 ✅ CI passing
 ⏳ Waiting for your review and merge...
 ```
+
 **STOP HERE** — do not continue until user merges PR.
 
 ---
@@ -140,6 +149,7 @@ gh run watch --repo $(gh repo view --json nameWithOwner -q .nameWithOwner) \
 ## Phase 1 — Core Infrastructure (Continued on Same Branch)
 
 After user merges `feature/core-infrastructure`:
+
 ```bash
 git checkout development
 git pull origin development
@@ -148,7 +158,9 @@ git pull origin development
 ```
 
 ### 1.1–1.5 Implementation (Add Commits to Same Branch)
+
 Each logical unit = 1 commit with emoji prefix:
+
 - `:sparkles: add app bootstrap and DI`
 - `:sparkles: add routing and theming`
 - `:sparkles: add encrypted SQLCipher database layer`
@@ -156,7 +168,9 @@ Each logical unit = 1 commit with emoji prefix:
 - ... (per repository, per widget group)
 
 ### After Each Logical Unit (Optional Intermediate PRs)
+
 If a unit is large enough to warrant separate review:
+
 ```bash
 # Push commits to same branch
 git push origin feature/core-infrastructure
@@ -166,7 +180,9 @@ gh pr edit --body "$(updated_body_with_new_diagrams)"
 ```
 
 ### Final PR for Core Infrastructure
+
 When all 1.1–1.5 complete:
+
 - Update PR body with complete architecture diagram
 - Watch CI → fix → report → **wait for user merge**
 
@@ -175,6 +191,7 @@ When all 1.1–1.5 complete:
 ## Phase 2 — Feature Implementation (One Branch Per Feature)
 
 ### Branching Protocol (MANDATORY)
+
 ```bash
 # AFTER user merges previous feature to development:
 git checkout development
@@ -203,6 +220,7 @@ graph TD
 ```
 
 ## User Flow
+
 ```mermaid
 sequenceDiagram
     participant User
@@ -221,24 +239,28 @@ sequenceDiagram
 ```
 
 ## Screenshots (Placeholders — Replace per Feature)
-| Screen | Light | Dark |
-|--------|-------|------|
-| {Screen Name} | `![Light](docs/screenshots/{feature}/{screen}_light.png)` | `![Dark](docs/screenshots/{feature}/{screen}_dark.png)` |
+
+| Screen                   | Light                                                            | Dark                                                           |
+| ------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| {Screen Name}            | `![Light](docs/screenshots/{feature}/{screen}_light.png)`      | `![Dark](docs/screenshots/{feature}/{screen}_dark.png)`      |
 | *Example: Home Ledger* | `![Light](docs/screenshots/transaction/home_ledger_light.png)` | `![Dark](docs/screenshots/transaction/home_ledger_dark.png)` |
 
 ## Testing
+
 - Unit tests: {list}
 - Widget tests: {list}
 - Integration tests: {list}
 
 ## Checklist
+
 - [ ] FAST gate passes
 - [ ] FULL gate passes
 - [ ] No secrets in diff
 - [ ] Scope limited to {feature} domain only
 - [ ] README placeholders added (screenshots/videos)
-EOF
-)"
+  EOF
+  )"
+
 ```
 
 ### Watch CI → Fix → Report → **Wait for User Merge**
@@ -249,6 +271,7 @@ gh run watch ...  # same as above
 ```
 
 ### Feature Order
+
 1. `feature/onboarding`
 2. `feature/security`
 3. `feature/transaction`
@@ -256,9 +279,9 @@ gh run watch ...  # same as above
 5. `feature/budget`
 6. `feature/analytics`
 7. `feature/speech-to-text`
-7. `feature/sms-ingestion`
-8. `feature/notifications`
-9. `feature/settings`
+8. `feature/sms-ingestion`
+9. `feature/notifications`
+10. `feature/settings`
 
 **Each feature = full PR cycle with user approval before next branch created.**
 
@@ -268,11 +291,11 @@ gh run watch ...  # same as above
 
 Can run in parallel after `feature/settings` merged:
 
-| Branch | PR Title |
-|--------|----------|
-| `feature/localization` | `feat: i18n — English/Arabic with RTL support` |
-| `feature/animations` | `feat: animations — thinking dots, waveform, border beam, search explode` |
-| `feature/splash-and-icons` | `feat: native splash (GIF/Lottie) + adaptive app icons` |
+| Branch                       | PR Title                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| `feature/localization`     | `feat: i18n — English/Arabic with RTL support`                            |
+| `feature/animations`       | `feat: animations — thinking dots, waveform, border beam, search explode` |
+| `feature/splash-and-icons` | `feat: native splash (GIF/Lottie) + adaptive app icons`                    |
 
 **Each = separate PR, separate CI watch, separate user approval.**
 
@@ -290,31 +313,27 @@ Same PR workflow. Include workflow diagrams.
 
 ---
 
-## Phase 6 — Plane Integration (`feature/plane-integration`)
+## Phase 6 — Verification & Delivery (Per Feature)
 
-Same PR workflow.
+### 6.1 Verification Subagent Loop (Before PR Creation)
 
----
-
-## Phase 7 — Verification & Delivery (Per Feature)
-
-### 7.1 Verification Subagent Loop (Before PR Creation)
 **Run BEFORE creating PR for each feature:**
 
 1. **Subagent 1 (QA)**: `qa-post-implementation` skill
+
    - Verification, code review, security audit, branch status
    - Fix ALL findings → re-run → **ZERO findings required**
-
 2. **Subagent 2 (Coverage)**: `test-coverage-analysis` skill
+
    - Map changed source to tests
    - Implement missing tests → re-run → **ZERO findings required**
-
 3. **Spec Sync**: `filling-gaps` to sync specs with implementation
-
 4. **README Update**: Add feature section with screenshot/video placeholders
+
    - Commit: `:memo: update README with {feature} screenshots and demo videos`
 
-### 7.2 PR Creation (Parent Agent)
+### 6.2 PR Creation (Parent Agent)
+
 ```bash
 # Only after BOTH subagents report ZERO findings
 gh pr create --base development \
@@ -325,20 +344,23 @@ gh pr create --base development \
 )"
 ```
 
-### 7.3 CI Watch & Fix
+### 6.3 CI Watch & Fix
+
 ```bash
 # Watch CI, fix failures, push fixes to same branch
 # DO NOT MERGE
 # Report: "PR #X ready for review: https://github.com/.../pull/X"
 ```
 
-### 7.4 User Review & Merge
+### 6.4 User Review & Merge
+
 ```
 ⏳ Waiting for your review...
 ✅ You approve & merge → I continue to next feature
 ```
 
-### 7.5 Post-Merge (After User Merges)
+### 6.5 Post-Merge (After User Merges)
+
 ```bash
 git checkout development
 git pull origin development
@@ -351,18 +373,19 @@ planecli work-item update <id> --state "Done"
 
 ## Branch & Commit Discipline (AGENTS.md Compliance)
 
-| Rule | Enforcement |
-|------|-------------|
-| **No direct commits to `development`** | All work on `feature/` branches only |
-| **Emoji commits only** | Use `emoji-commit` skill for every commit |
-| **FAST gate per commit** | `dart format`, `flutter analyze`, no `debugPrint` |
-| **No `git add -A`** | Stage by explicit path: `git add lib/features/...` |
-| **Scope audit per commit** | `git diff --staged` — only current feature's domain |
-| **Leakage = STOP** | Conflict touching another feature's domain → escalate |
-| **Never delete branches** | Merged branches stay for audit/rollback |
-| **Worktree for parallel** | Only when 2+ features touch overlapping files |
+| Rule                                           | Enforcement                                             |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| **No direct commits to `development`** | All work on`feature/` branches only                   |
+| **Emoji commits only**                   | Use`emoji-commit` skill for every commit              |
+| **FAST gate per commit**                 | `dart format`, `flutter analyze`, no `debugPrint` |
+| **No `git add -A`**                    | Stage by explicit path:`git add lib/features/...`     |
+| **Scope audit per commit**               | `git diff --staged` — only current feature's domain  |
+| **Leakage = STOP**                       | Conflict touching another feature's domain → escalate  |
+| **Never delete branches**                | Merged branches stay for audit/rollback                 |
+| **Worktree for parallel**                | Only when 2+ features touch overlapping files           |
 
 ### Commit Message Format
+
 ```
 :sparkles: add transaction list view with pagination
 :bug: fix transfer balance calculation for credit cards
@@ -395,14 +418,14 @@ gh run rerun --run-id {run_id} --repo {owner}/{repo}
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| SQLCipher key loss | Store key only in Keystore/Keychain; test key rotation |
-| Android SMS permission denial | Graceful degradation; no-op iOS adapter |
-| Shorebird patch failure | Fallback to full store release; test patch apply/restart |
-| Arabic RTL layout breaks | Widget tests with `Directionality.rtl`; manual QA on device |
-| Performance on low-end | Profile with `flutter run --profile`; use `const` constructors, lazy lists |
-| CI flakiness | Re-run failed jobs; investigate root cause before pushing fix |
+| Risk                          | Mitigation                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| SQLCipher key loss            | Store key only in Keystore/Keychain; test key rotation                        |
+| Android SMS permission denial | Graceful degradation; no-op iOS adapter                                       |
+| Shorebird patch failure       | Fallback to full store release; test patch apply/restart                      |
+| Arabic RTL layout breaks      | Widget tests with`Directionality.rtl`; manual QA on device                  |
+| Performance on low-end        | Profile with`flutter run --profile`; use `const` constructors, lazy lists |
+| CI flakiness                  | Re-run failed jobs; investigate root cause before pushing fix                 |
 
 ---
 
@@ -421,17 +444,17 @@ gh run rerun --run-id {run_id} --repo {owner}/{repo}
 
 ## Subagent Dispatch Plan
 
-| Phase | Subagent | Skill | Trigger |
-|-------|----------|-------|---------|
-| 0-1 | Senior Developer | — | Core infrastructure (on `feature/core-infrastructure`) |
-| 2.x | Senior Developer | `test-driven-development` | Per feature implementation |
-| 2.x | QA Subagent | `qa-post-implementation` | Post-impl verification (before PR) |
-| 2.x | Coverage Subagent | `test-coverage-analysis` | Test mapping & missing tests (before PR) |
-| 3 | Senior Developer | — | Localization, animations, splash, icons (parallel PRs) |
-| 4 | Senior Developer | — | Shorebird setup |
-| 5 | Senior Developer | — | CI/CD pipelines |
-| 6 | General | `planecli` | Plane automation |
-| 7 | Orchestrator | `feature-summary`, `merge-message` | PR body generation (but NO merge) |
+| Phase | Subagent          | Skill                                  | Trigger                                                 |
+| ----- | ----------------- | -------------------------------------- | ------------------------------------------------------- |
+| 0-1   | Senior Developer  | —                                     | Core infrastructure (on`feature/core-infrastructure`) |
+| 2.x   | Senior Developer  | `test-driven-development`            | Per feature implementation                              |
+| 2.x   | QA Subagent       | `qa-post-implementation`             | Post-impl verification (before PR)                      |
+| 2.x   | Coverage Subagent | `test-coverage-analysis`             | Test mapping & missing tests (before PR)                |
+| 3     | Senior Developer  | —                                     | Localization, animations, splash, icons (parallel PRs)  |
+| 4     | Senior Developer  | —                                     | Shorebird setup                                         |
+| 5     | Senior Developer  | —                                     | CI/CD pipelines                                         |
+| 6     | General           | `planecli`                           | Plane automation                                        |
+| 7     | Orchestrator      | `feature-summary`, `merge-message` | PR body generation (but NO merge)                       |
 
 ---
 
