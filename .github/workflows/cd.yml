@@ -1,0 +1,72 @@
+name: FinEcho Release Build
+
+# Dispatch-only by design. This workflow intentionally does not publish,
+# sign with production credentials, or access repository secrets.
+#
+# Phase 4/4+ follow-up: once Android product flavors are configured, add
+# flavor-specific builds and deployment targets for production, staging,
+# and development. Until then, every selected target produces the same
+# standard Flutter release APK so the workflow remains safe and useful.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Future deployment target (flavor builds are deferred)'
+        required: true
+        default: staging
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finecho-release-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-build:
+    name: Build standard release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ runner.os }}-stable-${{ hashFiles('pubspec.lock') }}
+          pub-cache-key: pub-cache-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build standard release APK
+        run: |
+          echo "Requested target: ${{ inputs.target }}"
+          echo "Android flavors are not configured yet; building the standard release APK."
+          flutter build apk --release
+
+      - name: Upload standard release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: finecho-standard-release-apk-${{ inputs.target }}-${{ github.sha }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
