@@ -5,11 +5,26 @@ enum AccountType {
   /// Money held as cash.
   cash,
 
-  /// Money held at a bank.
-  bank,
+  /// A debit card attached to a funding source.
+  debitCard,
 
   /// A revolving credit account.
   creditCard,
+
+  /// A prepaid or Mezza stored-value card.
+  prepaidMezza,
+
+  /// Money held at a bank.
+  bank,
+
+  /// Money held in a digital wallet.
+  wallet,
+
+  /// Money set aside in a savings account.
+  savings,
+
+  /// An account type that does not match another built-in type.
+  other,
 }
 
 /// An account that can hold money or credit in FinEcho.

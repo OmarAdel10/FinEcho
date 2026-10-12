@@ -56,6 +56,73 @@ abstract final class AppSchema {
       '    REFERENCES categories(id) ON DELETE CASCADE\n'
       ')';
 
+  static const String _createSpeechDrafts =
+      'CREATE TABLE speech_drafts (\n'
+      '  id TEXT PRIMARY KEY,\n'
+      '  transcript TEXT NOT NULL,\n'
+      '  parsed_amount_minor_units INTEGER,\n'
+      '  parsed_payee TEXT,\n'
+      '  parsed_category_id TEXT,\n'
+      '  confidence REAL,\n'
+      '  status TEXT NOT NULL,\n'
+      '  created_at INTEGER NOT NULL,\n'
+      '  updated_at INTEGER NOT NULL\n'
+      ')';
+
+  static const String _createSmsMessages =
+      'CREATE TABLE sms_messages (\n'
+      '  id TEXT PRIMARY KEY,\n'
+      '  sender TEXT NOT NULL,\n'
+      '  received_at INTEGER NOT NULL,\n'
+      '  fingerprint TEXT NOT NULL,\n'
+      '  account_id TEXT,\n'
+      '  parsed_payload TEXT,\n'
+      '  status TEXT NOT NULL,\n'
+      '  FOREIGN KEY(account_id)\n'
+      '    REFERENCES accounts(id) ON DELETE SET NULL\n'
+      ')';
+
+  static const String _createSmsParsingRules =
+      'CREATE TABLE sms_parsing_rules (\n'
+      '  id TEXT PRIMARY KEY,\n'
+      '  account_id TEXT NOT NULL,\n'
+      '  sender_pattern TEXT NOT NULL,\n'
+      '  amount_pattern TEXT NOT NULL,\n'
+      '  payee_pattern TEXT NOT NULL,\n'
+      '  enabled INTEGER NOT NULL,\n'
+      '  FOREIGN KEY(account_id)\n'
+      '    REFERENCES accounts(id) ON DELETE CASCADE\n'
+      ')';
+
+  static const String _createNotificationSchedules =
+      'CREATE TABLE notification_schedules (\n'
+      '  id TEXT PRIMARY KEY,\n'
+      '  title TEXT NOT NULL,\n'
+      '  body TEXT NOT NULL,\n'
+      '  scheduled_time INTEGER NOT NULL,\n'
+      '  repeat_interval TEXT NOT NULL,\n'
+      '  payload TEXT NOT NULL,\n'
+      '  enabled INTEGER NOT NULL\n'
+      ')';
+
+  static const String _createAppSettings =
+      'CREATE TABLE app_settings (\n'
+      '  key TEXT PRIMARY KEY,\n'
+      '  value TEXT NOT NULL,\n'
+      '  updated_at INTEGER NOT NULL\n'
+      ')';
+
+  static const String _createSecurityState =
+      'CREATE TABLE security_state (\n'
+      '  id INTEGER PRIMARY KEY CHECK (id = 0),\n'
+      '  app_lock_enabled INTEGER NOT NULL,\n'
+      '  pin_configured INTEGER NOT NULL,\n'
+      '  failed_unlock_attempts INTEGER NOT NULL,\n'
+      '  locked_until INTEGER,\n'
+      '  secure_key_ready INTEGER NOT NULL,\n'
+      '  updated_at INTEGER NOT NULL\n'
+      ')';
+
   static const String _indexAccountsLinkedAccount =
       'CREATE INDEX idx_accounts_linked_account_id '
       'ON accounts(linked_account_id)';
@@ -78,17 +145,47 @@ abstract final class AppSchema {
   static const String _indexBudgetsCategory =
       'CREATE INDEX idx_budgets_category_id ON budgets(category_id)';
 
+  static const String _indexSpeechDraftsStatus =
+      'CREATE INDEX idx_speech_drafts_status ON speech_drafts(status)';
+
+  static const String _indexSmsMessagesReceived =
+      'CREATE INDEX idx_sms_messages_received_at '
+      'ON sms_messages(received_at)';
+
+  static const String _indexSmsParsingRulesAccount =
+      'CREATE INDEX idx_sms_parsing_rules_account_id '
+      'ON sms_parsing_rules(account_id)';
+
+  static const String _indexNotificationSchedulesTime =
+      'CREATE INDEX idx_notification_schedules_scheduled_time '
+      'ON notification_schedules(scheduled_time)';
+
+  static const String _uniqueIndexSmsMessagesFingerprint =
+      'CREATE UNIQUE INDEX idx_sms_messages_fingerprint '
+      'ON sms_messages(fingerprint)';
+
   /// Ordered statements that create version 1 tables and indexes.
   static const List<String> statements = <String>[
     _createAccounts,
     _createCategories,
     _createTransactions,
     _createBudgets,
+    _createSpeechDrafts,
+    _createSmsMessages,
+    _createSmsParsingRules,
+    _createNotificationSchedules,
+    _createAppSettings,
+    _createSecurityState,
     _indexAccountsLinkedAccount,
     _indexCategoriesParent,
     _indexTransactionsAccount,
     _indexTransactionsCategory,
     _indexTransactionsTimestamp,
     _indexBudgetsCategory,
+    _indexSpeechDraftsStatus,
+    _indexSmsMessagesReceived,
+    _indexSmsParsingRulesAccount,
+    _indexNotificationSchedulesTime,
+    _uniqueIndexSmsMessagesFingerprint,
   ];
 }
