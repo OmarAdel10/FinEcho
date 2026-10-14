@@ -1,0 +1,93 @@
+import 'package:finecho/features/onboarding/data/models/onboarding_step.dart';
+import 'package:finecho/features/onboarding/view_model/models/onboarding_state.dart';
+import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
+import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'fake_onboarding_repository.dart';
+
+void main() {
+  late FakeOnboardingRepository repository;
+  late OnboardingCubit cubit;
+
+  setUp(() {
+    repository = FakeOnboardingRepository();
+    cubit = OnboardingCubit(OnboardingService(repository));
+  });
+
+  tearDown(() async {
+    await cubit.close();
+  });
+
+  group('OnboardingCubit', () {
+    test('loads the persisted snapshot', () async {
+      await cubit.load();
+
+      expect(cubit.state.status, OnboardingStatus.ready);
+      expect(cubit.state.currentStep, OnboardingStep.privacy);
+    });
+
+    test('advances and persists progress', () async {
+      await cubit.load();
+      await cubit.nextStep();
+
+      expect(cubit.state.currentStep, OnboardingStep.voiceLogging);
+      expect(repository.saved, hasLength(1));
+      expect(repository.saved.single.currentStep, OnboardingStep.voiceLogging);
+    });
+
+    test('returns to the previous step', () async {
+      await cubit.load();
+      await cubit.nextStep();
+      cubit.previousStep();
+
+      expect(cubit.state.currentStep, OnboardingStep.privacy);
+    });
+
+    test('completes onboarding with a six-digit PIN', () async {
+      await cubit.load();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      cubit.setPin('123456');
+      final completed = await cubit.complete();
+
+      expect(completed, isTrue);
+      expect(cubit.state.status, OnboardingStatus.completed);
+      expect(repository.saved.last.isCompleted, isTrue);
+      expect(repository.saved.last.currentStep, OnboardingStep.securitySetup);
+    });
+
+    test('rejects completion with an incomplete PIN', () async {
+      await cubit.load();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      cubit.setPin('12345');
+      final completed = await cubit.complete();
+
+      expect(completed, isFalse);
+      expect(cubit.state.status, OnboardingStatus.failure);
+      expect(cubit.state.errorMessage, 'Enter a six-digit PIN.');
+      expect(
+        repository.saved.where((snapshot) => snapshot.isCompleted),
+        isEmpty,
+      );
+    });
+
+    test('reports a persistence failure during completion', () async {
+      repository.saveError = Exception('save failed');
+      await cubit.load();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      cubit.setPin('123456');
+      repository.saveError = Exception('save failed');
+      final completed = await cubit.complete();
+
+      expect(completed, isFalse);
+      expect(cubit.state.status, OnboardingStatus.failure);
+      expect(cubit.state.errorMessage, contains('Could not finish setup'));
+    });
+  });
+}
