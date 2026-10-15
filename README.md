@@ -18,7 +18,27 @@ steps so users can resume where they left off.
 | Security setup | `![Security setup light](docs/screenshots/onboarding/security_setup_light.png)` | `![Security setup dark](docs/screenshots/onboarding/security_setup_dark.png)` |
 | Home after setup | `![Home light](docs/screenshots/onboarding/home_light.png)` | `![Home dark](docs/screenshots/onboarding/home_dark.png)` |
 
-## Getting Started
+## Security
+
+The app lock protects the home, accounts, statistics, and settings surfaces.
+During onboarding, the user configures a six-digit PIN. FinEcho stores only a
+salted HMAC-SHA256 PIN verifier, never the raw PIN, and applies a temporary
+lockout after five consecutive failed attempts.
+
+### Screenshots
+
+| Screen | Light | Dark |
+| --- | --- | --- |
+| App lock | `![App lock light](docs/screenshots/security/app_lock_light.png)` | `![App lock dark](docs/screenshots/security/app_lock_dark.png)` |
+| Locked home | `![Locked home light](docs/screenshots/security/locked_home_light.png)` | `![Locked home dark](docs/screenshots/security/locked_home_dark.png)` |
+
+## CI/CD
+
+GitHub Actions provides a FAST gate for formatting, code generation, static
+analysis, and tests with coverage, followed by a FULL Android build gate. A
+dispatch-only release workflow builds an unsigned standard APK until product
+flavors are introduced. Pull requests are labeled from a repository-managed
+configuration.
 
 ## Getting Started
 
