@@ -1,0 +1,154 @@
+import 'package:bloc/bloc.dart';
+import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/features/security/view_model/models/security_access_state.dart';
+import 'package:finecho/features/security/view_model/services/security_service.dart';
+
+/// The app-lock ViewModel.
+class SecurityCubit extends Cubit<SecurityAccessState> {
+  /// Creates an app-lock ViewModel.
+  new(this._service)
+    : super(
+        SecurityAccessState(
+          securityState: SecurityState(
+            appLockEnabled: false,
+            pinConfigured: false,
+            failedUnlockAttempts: 0,
+            secureKeyReady: false,
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+          ),
+        ),
+      );
+
+  final SecurityService _service;
+
+  /// Loads the persisted security snapshot.
+  Future<void> load() async {
+    emit(state.copyWith(status: SecurityAccessStatus.loading));
+    final securityState = await _service.load();
+    if (isClosed) {
+      return;
+    }
+    emit(
+      SecurityAccessState(
+        securityState: securityState,
+        status: securityState.appLockEnabled && securityState.pinConfigured
+            ? SecurityAccessStatus.ready
+            : SecurityAccessStatus.unlocked,
+      ),
+    );
+  }
+
+  /// Configures the app lock with a six-digit PIN.
+  Future<bool> configure(String pin) async {
+    if (pin.length != 6) {
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Enter a six-digit PIN.',
+        ),
+      );
+      return false;
+    }
+
+    emit(state.copyWith(status: SecurityAccessStatus.submitting));
+    try {
+      await _service.configurePin(pin);
+      final securityState = await _service.saveConfiguredState(
+        state.securityState,
+      );
+      if (isClosed) {
+        return true;
+      }
+      emit(
+        SecurityAccessState(
+          securityState: securityState,
+          status: SecurityAccessStatus.unlocked,
+        ),
+      );
+      return true;
+    } on Exception {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Could not save app lock. Please try again.',
+        ),
+      );
+      return false;
+    }
+  }
+
+  /// Verifies the six-digit PIN and unlocks the app on success.
+  Future<bool> unlockWithPin(String pin) async {
+    if (state.status == SecurityAccessStatus.submitting) {
+      return false;
+    }
+    if (pin.length != 6) {
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Enter a six-digit PIN.',
+        ),
+      );
+      return false;
+    }
+
+    emit(state.copyWith(status: SecurityAccessStatus.submitting));
+    if (state.isLockedOut) {
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Too many attempts. Try again later.',
+        ),
+      );
+      return false;
+    }
+
+    try {
+      final matches = await _service.verifyPin(pin);
+      if (!matches) {
+        final securityState = await _service.recordFailedAttempt(
+          state.securityState,
+        );
+        if (isClosed) {
+          return false;
+        }
+        emit(
+          SecurityAccessState(
+            securityState: securityState,
+            status: SecurityAccessStatus.failure,
+            errorMessage: securityState.lockedUntil == null
+                ? 'Incorrect PIN. Try again.'
+                : 'Too many attempts. Try again later.',
+          ),
+        );
+        return false;
+      }
+
+      final securityState = await _service.markUnlocked(state.securityState);
+      if (isClosed) {
+        return true;
+      }
+      emit(
+        SecurityAccessState(
+          securityState: securityState,
+          status: SecurityAccessStatus.unlocked,
+        ),
+      );
+      return true;
+    } on Exception {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Could not verify PIN. Please try again.',
+        ),
+      );
+      return false;
+    }
+  }
+}
