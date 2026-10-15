@@ -218,6 +218,9 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 
 ## Security model
 
+- During the current development phase, app-lock metadata and the PIN verifier
+  use in-memory repositories. The verifier is a random-salted HMAC-SHA256 hash;
+  the raw PIN is never stored.
 - Generate the database key using a cryptographically secure source.
 - Store that key only in Android Keystore/iOS Keychain through secure storage.
 - Open the local SQLCipher database only after the startup security flow succeeds.
