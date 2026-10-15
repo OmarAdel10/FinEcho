@@ -6,11 +6,13 @@ import 'package:finecho/features/onboarding/view/screens/welcome_screen.dart';
 import 'package:finecho/features/onboarding/view_model/models/onboarding_state.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
+import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pinput/pinput.dart';
 
+import '../security/fake_security_repositories.dart';
 import 'fake_onboarding_repository.dart';
 
 void main() {
@@ -64,7 +66,12 @@ void main() {
       );
       cubit = OnboardingCubit(OnboardingService(repository));
       await cubit.load();
-      final appRouter = AppRouter(onboardingCubit: cubit);
+      final securityHarness = SecurityTestHarness();
+      final securityCubit = SecurityCubit(securityHarness.service);
+      final appRouter = AppRouter(
+        onboardingCubit: cubit,
+        securityCubit: securityCubit,
+      );
       await tester.pumpWidget(
         MaterialApp.router(routerConfig: appRouter.router),
       );
@@ -73,7 +80,10 @@ void main() {
       await tester.pump();
 
       await tester.enterText(find.byType(Pinput), '123456');
+      await tester.pump();
+      await tester.pump();
       await tester.tap(find.text('Finish setup'));
+      await tester.pump();
       await tester.pump();
 
       expect(cubit.state.status, OnboardingStatus.completed);
@@ -82,7 +92,10 @@ void main() {
         find.descendant(of: find.byType(AppBar), matching: find.text('Home')),
         findsOneWidget,
       );
+      expect(securityHarness.securityRepository.state?.appLockEnabled, isTrue);
+      expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);
       appRouter.router.dispose();
+      await securityCubit.close();
     });
   });
 }
