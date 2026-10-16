@@ -27,6 +27,28 @@ Category _category() {
 
 void main() {
   group('TransactionService', () {
+    test('rejects a transaction against an archived account', () async {
+      final harness = TransactionsTestHarness(
+        initialAccounts: {'account-1': _account().copyWith(archived: true)},
+      );
+
+      await expectLater(
+        harness.service.addTransaction(
+          accountId: 'account-1',
+          type: TransactionType.expense,
+          amountMinorUnits: 1000,
+        ),
+        throwsA(
+          isA<TransactionValidationException>().having(
+            (error) => error.message,
+            'message',
+            'Choose an active account.',
+          ),
+        ),
+      );
+      expect(harness.transactionRepository.createdIds, isEmpty);
+    });
+
     test('rejects a zero amount', () async {
       final harness = TransactionsTestHarness(
         initialAccounts: {'account-1': _account()},
@@ -144,6 +166,44 @@ void main() {
         harness.transactionRepository.transactions['txn-new'],
         transaction,
       );
+      expect(
+        harness.accountRepository.accounts['account-1']?.balanceMinorUnits,
+        10000 - 2500,
+      );
+    });
+
+    test('income increases the account balance', () async {
+      final harness = TransactionsTestHarness(
+        initialAccounts: {'account-1': _account()},
+      );
+
+      await harness.service.addTransaction(
+        accountId: 'account-1',
+        type: TransactionType.income,
+        amountMinorUnits: 5000,
+      );
+
+      expect(
+        harness.accountRepository.accounts['account-1']?.balanceMinorUnits,
+        15000,
+      );
+    });
+
+    test('transfers reduce the source account balance', () async {
+      final harness = TransactionsTestHarness(
+        initialAccounts: {'account-1': _account()},
+      );
+
+      await harness.service.addTransaction(
+        accountId: 'account-1',
+        type: TransactionType.transfer,
+        amountMinorUnits: 3000,
+      );
+
+      expect(
+        harness.accountRepository.accounts['account-1']?.balanceMinorUnits,
+        7000,
+      );
     });
 
     test('updates a transaction and clears optional fields', () async {
@@ -160,7 +220,9 @@ void main() {
       );
       final harness = TransactionsTestHarness(
         initialTransactions: {'txn-1': original},
-        initialAccounts: {'account-1': _account()},
+        initialAccounts: {
+          'account-1': _account().copyWith(balanceMinorUnits: 9000),
+        },
       );
 
       final updated = await harness.service.updateTransaction(
@@ -180,6 +242,51 @@ void main() {
       expect(updated.rawText, isNull);
       expect(harness.transactionRepository.updatedIds, <String>['txn-1']);
       expect(harness.transactionRepository.transactions['txn-1'], updated);
+      expect(
+        harness.accountRepository.accounts['account-1']?.balanceMinorUnits,
+        12000,
+      );
+    });
+
+    test('moving an edit to another account updates both balances', () async {
+      final original = Transaction(
+        id: 'txn-1',
+        accountId: 'account-1',
+        amountMinorUnits: 1000,
+        timestamp: DateTime.utc(2026, 10, 14, 9),
+        type: TransactionType.expense,
+        source: TransactionSource.manual,
+      );
+      const secondAccount = Account(
+        id: 'account-2',
+        name: 'Wallet',
+        type: AccountType.wallet,
+        currency: 'EGP',
+        balanceMinorUnits: 20000,
+      );
+      final harness = TransactionsTestHarness(
+        initialTransactions: {'txn-1': original},
+        initialAccounts: {
+          'account-1': _account().copyWith(balanceMinorUnits: 9000),
+          'account-2': secondAccount,
+        },
+      );
+
+      await harness.service.updateTransaction(
+        original: original,
+        accountId: 'account-2',
+        type: TransactionType.expense,
+        amountMinorUnits: 1500,
+      );
+
+      expect(
+        harness.accountRepository.accounts['account-1']?.balanceMinorUnits,
+        10000,
+      );
+      expect(
+        harness.accountRepository.accounts['account-2']?.balanceMinorUnits,
+        18500,
+      );
     });
 
     test('delegates deletion to the repository', () async {
@@ -193,12 +300,19 @@ void main() {
       );
       final harness = TransactionsTestHarness(
         initialTransactions: {'txn-1': original},
+        initialAccounts: {
+          'account-1': _account().copyWith(balanceMinorUnits: 9000),
+        },
       );
 
       await harness.service.deleteTransaction('txn-1');
 
       expect(harness.transactionRepository.deletedIds, <String>['txn-1']);
       expect(harness.transactionRepository.transactions, isEmpty);
+      expect(
+        harness.accountRepository.accounts['account-1']?.balanceMinorUnits,
+        10000,
+      );
     });
 
     test('lists transactions newest first', () async {
