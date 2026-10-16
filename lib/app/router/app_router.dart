@@ -6,6 +6,8 @@ import 'package:finecho/features/onboarding/view/screens/welcome_screen.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/security/view/widgets/security_gate.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:finecho/features/transactions/view/screens/transactions_screen.dart';
+import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,10 +15,16 @@ import 'package:go_router/go_router.dart';
 /// Configures the initial application navigation graph.
 class AppRouter {
   /// Creates the application router.
-  new({OnboardingCubit? onboardingCubit, SecurityCubit? securityCubit}) {
+  new({
+    OnboardingCubit? onboardingCubit,
+    SecurityCubit? securityCubit,
+    TransactionsCubit? transactionsCubit,
+  }) {
     final cubit = onboardingCubit ?? sl<OnboardingCubit>();
     final security = securityCubit ?? sl<SecurityCubit>();
+    final transactions = transactionsCubit ?? sl<TransactionsCubit>();
     _securityCubit = security;
+    _transactionsCubit = transactions;
     router = GoRouter(
       initialLocation: '/welcome',
       routes: [
@@ -50,8 +58,12 @@ class AppRouter {
         GoRoute(
           path: '/home',
           name: 'home',
-          builder: (context, state) =>
-              _protected(const PlaceholderScreen(title: 'Home')),
+          builder: (context, state) => _protected(
+            BlocProvider<TransactionsCubit>.value(
+              value: _transactionsCubit,
+              child: const TransactionsScreen(),
+            ),
+          ),
         ),
         GoRoute(
           path: '/accounts',
@@ -79,6 +91,8 @@ class AppRouter {
   late final GoRouter router;
 
   late final SecurityCubit _securityCubit;
+
+  late final TransactionsCubit _transactionsCubit;
 
   Widget _protected(Widget child) {
     return BlocProvider<SecurityCubit>.value(
