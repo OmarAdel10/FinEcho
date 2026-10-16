@@ -7,12 +7,14 @@ import 'package:finecho/features/onboarding/view_model/models/onboarding_state.d
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pinput/pinput.dart';
 
 import '../security/fake_security_repositories.dart';
+import '../transactions/fake_transaction_repositories.dart';
 import 'fake_onboarding_repository.dart';
 
 void main() {
@@ -68,9 +70,12 @@ void main() {
       await cubit.load();
       final securityHarness = SecurityTestHarness();
       final securityCubit = SecurityCubit(securityHarness.service);
+      final transactionsHarness = TransactionsTestHarness();
+      final transactionsCubit = TransactionsCubit(transactionsHarness.service);
       final appRouter = AppRouter(
         onboardingCubit: cubit,
         securityCubit: securityCubit,
+        transactionsCubit: transactionsCubit,
       );
       await tester.pumpWidget(
         MaterialApp.router(routerConfig: appRouter.router),
@@ -89,13 +94,17 @@ void main() {
       expect(cubit.state.status, OnboardingStatus.completed);
       expect(repository.saved.last.isCompleted, isTrue);
       expect(
-        find.descendant(of: find.byType(AppBar), matching: find.text('Home')),
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('FinEcho'),
+        ),
         findsOneWidget,
       );
       expect(securityHarness.securityRepository.state?.appLockEnabled, isTrue);
       expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);
       appRouter.router.dispose();
       await securityCubit.close();
+      await transactionsCubit.close();
     });
   });
 }

@@ -4,12 +4,14 @@ import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
 import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../features/onboarding/fake_onboarding_repository.dart';
 import '../../features/security/fake_security_repositories.dart';
+import '../../features/transactions/fake_transaction_repositories.dart';
 
 void main() {
   testWidgets('protects a cold-loaded route until the PIN unlocks it', (
@@ -31,14 +33,18 @@ void main() {
     final onboardingCubit = OnboardingCubit(
       OnboardingService(FakeOnboardingRepository()),
     );
+    final transactionsHarness = TransactionsTestHarness();
+    final transactionsCubit = TransactionsCubit(transactionsHarness.service);
     final appRouter = AppRouter(
       onboardingCubit: onboardingCubit,
       securityCubit: securityCubit,
+      transactionsCubit: transactionsCubit,
     );
     final router = appRouter.router;
     addTearDown(router.dispose);
     addTearDown(onboardingCubit.close);
     addTearDown(securityCubit.close);
+    addTearDown(transactionsCubit.close);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     router.go('/home');
@@ -53,7 +59,7 @@ void main() {
 
     expect(securityCubit.state.isLocked, isFalse);
     expect(
-      find.descendant(of: find.byType(AppBar), matching: find.text('Home')),
+      find.descendant(of: find.byType(AppBar), matching: find.text('FinEcho')),
       findsOneWidget,
     );
     expect(

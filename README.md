@@ -32,6 +32,19 @@ lockout after five consecutive failed attempts.
 | App lock | `![App lock light](docs/screenshots/security/app_lock_light.png)` | `![App lock dark](docs/screenshots/security/app_lock_dark.png)` |
 | Locked home | `![Locked home light](docs/screenshots/security/locked_home_light.png)` | `![Locked home dark](docs/screenshots/security/locked_home_dark.png)` |
 
+## Transactions
+
+The home surface lists recent transactions and supports manual entry for
+income, expenses, and transfers. Amounts are validated as positive values
+attached to a real account, and entry works fully offline. Account and
+category management arrive with their own features.
+
+### Screenshots
+
+| Screen | Light | Dark |
+| --- | --- | --- |
+| Home ledger | `![Home ledger light](docs/screenshots/transaction/home_ledger_light.png)` | `![Home ledger dark](docs/screenshots/transaction/home_ledger_dark.png)` |
+
 ## CI/CD
 
 GitHub Actions provides a FAST gate for formatting, code generation, static

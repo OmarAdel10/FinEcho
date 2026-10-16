@@ -1,6 +1,12 @@
 import 'package:finecho/app/environment/environment.dart';
 import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/core/repositories/contracts/account_repository.dart';
+import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
+import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
 import 'package:finecho/features/onboarding/data/repositories/in_memory_onboarding_repository.dart';
 import 'package:finecho/features/onboarding/data/repositories/onboarding_repository.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
@@ -10,6 +16,8 @@ import 'package:finecho/features/security/data/repositories/in_memory_security_r
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
+import 'package:finecho/features/transactions/view_model/services/transaction_service.dart';
+import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:get_it/get_it.dart';
 
 /// The application service locator.
@@ -42,6 +50,21 @@ Future<void> configureDependencies({
     )
     ..registerLazySingleton<SecurityCubit>(
       () => SecurityCubit(sl<SecurityService>()),
+    )
+    ..registerLazySingleton<TransactionRepository>(
+      InMemoryTransactionRepository.new,
+    )
+    ..registerLazySingleton<AccountRepository>(InMemoryAccountRepository.new)
+    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new)
+    ..registerLazySingleton<TransactionService>(
+      () => TransactionService(
+        transactions: sl<TransactionRepository>(),
+        accounts: sl<AccountRepository>(),
+        categories: sl<CategoryRepository>(),
+      ),
+    )
+    ..registerLazySingleton<TransactionsCubit>(
+      () => TransactionsCubit(sl<TransactionService>()),
     )
     ..registerLazySingleton<AppRouter>(AppRouter.new);
 }
