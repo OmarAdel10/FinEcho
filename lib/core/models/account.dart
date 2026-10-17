@@ -37,6 +37,7 @@ class Account {
     required this.type,
     required this.currency,
     required this.balanceMinorUnits,
+    this.archived = false,
     this.maskedIdentifier,
     this.linkedAccountId,
     this.creditLimitMinorUnits,
@@ -51,6 +52,7 @@ class Account {
       type: AccountType.values.byName(map['type']! as String),
       currency: map['currency']! as String,
       balanceMinorUnits: map['balance_minor_units']! as int,
+      archived: (map['archived']! as int) == 1,
       maskedIdentifier: map['masked_identifier'] as String?,
       linkedAccountId: map['linked_account_id'] as String?,
       creditLimitMinorUnits: map['credit_limit_minor_units'] as int?,
@@ -74,6 +76,9 @@ class Account {
   /// The current balance in the account currency's minor units.
   final int balanceMinorUnits;
 
+  /// Whether the account is archived and excluded from active workflows.
+  final bool archived;
+
   /// A safe, partial identifier such as the last four card digits.
   final String? maskedIdentifier;
 
@@ -93,6 +98,7 @@ class Account {
     String? name,
     String? currency,
     int? balanceMinorUnits,
+    bool? archived,
     String? maskedIdentifier,
     String? linkedAccountId,
     int? creditLimitMinorUnits,
@@ -104,6 +110,7 @@ class Account {
       type: type ?? this.type,
       currency: currency ?? this.currency,
       balanceMinorUnits: balanceMinorUnits ?? this.balanceMinorUnits,
+      archived: archived ?? this.archived,
       maskedIdentifier: maskedIdentifier ?? this.maskedIdentifier,
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
       creditLimitMinorUnits:
@@ -121,6 +128,7 @@ class Account {
       'type': type.name,
       'currency': currency,
       'balance_minor_units': balanceMinorUnits,
+      'archived': archived ? 1 : 0,
       'masked_identifier': maskedIdentifier,
       'linked_account_id': linkedAccountId,
       'credit_limit_minor_units': creditLimitMinorUnits,
@@ -138,6 +146,7 @@ class Account {
             type == other.type &&
             currency == other.currency &&
             balanceMinorUnits == other.balanceMinorUnits &&
+            archived == other.archived &&
             maskedIdentifier == other.maskedIdentifier &&
             linkedAccountId == other.linkedAccountId &&
             creditLimitMinorUnits == other.creditLimitMinorUnits &&
@@ -152,6 +161,7 @@ class Account {
     type,
     currency,
     balanceMinorUnits,
+    archived,
     maskedIdentifier,
     linkedAccountId,
     creditLimitMinorUnits,

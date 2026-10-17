@@ -73,10 +73,11 @@ class TransactionService {
     String? note,
     DateTime? timestamp,
   }) async {
-    await _validate(
+    final account = await _validateAccount(
       accountId: accountId,
       categoryId: categoryId,
       amountMinorUnits: amountMinorUnits,
+      requireActive: true,
     );
     final transaction = Transaction(
       id: _newId(),
@@ -89,6 +90,7 @@ class TransactionService {
       rawText: note,
     );
     await _transactions.create(transaction);
+    await _applyBalanceDelta(account.id, _deltaFor(type, amountMinorUnits));
     return transaction;
   }
 
@@ -105,10 +107,11 @@ class TransactionService {
     String? note,
     DateTime? timestamp,
   }) async {
-    await _validate(
+    final account = await _validateAccount(
       accountId: accountId,
       categoryId: categoryId,
       amountMinorUnits: amountMinorUnits,
+      requireActive: false,
     );
     final transaction = Transaction(
       id: original.id,
@@ -121,20 +124,36 @@ class TransactionService {
       rawText: note,
     );
     await _transactions.update(transaction);
+    await _applyBalanceDelta(
+      original.accountId,
+      -_deltaFor(original.type, original.amountMinorUnits),
+    );
+    await _applyBalanceDelta(account.id, _deltaFor(type, amountMinorUnits));
     return transaction;
   }
 
   /// Deletes the transaction with [id].
-  Future<void> deleteTransaction(String id) => _transactions.delete(id);
+  Future<void> deleteTransaction(String id) async {
+    final transaction = await _transactions.get(id);
+    await _transactions.delete(id);
+    if (transaction == null) {
+      return;
+    }
+    await _applyBalanceDelta(
+      transaction.accountId,
+      -_deltaFor(transaction.type, transaction.amountMinorUnits),
+    );
+  }
 
   static String _defaultNewId() {
     return 'txn-${DateTime.now().microsecondsSinceEpoch}';
   }
 
-  Future<void> _validate({
+  Future<Account> _validateAccount({
     required String accountId,
     required String? categoryId,
     required int amountMinorUnits,
+    required bool requireActive,
   }) async {
     if (amountMinorUnits <= 0) {
       throw const TransactionValidationException(
@@ -146,13 +165,35 @@ class TransactionService {
     if (account == null) {
       throw const TransactionValidationException('Choose a valid account.');
     }
+    if (requireActive && account.archived) {
+      throw const TransactionValidationException('Choose an active account.');
+    }
 
     if (categoryId == null) {
-      return;
+      return account;
     }
     final category = await _categories.get(categoryId);
     if (category == null) {
       throw const TransactionValidationException('Choose a valid category.');
     }
+    return account;
+  }
+
+  int _deltaFor(TransactionType type, int amountMinorUnits) {
+    return switch (type) {
+      TransactionType.expense => -amountMinorUnits,
+      TransactionType.income => amountMinorUnits,
+      TransactionType.transfer => -amountMinorUnits,
+    };
+  }
+
+  Future<void> _applyBalanceDelta(String accountId, int delta) async {
+    final account = await _accounts.get(accountId);
+    if (account == null) {
+      throw const TransactionValidationException('Choose a valid account.');
+    }
+    await _accounts.update(
+      account.copyWith(balanceMinorUnits: account.balanceMinorUnits + delta),
+    );
   }
 }

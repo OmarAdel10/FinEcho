@@ -6,12 +6,15 @@ abstract final class AppMigrations {
   /// Ordered statements for each target schema version.
   ///
   /// The key is the version that the statements move the database from.
-  static const Map<int, List<String>> _upgradeStatements =
-      <int, List<String>>{};
+  static const Map<int, List<String>> _upgradeStatements = <int, List<String>>{
+    1: <String>[
+      'ALTER TABLE accounts ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
+    ],
+  };
 
   /// Moves a database from [fromVersion] through [toVersion].
   ///
-  /// Version 1 is created by [AppSchema], so there are no upgrade paths yet.
+  /// Version 1 is created by [AppSchema]; later versions upgrade in place.
   static Future<void> migrate({
     required DatabaseExecutor database,
     required int fromVersion,

@@ -72,6 +72,9 @@ void main() {
     await repository.update(account.copyWith(name: 'Wallet cash'));
     expect((await repository.get('account-1'))?.name, 'Wallet cash');
 
+    await repository.update(account.copyWith(archived: true));
+    expect((await repository.get('account-1'))?.archived, isTrue);
+
     await repository.delete('account-1');
     expect(await repository.get('account-1'), isNull);
     expect(await repository.list(), isEmpty);
