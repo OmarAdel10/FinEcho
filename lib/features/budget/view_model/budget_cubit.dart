@@ -1,0 +1,160 @@
+import 'package:finecho/core/models/budget.dart';
+import 'package:finecho/features/budget/view_model/models/budget_state.dart';
+import 'package:finecho/features/budget/view_model/services/budget_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+/// The budget ViewModel.
+class BudgetCubit extends Cubit<BudgetState> {
+  /// Creates a budget ViewModel.
+  new(this._service) : super(const BudgetState());
+
+  final BudgetService _service;
+
+  /// Loads budgets and categories into state.
+  Future<void> load() async {
+    emit(state.copyWith(status: BudgetStatus.loading));
+    try {
+      await _refresh();
+    } on Exception {
+      if (isClosed) {
+        return;
+      }
+      emit(
+        state.copyWith(
+          status: BudgetStatus.failure,
+          errorMessage: 'Could not load budgets. Please try again.',
+        ),
+      );
+    }
+  }
+
+  /// Validates and saves a new budget. Returns true when saved.
+  Future<bool> createBudget({
+    required String categoryId,
+    required int allocatedAmountMinorUnits,
+    required String period,
+    required DateTime startDate,
+  }) async {
+    if (state.status == BudgetStatus.submitting) {
+      return false;
+    }
+    emit(state.copyWith(status: BudgetStatus.submitting));
+    try {
+      await _service.createBudget(
+        categoryId: categoryId,
+        allocatedAmountMinorUnits: allocatedAmountMinorUnits,
+        period: period,
+        startDate: startDate,
+      );
+      await _refresh();
+      return !isClosed;
+    } on BudgetValidationException catch (error) {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        state.copyWith(
+          status: BudgetStatus.failure,
+          errorMessage: error.message,
+        ),
+      );
+      return false;
+    } on Exception {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        state.copyWith(
+          status: BudgetStatus.failure,
+          errorMessage: 'Could not save the budget. Please try again.',
+        ),
+      );
+      return false;
+    }
+  }
+
+  /// Validates and saves edits to [original]. Returns true when saved.
+  Future<bool> updateBudget({
+    required Budget original,
+    required String categoryId,
+    required int allocatedAmountMinorUnits,
+    required String period,
+    required DateTime startDate,
+  }) async {
+    if (state.status == BudgetStatus.submitting) {
+      return false;
+    }
+    emit(state.copyWith(status: BudgetStatus.submitting));
+    try {
+      await _service.updateBudget(
+        original: original,
+        categoryId: categoryId,
+        allocatedAmountMinorUnits: allocatedAmountMinorUnits,
+        period: period,
+        startDate: startDate,
+      );
+      await _refresh();
+      return !isClosed;
+    } on BudgetValidationException catch (error) {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        state.copyWith(
+          status: BudgetStatus.failure,
+          errorMessage: error.message,
+        ),
+      );
+      return false;
+    } on Exception {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        state.copyWith(
+          status: BudgetStatus.failure,
+          errorMessage: 'Could not save the budget. Please try again.',
+        ),
+      );
+      return false;
+    }
+  }
+
+  /// Deletes the budget with [id]. Returns true when deleted.
+  Future<bool> deleteBudget(String id) async {
+    if (state.status == BudgetStatus.submitting) {
+      return false;
+    }
+    emit(state.copyWith(status: BudgetStatus.submitting));
+    try {
+      await _service.deleteBudget(id);
+      await _refresh();
+      return !isClosed;
+    } on Exception {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        state.copyWith(
+          status: BudgetStatus.failure,
+          errorMessage: 'Could not delete the budget. Please try again.',
+        ),
+      );
+      return false;
+    }
+  }
+
+  Future<void> _refresh() async {
+    final budgets = await _service.listBudgets();
+    final categories = await _service.listCategories();
+    if (!isClosed) {
+      emit(
+        BudgetState(
+          status: BudgetStatus.ready,
+          budgets: budgets,
+          categories: categories,
+        ),
+      );
+    }
+  }
+}
