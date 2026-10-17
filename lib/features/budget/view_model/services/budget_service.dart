@@ -21,25 +21,13 @@ class BudgetService {
   const new({
     required BudgetRepository budgets,
     required CategoryRepository categories,
-    DateTime Function()? now,
     String Function()? newId,
-  }) : this._(
-         budgets,
-         categories,
-         now ?? DateTime.now,
-         newId ?? _defaultNewId,
-       );
+  }) : this._(budgets, categories, newId ?? _defaultNewId);
 
-  const new _(
-    this._budgets,
-    this._categories,
-    this._now,
-    this._newId,
-  );
+  const new _(this._budgets, this._categories, this._newId);
 
   final BudgetRepository _budgets;
   final CategoryRepository _categories;
-  final DateTime Function() _now;
   final String Function() _newId;
 
   /// Returns all budgets.

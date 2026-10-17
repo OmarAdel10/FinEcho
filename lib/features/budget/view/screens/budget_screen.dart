@@ -4,8 +4,8 @@ import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/features/budget/view/widgets/add_budget_sheet.dart';
 import 'package:finecho/features/budget/view/widgets/budget_tile.dart';
-import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
+import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -74,8 +74,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               state.status != BudgetStatus.failure) {
             return const _BlockedEmptyState();
           }
-          if (state.status == BudgetStatus.failure &&
-              state.budgets.isEmpty) {
+          if (state.status == BudgetStatus.failure && state.budgets.isEmpty) {
             return _FailureState(
               onRetry: () {
                 unawaited(context.read<BudgetCubit>().load());
@@ -185,10 +184,7 @@ class _BlockedEmptyState extends StatelessWidget {
         children: [
           const Icon(Icons.account_balance_wallet_outlined, size: 48),
           const SizedBox(height: 12),
-          Text(
-            _noBudgetsTitle,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(_noBudgetsTitle, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           const Text(_noBudgetsMessage, textAlign: TextAlign.center),
         ],
@@ -208,10 +204,7 @@ class _EmptyBudgetsState extends StatelessWidget {
         children: [
           const Icon(Icons.account_balance_wallet_outlined, size: 48),
           const SizedBox(height: 12),
-          Text(
-            _noBudgetsTitle,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(_noBudgetsTitle, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           const Text(_noBudgetsMessage, textAlign: TextAlign.center),
         ],

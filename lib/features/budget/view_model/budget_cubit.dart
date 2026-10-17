@@ -87,7 +87,7 @@ class BudgetCubit extends Cubit<BudgetState> {
     emit(state.copyWith(status: BudgetStatus.submitting));
     try {
       await _service.updateBudget(
-        original: original,
+        budget: original,
         categoryId: categoryId,
         allocatedAmountMinorUnits: allocatedAmountMinorUnits,
         period: period,

@@ -1,6 +1,6 @@
 import 'package:finecho/core/models/budget.dart';
-import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
+import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,7 +12,8 @@ const String _periodLabel = 'Period';
 const String _startDateLabel = 'Start date';
 const String _saveLabel = 'Save';
 const String _closeLabel = 'Close';
-const String _savingFailedMessage = 'Could not save the budget. Please try again.';
+const String _savingFailedMessage =
+    'Could not save the budget. Please try again.';
 
 /// The create or edit budget form shown as a modal sheet.
 class AddBudgetSheet extends StatefulWidget {
@@ -38,7 +39,9 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     super.initState();
     final initial = widget.initial;
     _amountController = TextEditingController(
-      text: initial == null ? '' : _formatMinorUnits(initial.allocatedAmountMinorUnits),
+      text: initial == null
+          ? ''
+          : _formatMinorUnits(initial.allocatedAmountMinorUnits),
     );
     _period = initial?.period.name ?? 'monthly';
     _startDate = initial?.startDate ?? DateTime.now();
@@ -112,7 +115,9 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     initialValue: _categoryId,
-                    decoration: const InputDecoration(labelText: _categoryLabel),
+                    decoration: const InputDecoration(
+                      labelText: _categoryLabel,
+                    ),
                     items: state.categories
                         .map(
                           (category) => DropdownMenuItem<String>(
@@ -140,7 +145,10 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                     items: const [
                       DropdownMenuItem(value: 'daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                      DropdownMenuItem(
+                        value: 'monthly',
+                        child: Text('Monthly'),
+                      ),
                       DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
                     ],
                     onChanged: state.isSubmitting
@@ -183,7 +191,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               ),
             ),
           ),
-        ),
+        );
       },
     );
   }
@@ -244,8 +252,12 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     }
 
     final separator = RegExp('[.,]').firstMatch(value);
-    final majorText = separator == null ? value : value.substring(0, separator.start);
-    final fractionText = separator == null ? '' : value.substring(separator.start + 1);
+    final majorText = separator == null
+        ? value
+        : value.substring(0, separator.start);
+    final fractionText = separator == null
+        ? ''
+        : value.substring(separator.start + 1);
     final major = int.parse(majorText);
     final fraction = int.parse(fractionText.padRight(2, '0'));
     final minorUnits = major * 100 + fraction;

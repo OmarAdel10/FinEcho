@@ -4,12 +4,7 @@ import 'package:flutter/material.dart';
 /// A presentational row for a single budget.
 class BudgetTile extends StatelessWidget {
   /// Creates a budget row.
-  const new({
-    required this.budget,
-    this.categoryName,
-    this.onTap,
-    super.key,
-  });
+  const new({required this.budget, this.categoryName, this.onTap, super.key});
 
   /// The budget to display.
   final Budget budget;
@@ -27,7 +22,8 @@ class BudgetTile extends StatelessWidget {
       leading: const CircleAvatar(child: Icon(Icons.account_balance_wallet)),
       title: Text(categoryName ?? 'Uncategorized'),
       subtitle: Text(
-        '${budget.period.name[0].toUpperCase()}${budget.period.name.substring(1)} • '
+        '${budget.period.name[0].toUpperCase()}'
+        '${budget.period.name.substring(1)} • '
         '${_formatDate(budget.startDate)}',
       ),
       trailing: Text(
