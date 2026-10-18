@@ -10,7 +10,9 @@ import 'fake_budget_repositories.dart';
 
 Widget _wrap(BudgetCubit cubit, AddBudgetSheet child) {
   return MaterialApp(
-    home: BlocProvider<BudgetCubit>.value(value: cubit, child: child),
+    home: Scaffold(
+      body: BlocProvider<BudgetCubit>.value(value: cubit, child: child),
+    ),
   );
 }
 

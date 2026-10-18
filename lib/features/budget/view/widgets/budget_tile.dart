@@ -49,12 +49,12 @@ class BudgetTile extends StatelessWidget {
 
   String _amountLabel(Budget budget) {
     if (budget.allocatedAmountMinorUnits <= 0) {
-      return r'$0.00';
+      return '0.00';
     }
     final major = budget.allocatedAmountMinorUnits ~/ 100;
     final fraction = (budget.allocatedAmountMinorUnits % 100)
         .toString()
         .padLeft(2, '0');
-    return '\$$major.$fraction';
+    return '$major.$fraction';
   }
 }

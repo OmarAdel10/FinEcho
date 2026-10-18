@@ -61,7 +61,7 @@ class BudgetCubit extends Cubit<BudgetState> {
       }
       emit(
         state.copyWith(
-          status: BudgetStatus.failure,
+          status: BudgetStatus.ready,
           errorMessage: error.message,
           failureSource: BudgetFailureSource.mutation,
         ),
@@ -73,7 +73,7 @@ class BudgetCubit extends Cubit<BudgetState> {
       }
       emit(
         state.copyWith(
-          status: BudgetStatus.failure,
+          status: BudgetStatus.ready,
           errorMessage: 'Could not save the budget. Please try again.',
           failureSource: BudgetFailureSource.mutation,
         ),
@@ -116,7 +116,7 @@ class BudgetCubit extends Cubit<BudgetState> {
       }
       emit(
         state.copyWith(
-          status: BudgetStatus.failure,
+          status: BudgetStatus.ready,
           errorMessage: error.message,
           failureSource: BudgetFailureSource.mutation,
         ),
@@ -128,7 +128,7 @@ class BudgetCubit extends Cubit<BudgetState> {
       }
       emit(
         state.copyWith(
-          status: BudgetStatus.failure,
+          status: BudgetStatus.ready,
           errorMessage: 'Could not save the budget. Please try again.',
           failureSource: BudgetFailureSource.mutation,
         ),
@@ -159,7 +159,7 @@ class BudgetCubit extends Cubit<BudgetState> {
       }
       emit(
         state.copyWith(
-          status: BudgetStatus.failure,
+          status: BudgetStatus.ready,
           errorMessage: 'Could not delete the budget. Please try again.',
           failureSource: BudgetFailureSource.mutation,
         ),

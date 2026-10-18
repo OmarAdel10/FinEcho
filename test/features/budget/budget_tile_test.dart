@@ -38,7 +38,7 @@ void main() {
 
     await tester.pumpWidget(_wrap(BudgetTile(budget: budget)));
 
-    expect(find.text(r'$0.00'), findsOneWidget);
+    expect(find.text('0.00'), findsOneWidget);
   });
 
   testWidgets('notifies when the row is tapped', (tester) async {

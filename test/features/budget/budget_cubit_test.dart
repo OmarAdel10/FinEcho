@@ -75,7 +75,7 @@ void main() {
       );
 
       expect(saved, isFalse);
-      expect(cubit.state.status, BudgetStatus.failure);
+      expect(cubit.state.status, BudgetStatus.ready);
       expect(cubit.state.errorMessage, 'Choose a valid category.');
       expect(harness.budgetRepository.createdIds, isEmpty);
     });
@@ -91,7 +91,7 @@ void main() {
       );
 
       expect(saved, isFalse);
-      expect(cubit.state.status, BudgetStatus.failure);
+      expect(cubit.state.status, BudgetStatus.ready);
       expect(
         cubit.state.errorMessage,
         'Could not save the budget. Please try again.',
@@ -143,7 +143,7 @@ void main() {
       );
 
       expect(saved, isFalse);
-      expect(freshCubit.state.status, BudgetStatus.failure);
+      expect(freshCubit.state.status, BudgetStatus.ready);
       expect(
         freshCubit.state.errorMessage,
         'Could not save the budget. Please try again.',
@@ -162,7 +162,7 @@ void main() {
       );
 
       expect(saved, isFalse);
-      expect(cubit.state.status, BudgetStatus.failure);
+      expect(cubit.state.status, BudgetStatus.ready);
       expect(cubit.state.failureSource, BudgetFailureSource.mutation);
       expect(cubit.state.errorMessage, 'Choose a valid category.');
       expect(harness.budgetRepository.updatedIds, isEmpty);
@@ -185,7 +185,7 @@ void main() {
       final deleted = await cubit.deleteBudget('budget-1');
 
       expect(deleted, isFalse);
-      expect(cubit.state.status, BudgetStatus.failure);
+      expect(cubit.state.status, BudgetStatus.ready);
       expect(
         cubit.state.errorMessage,
         'Could not delete the budget. Please try again.',
