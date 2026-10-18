@@ -69,7 +69,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               state.budgets.isEmpty &&
               state.status != BudgetStatus.loading &&
               state.status != BudgetStatus.failure) {
-            return const _BlockedEmptyState();
+            return const _EmptyBudgetsState();
           }
           if (state.status == BudgetStatus.failure && state.budgets.isEmpty) {
             return _FailureState(
@@ -156,8 +156,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
       return false;
     }
 
-    await cubit.deleteBudget(budget.id);
-    return true;
+    return await cubit.deleteBudget(budget.id);
   }
 
   String? _categoryName(List<Category> categories, String categoryId) {
@@ -167,26 +166,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
       }
     }
     return null;
-  }
-}
-
-class _BlockedEmptyState extends StatelessWidget {
-  const new();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.account_balance_wallet_outlined, size: 48),
-          const SizedBox(height: 12),
-          Text(_noBudgetsTitle, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          const Text(_noBudgetsMessage, textAlign: TextAlign.center),
-        ],
-      ),
-    );
   }
 }
 

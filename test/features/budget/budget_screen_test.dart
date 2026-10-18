@@ -165,6 +165,28 @@ void main() {
     expect(harness.budgetRepository.deletedIds, <String>['budget-1']);
   });
 
+  testWidgets('keeps a budget when deletion fails', (tester) async {
+    final harness = BudgetTestHarness(
+      initialBudgets: {'budget-1': testBudget()},
+      initialCategories: {'category-1': testCategory()},
+    );
+    harness.budgetRepository.deleteError = Exception('delete failed');
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, const BudgetScreen()));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BudgetTile), findsOneWidget);
+    expect(
+      find.text('Could not delete the budget. Please try again.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('retries after a load failure', (tester) async {
     final harness = BudgetTestHarness(
       initialCategories: {'category-1': testCategory()},

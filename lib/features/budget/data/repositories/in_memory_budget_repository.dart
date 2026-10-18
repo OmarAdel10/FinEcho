@@ -18,11 +18,17 @@ class InMemoryBudgetRepository implements BudgetRepository {
 
   @override
   Future<void> create(Budget budget) async {
+    if (_budgets.containsKey(budget.id)) {
+      throw StateError('Budget already exists: ${budget.id}');
+    }
     _budgets[budget.id] = budget;
   }
 
   @override
   Future<void> update(Budget budget) async {
+    if (!_budgets.containsKey(budget.id)) {
+      throw StateError('Budget not found: ${budget.id}');
+    }
     _budgets[budget.id] = budget;
   }
 

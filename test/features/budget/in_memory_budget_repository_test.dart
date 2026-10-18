@@ -26,4 +26,28 @@ void main() {
     expect(await repository.get('memory-budget'), isNull);
     expect(await repository.list(), isEmpty);
   });
+
+  test('rejects creating an existing budget id', () async {
+    final repository = InMemoryBudgetRepository();
+    final budget = testBudget(id: 'memory-budget');
+    await repository.create(budget);
+
+    await expectLater(
+      repository.create(budget.copyWith(allocatedAmountMinorUnits: 2000)),
+      throwsStateError,
+    );
+
+    expect(await repository.get('memory-budget'), budget);
+    expect(await repository.list(), <Budget>[budget]);
+  });
+
+  test('rejects updating a missing budget id', () async {
+    final repository = InMemoryBudgetRepository();
+    final budget = testBudget(id: 'memory-budget');
+
+    await expectLater(repository.update(budget), throwsStateError);
+
+    expect(await repository.get('memory-budget'), isNull);
+    expect(await repository.list(), isEmpty);
+  });
 }
