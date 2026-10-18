@@ -1,4 +1,5 @@
 import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/onboarding/data/models/onboarding_snapshot.dart';
 import 'package:finecho/features/onboarding/data/models/onboarding_step.dart';
 import 'package:finecho/features/onboarding/view/screens/onboarding_screen.dart';
@@ -6,7 +7,6 @@ import 'package:finecho/features/onboarding/view/screens/welcome_screen.dart';
 import 'package:finecho/features/onboarding/view_model/models/onboarding_state.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
-import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
