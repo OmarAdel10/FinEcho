@@ -72,6 +72,20 @@ void main() {
     expect(find.text('Monthly • 2026-10-01'), findsOneWidget);
   });
 
+  testWidgets('refreshes an already-ready cubit on entry', (tester) async {
+    final harness = BudgetTestHarness(
+      initialCategories: {'category-1': testCategory()},
+    );
+    final cubit = await _loadedCubit(harness);
+    await harness.budgetRepository.create(testBudget(id: 'budget-late'));
+
+    await tester.pumpWidget(_wrap(cubit, const BudgetScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BudgetTile), findsOneWidget);
+    expect(find.text('100.00'), findsOneWidget);
+  });
+
   testWidgets('creates a budget from the add sheet', (tester) async {
     final harness = BudgetTestHarness(
       initialCategories: {'category-1': testCategory()},

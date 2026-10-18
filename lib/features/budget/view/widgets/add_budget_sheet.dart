@@ -81,7 +81,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
           );
         }
 
-        _syncSelectedCategory(state);
+        final selectedCategoryId = _selectedCategoryId(state);
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -114,7 +114,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    initialValue: _categoryId,
+                    initialValue: selectedCategoryId,
                     decoration: const InputDecoration(
                       labelText: _categoryLabel,
                     ),
@@ -208,9 +208,9 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     }
 
     final cubit = context.read<BudgetCubit>();
+    final categoryId = _selectedCategoryId(cubit.state);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final categoryId = _categoryId;
     final initial = widget.initial;
     final ok = initial == null
         ? await cubit.createBudget(
@@ -238,11 +238,12 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     );
   }
 
-  void _syncSelectedCategory(BudgetState state) {
+  String? _selectedCategoryId(BudgetState state) {
     final categoryIds = state.categories.map((c) => c.id).toList();
-    if (_categoryId != null && !categoryIds.contains(_categoryId)) {
-      _categoryId = categoryIds.first;
+    if (_categoryId != null && categoryIds.contains(_categoryId)) {
+      return _categoryId;
     }
+    return categoryIds.isEmpty ? null : categoryIds.first;
   }
 
   int? _parseMinorUnits(String input) {

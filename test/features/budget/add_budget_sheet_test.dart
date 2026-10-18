@@ -95,6 +95,24 @@ void main() {
     expect(harness.budgetRepository.updatedIds, <String>[original.id]);
   });
 
+  testWidgets('falls back to the first valid category', (tester) async {
+    final original = testBudget(categoryId: 'missing-category');
+    final harness = BudgetTestHarness(
+      initialCategories: {'category-1': testCategory()},
+    );
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, AddBudgetSheet(initial: original)));
+    await tester.enterText(find.byType(TextFormField).first, '10');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(
+      harness.budgetRepository.budgets[original.id]?.categoryId,
+      'category-1',
+    );
+  });
+
   testWidgets('explains that categories are required', (tester) async {
     final harness = BudgetTestHarness();
     final cubit = await _loadedCubit(harness);

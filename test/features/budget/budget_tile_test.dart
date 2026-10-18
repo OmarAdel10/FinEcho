@@ -32,4 +32,12 @@ void main() {
     expect(find.text('Monthly • 2026-10-01'), findsOneWidget);
     expect(find.text('100.00'), findsOneWidget);
   });
+
+  testWidgets('renders non-positive amounts defensively', (tester) async {
+    final budget = testBudget(allocatedAmountMinorUnits: -1);
+
+    await tester.pumpWidget(_wrap(BudgetTile(budget: budget)));
+
+    expect(find.text(r'$0.00'), findsOneWidget);
+  });
 }

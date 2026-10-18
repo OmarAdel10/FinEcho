@@ -22,8 +22,7 @@ class BudgetTile extends StatelessWidget {
       leading: const CircleAvatar(child: Icon(Icons.account_balance_wallet)),
       title: Text(categoryName ?? 'Uncategorized'),
       subtitle: Text(
-        '${budget.period.name[0].toUpperCase()}'
-        '${budget.period.name.substring(1)} • '
+        '${_periodTitle(budget.period)} • '
         '${_formatDate(budget.startDate)}',
       ),
       trailing: Text(
@@ -40,7 +39,18 @@ class BudgetTile extends StatelessWidget {
     return '${timestamp.year}-$month-$day';
   }
 
+  String _periodTitle(BudgetPeriod period) {
+    final name = period.name;
+    if (name.isEmpty) {
+      return '';
+    }
+    return '${name[0].toUpperCase()}${name.substring(1)}';
+  }
+
   String _amountLabel(Budget budget) {
+    if (budget.allocatedAmountMinorUnits <= 0) {
+      return r'$0.00';
+    }
     final major = budget.allocatedAmountMinorUnits ~/ 100;
     final fraction = (budget.allocatedAmountMinorUnits % 100)
         .toString()

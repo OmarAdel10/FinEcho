@@ -38,10 +38,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
       if (!mounted) {
         return;
       }
-      final cubit = context.read<BudgetCubit>();
-      if (cubit.state.status == BudgetStatus.loading) {
-        unawaited(cubit.load());
-      }
+      unawaited(context.read<BudgetCubit>().load());
     });
   }
 
