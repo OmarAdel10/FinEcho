@@ -151,6 +151,23 @@ void main() {
       await freshCubit.close();
     });
 
+    test('surfaces an update validation failure', () async {
+      await cubit.load();
+      final saved = await cubit.updateBudget(
+        original: cubit.state.budgets.single,
+        categoryId: 'missing-category',
+        allocatedAmountMinorUnits: 2500,
+        period: 'weekly',
+        startDate: DateTime.utc(2026, 11),
+      );
+
+      expect(saved, isFalse);
+      expect(cubit.state.status, BudgetStatus.failure);
+      expect(cubit.state.failureSource, BudgetFailureSource.mutation);
+      expect(cubit.state.errorMessage, 'Choose a valid category.');
+      expect(harness.budgetRepository.updatedIds, isEmpty);
+    });
+
     test('deletes a budget and refreshes ready state', () async {
       await cubit.load();
       final deleted = await cubit.deleteBudget('budget-1');
@@ -196,10 +213,71 @@ void main() {
       );
 
       expect(second, isFalse);
+      final updated = await cubit.updateBudget(
+        original: cubit.state.budgets.single,
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 2500,
+        period: 'weekly',
+        startDate: DateTime.utc(2026, 10),
+      );
+      final deleted = await cubit.deleteBudget('budget-1');
+
+      expect(updated, isFalse);
+      expect(deleted, isFalse);
       expect(harness.budgetRepository.createdIds, isEmpty);
+      expect(harness.budgetRepository.updatedIds, isEmpty);
+      expect(harness.budgetRepository.deletedIds, isEmpty);
       harness.budgetRepository.createGate!.complete();
       expect(await first, isTrue);
       expect(harness.budgetRepository.createdIds, <String>['budget-new']);
+    });
+
+    test('returns false when a pending create is closed', () async {
+      await cubit.load();
+      harness.budgetRepository.createGate = Completer<void>();
+      final pending = cubit.createBudget(
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 1000,
+        period: 'monthly',
+        startDate: DateTime.utc(2026, 10),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      await cubit.close();
+      harness.budgetRepository.createGate!.complete();
+
+      expect(await pending, isFalse);
+    });
+
+    test('returns false when a pending update is closed', () async {
+      await cubit.load();
+      harness.budgetRepository.updateGate = Completer<void>();
+      final pending = cubit.updateBudget(
+        original: cubit.state.budgets.single,
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 1000,
+        period: 'monthly',
+        startDate: DateTime.utc(2026, 10),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      await cubit.close();
+      harness.budgetRepository.updateGate!.complete();
+
+      expect(await pending, isFalse);
+    });
+
+    test('guards a refresh after a closed mutation', () async {
+      await cubit.load();
+      harness.budgetRepository.listGate = Completer<void>();
+      final pending = cubit.deleteBudget('budget-1');
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+      await cubit.close();
+      harness.budgetRepository.listGate!.complete();
+
+      expect(await pending, isFalse);
+      expect(harness.budgetRepository.deletedIds, <String>['budget-1']);
     });
   });
 }

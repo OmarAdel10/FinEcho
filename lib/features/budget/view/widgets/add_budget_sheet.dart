@@ -44,7 +44,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
           : _formatMinorUnits(initial.allocatedAmountMinorUnits),
     );
     _period = initial?.period.name ?? 'monthly';
-    _startDate = initial?.startDate ?? DateTime.now();
+    _startDate = _normalizeUtcDate(initial?.startDate ?? DateTime.now());
     _categoryId = initial?.categoryId;
   }
 
@@ -177,7 +177,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                             );
                             if (picked != null && mounted) {
                               setState(() {
-                                _startDate = picked;
+                                _startDate = _normalizeUtcDate(picked);
                               });
                             }
                           },
@@ -240,10 +240,11 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
 
   String? _selectedCategoryId(BudgetState state) {
     final categoryIds = state.categories.map((c) => c.id).toList();
-    if (_categoryId != null && categoryIds.contains(_categoryId)) {
-      return _categoryId;
+    final categoryId = _categoryId;
+    if (categoryId != null && categoryIds.contains(categoryId)) {
+      return categoryId;
     }
-    return categoryIds.isEmpty ? null : categoryIds.first;
+    return null;
   }
 
   int? _parseMinorUnits(String input) {
@@ -259,8 +260,14 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     final fractionText = separator == null
         ? ''
         : value.substring(separator.start + 1);
-    final major = int.parse(majorText);
-    final fraction = int.parse(fractionText.padRight(2, '0'));
+    if (majorText.length > 12) {
+      return null;
+    }
+    final major = int.tryParse(majorText);
+    final fraction = int.tryParse(fractionText.padRight(2, '0'));
+    if (major == null || fraction == null) {
+      return null;
+    }
     final minorUnits = major * 100 + fraction;
     return minorUnits <= 0 ? null : minorUnits;
   }
@@ -275,5 +282,9 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     final month = timestamp.month.toString().padLeft(2, '0');
     final day = timestamp.day.toString().padLeft(2, '0');
     return '${timestamp.year}-$month-$day';
+  }
+
+  DateTime _normalizeUtcDate(DateTime timestamp) {
+    return DateTime.utc(timestamp.year, timestamp.month, timestamp.day);
   }
 }

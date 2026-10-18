@@ -40,4 +40,15 @@ void main() {
 
     expect(find.text(r'$0.00'), findsOneWidget);
   });
+
+  testWidgets('notifies when the row is tapped', (tester) async {
+    var tapped = false;
+    await tester.pumpWidget(
+      _wrap(BudgetTile(budget: testBudget(), onTap: () => tapped = true)),
+    );
+
+    await tester.tap(find.byType(BudgetTile));
+
+    expect(tapped, isTrue);
+  });
 }

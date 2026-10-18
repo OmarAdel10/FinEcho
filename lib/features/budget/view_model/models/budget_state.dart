@@ -17,6 +17,15 @@ enum BudgetStatus {
   failure,
 }
 
+/// The operation that produced a failed ViewModel state.
+enum BudgetFailureSource {
+  /// Loading the initial list failed.
+  load,
+
+  /// A create, update, or delete mutation failed.
+  mutation,
+}
+
 /// Immutable state rendered by budget views.
 @immutable
 class BudgetState {
@@ -26,6 +35,7 @@ class BudgetState {
     this.budgets = const <Budget>[],
     this.categories = const <Category>[],
     this.errorMessage,
+    this.failureSource = BudgetFailureSource.load,
   });
 
   /// The current ViewModel lifecycle status.
@@ -40,6 +50,9 @@ class BudgetState {
   /// A user-facing error, when present.
   final String? errorMessage;
 
+  /// The operation responsible for the current failure.
+  final BudgetFailureSource failureSource;
+
   /// Whether the ViewModel is waiting for a mutation to persist.
   bool get isSubmitting => status == BudgetStatus.submitting;
 
@@ -49,6 +62,7 @@ class BudgetState {
     List<Budget>? budgets,
     List<Category>? categories,
     String? errorMessage,
+    BudgetFailureSource? failureSource,
     bool clearErrorMessage = false,
   }) {
     return BudgetState(
@@ -58,6 +72,7 @@ class BudgetState {
       errorMessage: clearErrorMessage
           ? null
           : (errorMessage ?? this.errorMessage),
+      failureSource: failureSource ?? this.failureSource,
     );
   }
 }

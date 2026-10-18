@@ -20,6 +20,8 @@ const String _deleteTitle = 'Delete budget?';
 const String _deleteMessage = 'This removes the budget permanently.';
 const String _cancelLabel = 'Cancel';
 const String _deleteLabel = 'Delete';
+const String _deleteFailureMessage =
+    'Could not delete the budget. Please try again.';
 
 /// The FinEcho budget list and entry point.
 class BudgetScreen extends StatefulWidget {
@@ -56,7 +58,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
       body: BlocConsumer<BudgetCubit, BudgetState>(
         listenWhen: (previous, current) =>
             previous.status != BudgetStatus.failure &&
-            current.status == BudgetStatus.failure,
+            current.status == BudgetStatus.failure &&
+            current.failureSource != BudgetFailureSource.mutation,
         listener: (context, state) {
           final errorMessage = state.errorMessage;
           if (errorMessage != null) {
@@ -71,7 +74,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
               state.status != BudgetStatus.failure) {
             return const _EmptyBudgetsState();
           }
-          if (state.status == BudgetStatus.failure && state.budgets.isEmpty) {
+          if (state.status == BudgetStatus.failure &&
+              state.failureSource == BudgetFailureSource.load &&
+              state.budgets.isEmpty) {
             return _FailureState(
               onRetry: () {
                 unawaited(context.read<BudgetCubit>().load());
@@ -91,10 +96,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
               itemCount: state.budgets.length,
               itemBuilder: (context, index) {
                 final budget = state.budgets[index];
-                final categoryName = _categoryName(
+                final categoryName = _categoryNames(
                   state.categories,
-                  budget.categoryId,
-                );
+                )[budget.categoryId];
                 final tile = BudgetTile(
                   budget: budget,
                   categoryName: categoryName,
@@ -156,16 +160,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
       return false;
     }
 
-    return await cubit.deleteBudget(budget.id);
+    final deleted = await cubit.deleteBudget(budget.id);
+    if (!deleted && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text(_deleteFailureMessage)));
+    }
+    return deleted;
   }
 
-  String? _categoryName(List<Category> categories, String categoryId) {
-    for (final category in categories) {
-      if (category.id == categoryId) {
-        return category.name;
-      }
-    }
-    return null;
+  Map<String, String> _categoryNames(List<Category> categories) {
+    return <String, String>{
+      for (final category in categories) category.id: category.name,
+    };
   }
 }
 

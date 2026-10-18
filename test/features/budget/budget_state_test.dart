@@ -20,6 +20,7 @@ void main() {
     expect(state.budgets, isEmpty);
     expect(state.categories, isEmpty);
     expect(state.errorMessage, isNull);
+    expect(state.failureSource, BudgetFailureSource.load);
     expect(state.isSubmitting, isFalse);
   });
 
@@ -57,6 +58,7 @@ void main() {
     expect(copied.budgets, state.budgets);
     expect(copied.categories, state.categories);
     expect(copied.errorMessage, state.errorMessage);
+    expect(copied.failureSource, state.failureSource);
   });
 
   test('clears and restores an error message', () {
@@ -67,5 +69,17 @@ void main() {
 
     expect(cleared.errorMessage, isNull);
     expect(restored.errorMessage, 'save failed');
+  });
+
+  test('replaces the failure source', () {
+    const state = BudgetState();
+
+    final mutated = state.copyWith(
+      status: BudgetStatus.failure,
+      errorMessage: 'save failed',
+      failureSource: BudgetFailureSource.mutation,
+    );
+
+    expect(mutated.failureSource, BudgetFailureSource.mutation);
   });
 }

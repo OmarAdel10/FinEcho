@@ -38,6 +38,12 @@ class FakeBudgetRepository implements BudgetRepository {
   /// An optional gate that keeps the next [create] call pending.
   Completer<void>? createGate;
 
+  /// An optional gate that keeps the next [update] call pending.
+  Completer<void>? updateGate;
+
+  /// An optional gate that keeps the next [list] call pending.
+  Completer<void>? listGate;
+
   /// The current budgets, keyed by id.
   Map<String, Budget> get budgets => Map.unmodifiable(_budgets);
 
@@ -46,6 +52,10 @@ class FakeBudgetRepository implements BudgetRepository {
     final error = listError;
     if (error != null) {
       throw error;
+    }
+    final gate = listGate;
+    if (gate != null) {
+      await gate.future;
     }
     return _budgets.values.toList();
   }
@@ -69,6 +79,10 @@ class FakeBudgetRepository implements BudgetRepository {
 
   @override
   Future<void> update(Budget budget) async {
+    final gate = updateGate;
+    if (gate != null) {
+      await gate.future;
+    }
     final error = updateError;
     if (error != null) {
       throw error;

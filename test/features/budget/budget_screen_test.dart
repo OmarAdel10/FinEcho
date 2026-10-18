@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finecho/features/budget/view/screens/budget_screen.dart';
 import 'package:finecho/features/budget/view/widgets/budget_tile.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
@@ -185,6 +187,60 @@ void main() {
       find.text('Could not delete the budget. Please try again.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('keeps a budget when deletion is canceled', (tester) async {
+    final harness = BudgetTestHarness(
+      initialBudgets: {'budget-1': testBudget()},
+      initialCategories: {'category-1': testCategory()},
+    );
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, const BudgetScreen()));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BudgetTile), findsOneWidget);
+    expect(harness.budgetRepository.deletedIds, isEmpty);
+  });
+
+  testWidgets('does not allow deletion while submitting', (tester) async {
+    final harness = BudgetTestHarness(
+      initialBudgets: {'budget-1': testBudget()},
+      initialCategories: {'category-1': testCategory()},
+    );
+    final cubit = await _loadedCubit(harness);
+    harness.budgetRepository.createGate = Completer<void>();
+    final pending = cubit.createBudget(
+      categoryId: 'category-1',
+      allocatedAmountMinorUnits: 1000,
+      period: 'monthly',
+      startDate: DateTime.utc(2026, 10),
+    );
+    await tester.pumpWidget(_wrap(cubit, const BudgetScreen()));
+    await tester.pump();
+
+    expect(find.byType(Dismissible), findsNothing);
+    expect(find.byType(BudgetTile), findsOneWidget);
+
+    harness.budgetRepository.createGate!.complete();
+    await pending;
+  });
+
+  testWidgets('uses the screen-level category fallback', (tester) async {
+    final harness = BudgetTestHarness(
+      initialBudgets: {'budget-1': testBudget(categoryId: 'missing')},
+      initialCategories: {'category-1': testCategory()},
+    );
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, const BudgetScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Uncategorized'), findsOneWidget);
   });
 
   testWidgets('retries after a load failure', (tester) async {

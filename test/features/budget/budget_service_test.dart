@@ -93,6 +93,78 @@ void main() {
       expect(harness.budgetRepository.budgets[original.id], updated);
     });
 
+    test('rejects a zero update allocation without writing', () async {
+      final original = testBudget();
+      final harness = BudgetTestHarness(
+        initialBudgets: {original.id: original},
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      await expectLater(
+        harness.service.updateBudget(
+          budget: original,
+          categoryId: 'category-1',
+          allocatedAmountMinorUnits: 0,
+          period: 'monthly',
+          startDate: DateTime.utc(2026, 10),
+        ),
+        throwsA(
+          isA<BudgetValidationException>().having(
+            (error) => error.message,
+            'message',
+            'Enter an allocated amount greater than zero.',
+          ),
+        ),
+      );
+      expect(harness.budgetRepository.updatedIds, isEmpty);
+    });
+
+    test('rejects an update for a missing category without writing', () async {
+      final original = testBudget();
+      final harness = BudgetTestHarness(
+        initialBudgets: {original.id: original},
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      await expectLater(
+        harness.service.updateBudget(
+          budget: original,
+          categoryId: 'missing-category',
+          allocatedAmountMinorUnits: 1000,
+          period: 'monthly',
+          startDate: DateTime.utc(2026, 10),
+        ),
+        throwsA(
+          isA<BudgetValidationException>().having(
+            (error) => error.message,
+            'message',
+            'Choose a valid category.',
+          ),
+        ),
+      );
+      expect(harness.budgetRepository.updatedIds, isEmpty);
+    });
+
+    test('rejects an invalid period without writing', () async {
+      final original = testBudget();
+      final harness = BudgetTestHarness(
+        initialBudgets: {original.id: original},
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      await expectLater(
+        harness.service.updateBudget(
+          budget: original,
+          categoryId: 'category-1',
+          allocatedAmountMinorUnits: 1000,
+          period: 'sometimes',
+          startDate: DateTime.utc(2026, 10),
+        ),
+        throwsArgumentError,
+      );
+      expect(harness.budgetRepository.updatedIds, isEmpty);
+    });
+
     test('lists budgets and deletes a budget', () async {
       final budget = testBudget();
       final harness = BudgetTestHarness(
