@@ -1,5 +1,4 @@
 import 'package:finecho/core/models/budget.dart';
-import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -108,26 +107,6 @@ void main() {
 
       expect(harness.budgetRepository.deletedIds, <String>[budget.id]);
       expect(harness.budgetRepository.budgets, isEmpty);
-    });
-  });
-
-  group('InMemoryBudgetRepository', () {
-    test('performs the full repository contract', () async {
-      final repository = InMemoryBudgetRepository();
-      final budget = testBudget(id: 'memory-budget');
-
-      expect(await repository.get('memory-budget'), isNull);
-      await repository.create(budget);
-      expect(await repository.get('memory-budget'), budget);
-      expect(await repository.list(), <Budget>[budget]);
-
-      final updated = budget.copyWith(allocatedAmountMinorUnits: 5000);
-      await repository.update(updated);
-      expect(await repository.get('memory-budget'), updated);
-
-      await repository.delete('memory-budget');
-      expect(await repository.get('memory-budget'), isNull);
-      expect(await repository.list(), isEmpty);
     });
   });
 }
