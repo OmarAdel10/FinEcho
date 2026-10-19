@@ -267,6 +267,146 @@ void main() {
       expect(dashboard.budgetProgress, isEmpty);
     });
   });
+
+  group('hashCode', () {
+    test('matches equal account totals and differs for distinct ones', () {
+      const total = AccountTotal(
+        accountId: 'account-1',
+        name: 'Cash',
+        incomeMinorUnits: 20000,
+        expenseMinorUnits: 5000,
+      );
+      const same = AccountTotal(
+        accountId: 'account-1',
+        name: 'Cash',
+        incomeMinorUnits: 20000,
+        expenseMinorUnits: 5000,
+      );
+      const different = AccountTotal(
+        accountId: 'account-2',
+        name: 'Cash',
+        incomeMinorUnits: 20000,
+        expenseMinorUnits: 5000,
+      );
+
+      expect(total.hashCode, same.hashCode);
+      expect(total.hashCode, isNot(different.hashCode));
+    });
+
+    test('matches equal recurring charges and differs for distinct ones', () {
+      final charge = RecurringCharge(
+        categoryId: 'category-1',
+        name: 'Food',
+        amountMinorUnits: 4500,
+        monthsSeen: 3,
+        lastSeenUtc: DateTime.utc(2026, 10, 10),
+      );
+      final same = RecurringCharge(
+        categoryId: 'category-1',
+        name: 'Food',
+        amountMinorUnits: 4500,
+        monthsSeen: 3,
+        lastSeenUtc: DateTime.utc(2026, 10, 10),
+      );
+      final different = RecurringCharge(
+        categoryId: 'category-1',
+        name: 'Food',
+        amountMinorUnits: 4500,
+        monthsSeen: 2,
+        lastSeenUtc: DateTime.utc(2026, 10, 10),
+      );
+
+      expect(charge.hashCode, same.hashCode);
+      expect(charge.hashCode, isNot(different.hashCode));
+    });
+
+    test('matches equal spikes and differs for distinct ones', () {
+      const spike = CategorySpike(
+        categoryId: null,
+        name: 'Uncategorized',
+        currentExpenseMinorUnits: 4800,
+        previousAverageMinorUnits: 3000,
+        ratio: 1.6,
+      );
+      const same = CategorySpike(
+        categoryId: null,
+        name: 'Uncategorized',
+        currentExpenseMinorUnits: 4800,
+        previousAverageMinorUnits: 3000,
+        ratio: 1.6,
+      );
+      const different = CategorySpike(
+        categoryId: null,
+        name: 'Uncategorized',
+        currentExpenseMinorUnits: 4800,
+        previousAverageMinorUnits: 3000,
+        ratio: 2,
+      );
+
+      expect(spike.hashCode, same.hashCode);
+      expect(spike.hashCode, isNot(different.hashCode));
+    });
+
+    test('matches equal forecasts and differs for distinct ones', () {
+      final forecast = MonthlyForecast(
+        monthStartUtc: DateTime.utc(2026, 10),
+        monthEndUtc: DateTime.utc(2026, 11),
+        elapsedDays: 15,
+        daysInMonth: 31,
+        expenseSoFarMinorUnits: 150000,
+        projectedExpenseMinorUnits: 310000,
+      );
+      final same = MonthlyForecast(
+        monthStartUtc: DateTime.utc(2026, 10),
+        monthEndUtc: DateTime.utc(2026, 11),
+        elapsedDays: 15,
+        daysInMonth: 31,
+        expenseSoFarMinorUnits: 150000,
+        projectedExpenseMinorUnits: 310000,
+      );
+      final different = MonthlyForecast(
+        monthStartUtc: DateTime.utc(2026, 10),
+        monthEndUtc: DateTime.utc(2026, 11),
+        elapsedDays: 15,
+        daysInMonth: 31,
+        expenseSoFarMinorUnits: 150000,
+        projectedExpenseMinorUnits: 206667,
+      );
+
+      expect(forecast.hashCode, same.hashCode);
+      expect(forecast.hashCode, isNot(different.hashCode));
+    });
+
+    test('matches equal budget progress and differs for distinct ones', () {
+      const progress = BudgetProgress(
+        budgetId: 'budget-1',
+        categoryId: 'category-1',
+        categoryName: 'Food',
+        allocatedAmountMinorUnits: 100000,
+        spentAmountMinorUnits: 90000,
+        level: BudgetProgressLevel.warning,
+      );
+      const same = BudgetProgress(
+        budgetId: 'budget-1',
+        categoryId: 'category-1',
+        categoryName: 'Food',
+        allocatedAmountMinorUnits: 100000,
+        spentAmountMinorUnits: 90000,
+        level: BudgetProgressLevel.warning,
+      );
+      const different = BudgetProgress(
+        budgetId: 'budget-1',
+        categoryId: 'category-1',
+        categoryName: 'Food',
+        allocatedAmountMinorUnits: 100000,
+        spentAmountMinorUnits: 90000,
+        level: BudgetProgressLevel.exceeded,
+      );
+
+      expect(progress.hashCode, same.hashCode);
+      expect(progress.hashCode, isNot(different.hashCode));
+    });
+  });
 }
 
 AnalyticsDashboard _dashboard() {

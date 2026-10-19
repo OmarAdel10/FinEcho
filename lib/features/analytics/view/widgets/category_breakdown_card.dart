@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 const String _title = 'Spending by category';
 const String _emptyMessage = 'No spending in this period.';
 const String _uncategorizedLabel = 'Uncategorized';
+const String _ringSemanticsLabel = 'Spending ring by category';
 const double _ringSize = 160;
 const double _ringStrokeWidth = 20;
 const List<Color> _slicePalette = [
@@ -48,20 +49,23 @@ class CategoryBreakdownCard extends StatelessWidget {
               const Text(_emptyMessage)
             else ...[
               Center(
-                child: SizedBox(
-                  width: _ringSize,
-                  height: _ringSize,
-                  child: CustomPaint(
-                    painter: _CategoryRingPainter(
-                      slices: [
-                        for (final categoryTotal in categoryTotals)
-                          if (totalExpense > 0)
-                            categoryTotal.expenseMinorUnits / totalExpense
-                          else
-                            0.0,
-                      ],
-                      trackColor: theme.colorScheme.outlineVariant,
-                      strokeWidth: _ringStrokeWidth,
+                child: Semantics(
+                  label: _ringSemanticsLabel,
+                  child: SizedBox(
+                    width: _ringSize,
+                    height: _ringSize,
+                    child: CustomPaint(
+                      painter: _CategoryRingPainter(
+                        slices: [
+                          for (final categoryTotal in categoryTotals)
+                            if (totalExpense > 0)
+                              categoryTotal.expenseMinorUnits / totalExpense
+                            else
+                              0.0,
+                        ],
+                        trackColor: theme.colorScheme.outlineVariant,
+                        strokeWidth: _ringStrokeWidth,
+                      ),
                     ),
                   ),
                 ),

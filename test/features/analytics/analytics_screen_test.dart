@@ -5,8 +5,10 @@ import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/features/analytics/view/screens/analytics_screen.dart';
+import 'package:finecho/features/analytics/view/widgets/account_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/analytics_summary_card.dart';
 import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dart';
+import 'package:finecho/features/analytics/view/widgets/insights_card.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:flutter/material.dart';
@@ -133,7 +135,9 @@ void main() {
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('Yearly'), findsOneWidget);
 
-    expect(find.text('Income'), findsOneWidget);
+    expect(find.text('Spending'), findsOneWidget);
+    expect(find.text('Income'), findsNWidgets(2));
+    expect(find.text('Patterns'), findsOneWidget);
     expect(find.text('5000.00'), findsOneWidget);
     expect(find.text('Expenses'), findsOneWidget);
     expect(find.text('1250.00'), findsOneWidget);
@@ -151,9 +155,9 @@ void main() {
 
     expect(find.text('By account'), findsOneWidget);
     expect(find.text('Cash'), findsOneWidget);
-    expect(find.text('-250.00'), findsOneWidget);
+    expect(find.text('250.00'), findsOneWidget);
     expect(find.text('Bank'), findsOneWidget);
-    expect(find.text('-100.00'), findsOneWidget);
+    expect(find.text('100.00'), findsOneWidget);
 
     expect(find.text('Insights'), findsOneWidget);
     expect(find.text('Projected month-end spending'), findsOneWidget);
@@ -203,10 +207,80 @@ void main() {
     expect(cubit.state.period, AnalyticsPeriod.year);
     expect(harness.analyticsRepository.requestedRanges, [
       (DateTime.utc(2026, 10), DateTime.utc(2026, 11)),
-      (DateTime.utc(2026, 9), DateTime.utc(2026, 10)),
+      (DateTime.utc(2026, 9), DateTime.utc(2026, 9, 16)),
       (DateTime.utc(2026), DateTime.utc(2027)),
-      (DateTime.utc(2025), DateTime.utc(2026)),
+      (DateTime.utc(2025), DateTime.utc(2025, 10, 16)),
     ]);
+  });
+
+  testWidgets('switches mode from the segmented control', (tester) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Spending by category'), findsOneWidget);
+    expect(find.byType(AccountBreakdownCard), findsOneWidget);
+
+    await tester.tap(find.text('Income').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Spending by category'), findsNothing);
+    expect(find.byType(AccountBreakdownCard), findsOneWidget);
+    expect(find.text('By account'), findsOneWidget);
+
+    await tester.tap(find.text('Patterns'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountBreakdownCard), findsNothing);
+    expect(find.text('Insights'), findsOneWidget);
+  });
+
+  testWidgets('refreshes the dashboard on a pull gesture', (tester) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(harness.analyticsRepository.requestedRanges, hasLength(2));
+
+    await tester.fling(find.byType(ListView), const Offset(0, 1200), 1000);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(harness.analyticsRepository.requestedRanges, hasLength(4));
+    expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
+  });
+
+  testWidgets('keeps the dashboard and warns when a refresh fails', (
+    tester,
+  ) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    harness.analyticsRepository.error = Exception('boom');
+    await tester.tap(find.text('Yearly'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(
+      find.text('Could not load your statistics. Please try again.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows the empty category, account, and insight messages', (
@@ -326,10 +400,16 @@ void main() {
           amountMinorUnits: 3000,
           categoryId: 'category-4',
         ),
+        'baseline-august': testTransaction(
+          id: 'baseline-august',
+          timestamp: DateTime.utc(2026, 8, 10),
+          amountMinorUnits: 3000,
+          categoryId: 'category-4',
+        ),
         'spike-october': testTransaction(
           id: 'spike-october',
           timestamp: DateTime.utc(2026, 10, 5),
-          amountMinorUnits: 3000,
+          amountMinorUnits: 6000,
           categoryId: 'category-4',
         ),
       },
@@ -345,8 +425,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Dining'), findsOneWidget);
-    expect(find.text('200% above the recent average'), findsOneWidget);
-    expect(find.text('30.00'), findsOneWidget);
+    expect(find.text('100% above the recent average'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(InsightsCard),
+        matching: find.text('60.00'),
+      ),
+      findsOneWidget,
+    );
     final icon = tester.widget<Icon>(find.byIcon(Icons.warning_amber_rounded));
     expect(icon.color, FinEchoColors.coral);
   });

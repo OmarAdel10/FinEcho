@@ -155,6 +155,28 @@ void main() {
       expect(find.text('0.00'), findsOneWidget);
       expect(find.text('0%'), findsOneWidget);
     });
+
+    testWidgets('labels a category without a name as uncategorized', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: null,
+                name: null,
+                expenseMinorUnits: 1000,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('Uncategorized'), findsOneWidget);
+      expect(find.text('10.00'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget);
+    });
   });
 
   group('BudgetProgressCard', () {

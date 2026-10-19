@@ -36,4 +36,26 @@ class AnalyticsState {
 
   /// A user-facing error, when present.
   final String? errorMessage;
+
+  /// Returns a copy with the given fields replaced.
+  ///
+  /// The loaded [dashboard] is carried over so refreshes and failed reloads
+  /// keep showing the last good data. Pass `clearErrorMessage: true` to drop
+  /// a stale error.
+  AnalyticsState copyWith({
+    AnalyticsStatus? status,
+    AnalyticsPeriod? period,
+    AnalyticsDashboard? dashboard,
+    String? errorMessage,
+    bool clearErrorMessage = false,
+  }) {
+    return AnalyticsState(
+      status: status ?? this.status,
+      period: period ?? this.period,
+      dashboard: dashboard ?? this.dashboard,
+      errorMessage: clearErrorMessage
+          ? null
+          : errorMessage ?? this.errorMessage,
+    );
+  }
 }

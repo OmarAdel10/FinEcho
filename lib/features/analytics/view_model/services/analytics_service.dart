@@ -27,6 +27,9 @@ const double _spikeRatioThreshold = 1.5;
 /// The number of months averaged before the current month.
 const int _spikeBaselineMonths = 3;
 
+/// Baseline months required before unusual spending can be flagged.
+const int _spikeMinimumBaselineMonths = 2;
+
 /// The spent share of a budget that raises a warning.
 const double _budgetWarningShare = 0.85;
 
@@ -78,6 +81,12 @@ class AnalyticsService {
       period,
       nowUtc,
     );
+    final previousComparisonEndUtc = _previousComparisonEnd(
+      startUtc: startUtc,
+      nowUtc: nowUtc,
+      previousStartUtc: previousStartUtc,
+      previousEndUtc: previousEndUtc,
+    );
 
     final summary = await _analytics.summaryForRange(
       startUtc: startUtc,
@@ -85,7 +94,7 @@ class AnalyticsService {
     );
     final previousSummary = await _analytics.summaryForRange(
       startUtc: previousStartUtc,
-      endUtc: previousEndUtc,
+      endUtc: previousComparisonEndUtc,
     );
     final transactions = await _transactions.list();
     final accounts = await _accounts.list();
@@ -169,6 +178,22 @@ class AnalyticsService {
     }
   }
 
+  /// Compares like for like: the previous period runs up to the same elapsed
+  /// day count as the current period, so a partial current period is never
+  /// measured against a complete previous one.
+  static DateTime _previousComparisonEnd({
+    required DateTime startUtc,
+    required DateTime nowUtc,
+    required DateTime previousStartUtc,
+    required DateTime previousEndUtc,
+  }) {
+    final elapsedDays = nowUtc.difference(startUtc).inDays + 1;
+    final comparisonEnd = previousStartUtc.add(Duration(days: elapsedDays));
+    return comparisonEnd.isAfter(previousEndUtc)
+        ? previousEndUtc
+        : comparisonEnd;
+  }
+
   static DateTime _startOfWeek(DateTime nowUtc) {
     final date = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
     return date.subtract(Duration(days: date.weekday - DateTime.monday));
@@ -247,7 +272,11 @@ class AnalyticsService {
       if (byIncome != 0) {
         return byIncome;
       }
-      return a.name.compareTo(b.name);
+      final byName = a.name.compareTo(b.name);
+      if (byName != 0) {
+        return byName;
+      }
+      return a.accountId.compareTo(b.accountId);
     });
     return totals;
   }
@@ -314,7 +343,11 @@ class AnalyticsService {
       if (byAmount != 0) {
         return byAmount;
       }
-      return a.name.compareTo(b.name);
+      final byName = a.name.compareTo(b.name);
+      if (byName != 0) {
+        return byName;
+      }
+      return (a.categoryId ?? '').compareTo(b.categoryId ?? '');
     });
     return charges;
   }
@@ -339,6 +372,7 @@ class AnalyticsService {
 
     final currentTotals = <String?, int>{};
     final baselineTotals = <String?, int>{};
+    final baselineMonths = <String?, Set<int>>{};
     for (final transaction in transactions) {
       if (transaction.type != TransactionType.expense) {
         continue;
@@ -355,12 +389,20 @@ class AnalyticsService {
           (value) => value + transaction.amountMinorUnits,
           ifAbsent: () => transaction.amountMinorUnits,
         );
+        final timestamp = transaction.timestamp.toUtc();
+        baselineMonths
+            .putIfAbsent(transaction.categoryId, () => <int>{})
+            .add(timestamp.year * 12 + timestamp.month);
       }
     }
 
     final spikes = <CategorySpike>[];
     for (final entry in currentTotals.entries) {
-      final average = (baselineTotals[entry.key] ?? 0) / _spikeBaselineMonths;
+      final baselineMonthCount = baselineMonths[entry.key]?.length ?? 0;
+      if (baselineMonthCount < _spikeMinimumBaselineMonths) {
+        continue;
+      }
+      final average = baselineTotals[entry.key]! / baselineMonthCount;
       if (average <= 0 || entry.value < average * _spikeRatioThreshold) {
         continue;
       }
@@ -379,7 +421,13 @@ class AnalyticsService {
       if (byRatio != 0) {
         return byRatio;
       }
-      return b.currentExpenseMinorUnits.compareTo(a.currentExpenseMinorUnits);
+      final byCurrent = b.currentExpenseMinorUnits.compareTo(
+        a.currentExpenseMinorUnits,
+      );
+      if (byCurrent != 0) {
+        return byCurrent;
+      }
+      return (a.categoryId ?? '').compareTo(b.categoryId ?? '');
     });
     return spikes;
   }
@@ -417,14 +465,24 @@ class AnalyticsService {
     Map<String, Category> categoriesById,
     DateTime nowUtc,
   ) {
+    final expensesByCategory = <String, List<Transaction>>{};
+    for (final transaction in transactions) {
+      final categoryId = transaction.categoryId;
+      if (transaction.type != TransactionType.expense || categoryId == null) {
+        continue;
+      }
+      expensesByCategory
+          .putIfAbsent(categoryId, () => <Transaction>[])
+          .add(transaction);
+    }
+
     final progress = <BudgetProgress>[];
     for (final budget in budgets) {
-      final (startUtc, endUtc) = _budgetWindow(budget.period, nowUtc);
+      final (startUtc, endUtc) = _budgetWindow(budget, nowUtc);
       var spent = 0;
-      for (final transaction in transactions) {
-        if (transaction.type != TransactionType.expense ||
-            transaction.categoryId != budget.categoryId ||
-            !_isWithin(transaction, startUtc, endUtc)) {
+      for (final transaction
+          in expensesByCategory[budget.categoryId] ?? const <Transaction>[]) {
+        if (!_isWithin(transaction, startUtc, endUtc)) {
           continue;
         }
         spent += transaction.amountMinorUnits;
@@ -461,29 +519,82 @@ class AnalyticsService {
       if (byRatio != 0) {
         return byRatio;
       }
-      return a.categoryName.compareTo(b.categoryName);
+      final byName = a.categoryName.compareTo(b.categoryName);
+      if (byName != 0) {
+        return byName;
+      }
+      return a.budgetId.compareTo(b.budgetId);
     });
     return progress;
   }
 
-  static (DateTime, DateTime) _budgetWindow(
-    BudgetPeriod period,
-    DateTime nowUtc,
-  ) {
+  /// The budget window containing [nowUtc], anchored to the first period
+  /// that started at [Budget.startDate].
+  static (DateTime, DateTime) _budgetWindow(Budget budget, DateTime nowUtc) {
+    final anchor = budget.startDate.toUtc();
+    if (nowUtc.isBefore(anchor)) {
+      return (anchor, _addBudgetPeriod(anchor, budget.period));
+    }
+    final DateTime start;
+    switch (budget.period) {
+      case BudgetPeriod.daily:
+        start = anchor.add(Duration(days: nowUtc.difference(anchor).inDays));
+      case BudgetPeriod.weekly:
+        start = anchor.add(
+          Duration(days: nowUtc.difference(anchor).inDays ~/ 7 * 7),
+        );
+      case BudgetPeriod.monthly:
+        start = _monthAnchoredStart(anchor, nowUtc, months: 1);
+      case BudgetPeriod.yearly:
+        start = _monthAnchoredStart(anchor, nowUtc, months: 12);
+    }
+    return (start, _addBudgetPeriod(start, budget.period));
+  }
+
+  static DateTime _monthAnchoredStart(
+    DateTime anchor,
+    DateTime nowUtc, {
+    required int months,
+  }) {
+    final elapsedMonths =
+        (nowUtc.year - anchor.year) * 12 + nowUtc.month - anchor.month;
+    final elapsedPeriods = elapsedMonths ~/ months * months;
+    final start = _addMonths(anchor, elapsedPeriods);
+    if (start.isAfter(nowUtc)) {
+      return _addMonths(anchor, elapsedPeriods - months);
+    }
+    return start;
+  }
+
+  static DateTime _addBudgetPeriod(DateTime start, BudgetPeriod period) {
     switch (period) {
       case BudgetPeriod.daily:
-        final start = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
-        return (start, start.add(const Duration(days: 1)));
+        return start.add(const Duration(days: 1));
       case BudgetPeriod.weekly:
-        final start = _startOfWeek(nowUtc);
-        return (start, start.add(const Duration(days: 7)));
+        return start.add(const Duration(days: 7));
       case BudgetPeriod.monthly:
-        return (
-          DateTime.utc(nowUtc.year, nowUtc.month),
-          DateTime.utc(nowUtc.year, nowUtc.month + 1),
-        );
+        return _addMonths(start, 1);
       case BudgetPeriod.yearly:
-        return (DateTime.utc(nowUtc.year), DateTime.utc(nowUtc.year + 1));
+        return _addMonths(start, 12);
     }
+  }
+
+  /// Adds [months] to [start], clamping the day to the target month length.
+  static DateTime _addMonths(DateTime start, int months) {
+    final zeroBasedMonth = start.month - 1 + months;
+    final targetYear = start.year + zeroBasedMonth ~/ 12;
+    final targetMonth = zeroBasedMonth % 12 + 1;
+    final lastDay = DateTime.utc(targetYear, targetMonth + 1, 0).day;
+    final day = start.day > lastDay ? lastDay : start.day;
+    return DateTime.utc(
+      targetYear,
+      targetMonth,
+      day,
+      start.hour,
+      start.minute,
+      start.second,
+      start.millisecond,
+      start.microsecond,
+    );
   }
 }

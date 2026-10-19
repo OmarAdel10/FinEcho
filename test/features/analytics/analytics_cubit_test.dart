@@ -81,9 +81,9 @@ void main() {
 
       expect(harness.analyticsRepository.requestedRanges, [
         (DateTime.utc(2026, 10), DateTime.utc(2026, 11)),
-        (DateTime.utc(2026, 9), DateTime.utc(2026, 10)),
+        (DateTime.utc(2026, 9), DateTime.utc(2026, 9, 16)),
         (DateTime.utc(2026), DateTime.utc(2027)),
-        (DateTime.utc(2025), DateTime.utc(2026)),
+        (DateTime.utc(2025), DateTime.utc(2025, 10, 16)),
       ]);
       expect(cubit.state.period, AnalyticsPeriod.year);
     });
@@ -121,10 +121,83 @@ void main() {
       expect(cubit.state.status, AnalyticsStatus.ready);
     });
 
+    test('queues a period change that arrives while loading', () async {
+      final harness = AnalyticsTestHarness();
+      final gate = Completer<void>();
+      harness.analyticsRepository.gate = gate;
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      final load = cubit.load();
+      final select = cubit.selectPeriod(AnalyticsPeriod.year);
+      gate.complete();
+      await Future.wait([load, select]);
+
+      expect(cubit.state.period, AnalyticsPeriod.year);
+      expect(cubit.state.status, AnalyticsStatus.ready);
+      expect(harness.analyticsRepository.requestedRanges, [
+        (DateTime.utc(2026, 10), DateTime.utc(2026, 11)),
+        (DateTime.utc(2026, 9), DateTime.utc(2026, 9, 16)),
+        (DateTime.utc(2026), DateTime.utc(2027)),
+        (DateTime.utc(2025), DateTime.utc(2025, 10, 16)),
+      ]);
+    });
+
+    test('keeps the dashboard when a reload fails', () async {
+      final harness = AnalyticsTestHarness();
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      await cubit.load();
+      final dashboard = cubit.state.dashboard;
+
+      harness.analyticsRepository.error = Exception('boom');
+      final expectations = expectLater(
+        cubit.stream,
+        emitsInOrder([
+          isA<AnalyticsState>()
+              .having(
+                (state) => state.status,
+                'status',
+                AnalyticsStatus.loading,
+              )
+              .having((state) => state.dashboard, 'dashboard', dashboard),
+          isA<AnalyticsState>()
+              .having(
+                (state) => state.status,
+                'status',
+                AnalyticsStatus.failure,
+              )
+              .having((state) => state.dashboard, 'dashboard', dashboard)
+              .having((state) => state.errorMessage, 'errorMessage', isNotNull),
+        ]),
+      );
+
+      await cubit.load();
+      await expectations;
+
+      expect(cubit.state.dashboard, dashboard);
+    });
+
     test('ignores the result of a load that finishes after close', () async {
       final harness = AnalyticsTestHarness();
       final gate = Completer<void>();
       harness.analyticsRepository.gate = gate;
+      final cubit = AnalyticsCubit(harness.service);
+
+      final load = cubit.load();
+      await cubit.close();
+      gate.complete();
+      await load;
+
+      expect(cubit.isClosed, isTrue);
+    });
+
+    test('swallows a failure that finishes after close', () async {
+      final harness = AnalyticsTestHarness();
+      final gate = Completer<void>();
+      harness.analyticsRepository.gate = gate;
+      harness.analyticsRepository.error = Exception('boom');
       final cubit = AnalyticsCubit(harness.service);
 
       final load = cubit.load();

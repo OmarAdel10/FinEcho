@@ -89,6 +89,53 @@ void main() {
       ]);
     });
 
+    test('accumulates repeated transactions per category and type', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'expense-food-1',
+            amountMinorUnits: 40000,
+            timestamp: DateTime.utc(2026, 1, 10),
+            categoryId: 'category-food',
+          ),
+          _transaction(
+            'expense-food-2',
+            amountMinorUnits: 2500,
+            timestamp: DateTime.utc(2026, 1, 12),
+            categoryId: 'category-food',
+          ),
+          _transaction(
+            'income-1',
+            amountMinorUnits: 120000,
+            timestamp: DateTime.utc(2026, 1, 11),
+            type: TransactionType.income,
+          ),
+          _transaction(
+            'income-2',
+            amountMinorUnits: 30000,
+            timestamp: DateTime.utc(2026, 1, 13),
+            type: TransactionType.income,
+          ),
+        ],
+        categories: [_category('category-food', 'Food')],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      expect(summary.totalIncomeMinorUnits, 150000);
+      expect(summary.totalExpenseMinorUnits, 42500);
+      expect(summary.categoryExpenseTotals, <CategoryTotal>[
+        const CategoryTotal(
+          categoryId: 'category-food',
+          name: 'Food',
+          expenseMinorUnits: 42500,
+        ),
+      ]);
+    });
+
     test(
       'includes the start and excludes the end of the half-open range',
       () async {

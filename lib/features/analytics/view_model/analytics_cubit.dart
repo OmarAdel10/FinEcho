@@ -13,13 +13,24 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
 
   final AnalyticsService _service;
   bool _isLoading = false;
+  AnalyticsPeriod? _pendingPeriod;
 
   /// Loads the dashboard for the selected period.
   Future<void> load() => _load(state.period);
 
   /// Selects [period] and reloads the dashboard when it changed.
+  ///
+  /// A selection made while a load is in flight is queued and applied as soon
+  /// as the running load settles.
   Future<void> selectPeriod(AnalyticsPeriod period) async {
-    if (period == state.period) {
+    if (period == state.period && _pendingPeriod == null) {
+      return;
+    }
+    if (period == _pendingPeriod) {
+      return;
+    }
+    if (_isLoading) {
+      _pendingPeriod = period;
       return;
     }
     await _load(period);
@@ -30,7 +41,13 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
       return;
     }
     _isLoading = true;
-    emit(AnalyticsState(period: period));
+    emit(
+      state.copyWith(
+        status: AnalyticsStatus.loading,
+        period: period,
+        clearErrorMessage: true,
+      ),
+    );
     try {
       final dashboard = await _service.loadDashboard(period: period);
       if (!isClosed) {
@@ -42,10 +59,10 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
           ),
         );
       }
-    } on Exception {
+    } on Object {
       if (!isClosed) {
         emit(
-          AnalyticsState(
+          state.copyWith(
             status: AnalyticsStatus.failure,
             period: period,
             errorMessage: _loadErrorMessage,
@@ -54,6 +71,11 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
       }
     } finally {
       _isLoading = false;
+      final pendingPeriod = _pendingPeriod;
+      if (pendingPeriod != null && !isClosed) {
+        _pendingPeriod = null;
+        await _load(pendingPeriod);
+      }
     }
   }
 }
