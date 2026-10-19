@@ -1,5 +1,7 @@
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/app/router/screens/placeholder_screen.dart';
+import 'package:finecho/features/budget/view/screens/budget_screen.dart';
+import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/onboarding/view/screens/onboarding_screen.dart';
 import 'package:finecho/features/onboarding/view/screens/security_setup_screen.dart';
 import 'package:finecho/features/onboarding/view/screens/welcome_screen.dart';
@@ -19,12 +21,15 @@ class AppRouter {
     OnboardingCubit? onboardingCubit,
     SecurityCubit? securityCubit,
     TransactionsCubit? transactionsCubit,
+    BudgetCubit? budgetCubit,
   }) {
     final cubit = onboardingCubit ?? sl<OnboardingCubit>();
     final security = securityCubit ?? sl<SecurityCubit>();
     final transactions = transactionsCubit ?? sl<TransactionsCubit>();
+    final budgets = budgetCubit ?? sl<BudgetCubit>();
     _securityCubit = security;
     _transactionsCubit = transactions;
+    _budgetsCubit = budgets;
     router = GoRouter(
       initialLocation: '/welcome',
       routes: [
@@ -66,6 +71,16 @@ class AppRouter {
           ),
         ),
         GoRoute(
+          path: '/budgets',
+          name: 'budgets',
+          builder: (context, state) => _protected(
+            BlocProvider<BudgetCubit>.value(
+              value: _budgetsCubit,
+              child: const BudgetScreen(),
+            ),
+          ),
+        ),
+        GoRoute(
           path: '/accounts',
           name: 'accounts',
           builder: (context, state) =>
@@ -93,6 +108,8 @@ class AppRouter {
   late final SecurityCubit _securityCubit;
 
   late final TransactionsCubit _transactionsCubit;
+
+  late final BudgetCubit _budgetsCubit;
 
   Widget _protected(Widget child) {
     return BlocProvider<SecurityCubit>.value(

@@ -1,12 +1,16 @@
 import 'package:finecho/app/environment/environment.dart';
 import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/core/repositories/contracts/account_repository.dart';
+import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
+import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
+import 'package:finecho/features/budget/view_model/budget_cubit.dart';
+import 'package:finecho/features/budget/view_model/services/budget_service.dart';
 import 'package:finecho/features/onboarding/data/repositories/in_memory_onboarding_repository.dart';
 import 'package:finecho/features/onboarding/data/repositories/onboarding_repository.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
@@ -66,5 +70,13 @@ Future<void> configureDependencies({
     ..registerLazySingleton<TransactionsCubit>(
       () => TransactionsCubit(sl<TransactionService>()),
     )
+    ..registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new)
+    ..registerLazySingleton<BudgetService>(
+      () => BudgetService(
+        budgets: sl<BudgetRepository>(),
+        categories: sl<CategoryRepository>(),
+      ),
+    )
+    ..registerLazySingleton<BudgetCubit>(() => BudgetCubit(sl<BudgetService>()))
     ..registerLazySingleton<AppRouter>(AppRouter.new);
 }

@@ -1,4 +1,5 @@
 import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/onboarding/data/models/onboarding_snapshot.dart';
 import 'package:finecho/features/onboarding/data/models/onboarding_step.dart';
 import 'package:finecho/features/onboarding/view/screens/onboarding_screen.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pinput/pinput.dart';
 
+import '../budget/fake_budget_repositories.dart';
 import '../security/fake_security_repositories.dart';
 import '../transactions/fake_transaction_repositories.dart';
 import 'fake_onboarding_repository.dart';
@@ -72,10 +74,13 @@ void main() {
       final securityCubit = SecurityCubit(securityHarness.service);
       final transactionsHarness = TransactionsTestHarness();
       final transactionsCubit = TransactionsCubit(transactionsHarness.service);
+      final budgetHarness = BudgetTestHarness();
+      final budgetCubit = BudgetCubit(budgetHarness.service);
       final appRouter = AppRouter(
         onboardingCubit: cubit,
         securityCubit: securityCubit,
         transactionsCubit: transactionsCubit,
+        budgetCubit: budgetCubit,
       );
       await tester.pumpWidget(
         MaterialApp.router(routerConfig: appRouter.router),
@@ -105,6 +110,7 @@ void main() {
       appRouter.router.dispose();
       await securityCubit.close();
       await transactionsCubit.close();
+      await budgetCubit.close();
     });
   });
 }
