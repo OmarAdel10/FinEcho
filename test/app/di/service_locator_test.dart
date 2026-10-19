@@ -1,7 +1,13 @@
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/core/models/category.dart';
+import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
+import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
+import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
+import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
+import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
+import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
@@ -43,5 +49,28 @@ void main() {
 
     expect(await repository.list(), hasLength(1));
     await sl<BudgetCubit>().close();
+  });
+
+  test('registers the analytics dependency graph', () async {
+    await configureDependencies();
+
+    expect(sl<AnalyticsRepository>(), isA<InMemoryAnalyticsRepository>());
+    expect(sl<AnalyticsCubit>().state.status, AnalyticsStatus.loading);
+    final dashboard = await sl<AnalyticsService>().loadDashboard(
+      period: AnalyticsPeriod.month,
+    );
+
+    expect(dashboard.totalIncomeMinorUnits, isZero);
+    expect(dashboard.totalExpenseMinorUnits, isZero);
+    expect(dashboard.categoryTotals, isEmpty);
+    await sl<AnalyticsCubit>().close();
+  });
+
+  test('shares one analytics repository across the graph', () async {
+    await configureDependencies();
+    final repository = sl<AnalyticsRepository>();
+
+    expect(identical(repository, sl<AnalyticsRepository>()), isTrue);
+    await sl<AnalyticsCubit>().close();
   });
 }

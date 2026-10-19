@@ -1,6 +1,7 @@
 import 'package:finecho/app/environment/environment.dart';
 import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/core/repositories/contracts/account_repository.dart';
+import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
@@ -8,6 +9,9 @@ import 'package:finecho/core/repositories/contracts/transaction_repository.dart'
 import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
+import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
+import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
+import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
 import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
@@ -78,5 +82,23 @@ Future<void> configureDependencies({
       ),
     )
     ..registerLazySingleton<BudgetCubit>(() => BudgetCubit(sl<BudgetService>()))
+    ..registerLazySingleton<AnalyticsRepository>(
+      () => InMemoryAnalyticsRepository(
+        transactions: sl<TransactionRepository>(),
+        categories: sl<CategoryRepository>(),
+      ),
+    )
+    ..registerLazySingleton<AnalyticsService>(
+      () => AnalyticsService(
+        analytics: sl<AnalyticsRepository>(),
+        transactions: sl<TransactionRepository>(),
+        accounts: sl<AccountRepository>(),
+        budgets: sl<BudgetRepository>(),
+        categories: sl<CategoryRepository>(),
+      ),
+    )
+    ..registerLazySingleton<AnalyticsCubit>(
+      () => AnalyticsCubit(sl<AnalyticsService>()),
+    )
     ..registerLazySingleton<AppRouter>(AppRouter.new);
 }
