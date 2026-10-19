@@ -27,3 +27,21 @@
   the soft stone slice has low contrast on light surfaces.
 - Verify the in-memory analytics category tie-break matches the SQLite BINARY
   collation for non-ASCII category identifiers.
+
+## Analytics review round 2
+
+Deferred during the round-two review; tracked in Plane:
+
+- Support multiple currencies in analytics aggregation (FINECHO-8).
+- Make budget warning thresholds configurable (FINECHO-9).
+- Add period totals to the home dashboard (FINECHO-10).
+- Protect financial screens with FLAG_SECURE and lock on pause (FINECHO-11).
+- Add a navigation shell entry for statistics (FINECHO-12).
+- Identify recurring charges by payee instead of an amount bucket (FINECHO-13).
+- Push analytics aggregation into repository queries (FINECHO-14).
+- Clear analytics state when the app locks (FINECHO-15).
+- Add analytics screenshots to the README (FINECHO-16).
+- Extract the shared minor-unit currency formatter (FINECHO-5).
+- Use largest-remainder rounding for category legend percentages (FINECHO-18).
+- Cover the remaining analytics boundary branches with tests (FINECHO-19).
+- Add an income breakdown by category to analytics (FINECHO-20).
