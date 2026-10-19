@@ -13,3 +13,17 @@
   budget ID fallback.
 - Add currency-aware display metadata instead of the current USD-only budget
   amount formatting.
+
+## Analytics persistence
+
+- Wire `SqfliteAnalyticsRepository` into application DI when the encrypted
+  database bootstrap lands, replacing the temporary in-memory registration.
+
+## Analytics presentation
+
+- Extract the minor-unit amount formatter duplicated across the transactions,
+  budget, and analytics widget files.
+- Improve the category ring palette: colors repeat beyond three categories and
+  the soft stone slice has low contrast on light surfaces.
+- Verify the in-memory analytics category tie-break matches the SQLite BINARY
+  collation for non-ASCII category identifiers.
