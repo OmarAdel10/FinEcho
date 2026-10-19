@@ -481,7 +481,7 @@ void main() {
     expect(cubit.state.period, AnalyticsPeriod.year);
   });
 
-  testWidgets('does not reload a ready dashboard on mount', (tester) async {
+  testWidgets('refreshes a ready dashboard on mount', (tester) async {
     final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
     final cubit = AnalyticsCubit(harness.service);
     addTearDown(cubit.close);
@@ -491,7 +491,7 @@ void main() {
     await tester.pumpWidget(_wrap(cubit));
     await tester.pumpAndSettle();
 
-    expect(harness.analyticsRepository.requestedRanges, hasLength(2));
+    expect(harness.analyticsRepository.requestedRanges, hasLength(4));
     expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
   });
 }

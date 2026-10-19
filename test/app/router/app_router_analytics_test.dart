@@ -1,3 +1,4 @@
+import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/features/analytics/view/screens/analytics_screen.dart';
@@ -20,6 +21,22 @@ import '../../features/security/fake_security_repositories.dart';
 import '../../features/transactions/fake_transaction_repositories.dart';
 
 void main() {
+  testWidgets('resolves the statistics route from the production graph', (
+    tester,
+  ) async {
+    await configureDependencies();
+    final appRouter = AppRouter();
+    final router = appRouter.router;
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    router.go('/statistics');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(AnalyticsScreen), findsOneWidget);
+  });
+
   testWidgets('shows /statistics when the app lock is disabled', (
     tester,
   ) async {
@@ -62,6 +79,52 @@ void main() {
     await tester.pump();
 
     expect(find.byType(LockScreen), findsNothing);
+    expect(find.byType(AnalyticsScreen), findsOneWidget);
+  });
+
+  testWidgets('opens statistics from the transactions screen', (tester) async {
+    final securityHarness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: false,
+        pinConfigured: false,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+    );
+    final securityCubit = SecurityCubit(securityHarness.service);
+    final onboardingCubit = OnboardingCubit(
+      OnboardingService(FakeOnboardingRepository()),
+    );
+    final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+    final transactionsCubit = TransactionsCubit(
+      TransactionsTestHarness().service,
+    );
+    final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+    final appRouter = AppRouter(
+      onboardingCubit: onboardingCubit,
+      securityCubit: securityCubit,
+      transactionsCubit: transactionsCubit,
+      budgetCubit: budgetCubit,
+      analyticsCubit: analyticsCubit,
+    );
+    final router = appRouter.router;
+    addTearDown(router.dispose);
+    addTearDown(onboardingCubit.close);
+    addTearDown(securityCubit.close);
+    addTearDown(transactionsCubit.close);
+    addTearDown(budgetCubit.close);
+    addTearDown(analyticsCubit.close);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    router.go('/home');
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Statistics'));
+    await tester.pump();
+    await tester.pump();
+
     expect(find.byType(AnalyticsScreen), findsOneWidget);
   });
 

@@ -164,6 +164,24 @@ void main() {
         ]);
       });
 
+      test('skips the previous comparison at a period start', () async {
+        final harness = AnalyticsTestHarness(
+          onSummary: (startUtc, endUtc) =>
+              _summary(startUtc: startUtc, endUtc: endUtc),
+          now: () => DateTime.utc(2026, 11),
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(harness.analyticsRepository.requestedRanges, [
+          (DateTime.utc(2026, 11), DateTime.utc(2026, 12)),
+        ]);
+        expect(dashboard.previousExpenseMinorUnits, 0);
+        expect(dashboard.expenseChangeRatio, isNull);
+      });
+
       test('propagates repository failures', () async {
         final harness = AnalyticsTestHarness();
         harness.analyticsRepository.error = Exception('boom');
@@ -1467,9 +1485,9 @@ void main() {
         ]);
       });
 
-      test('clamps anchored windows to shorter months', () async {
+      test('keeps clamped windows contiguous before the anchor day', () async {
         final harness = AnalyticsTestHarness(
-          now: () => DateTime.utc(2026, 3, 15),
+          now: () => DateTime.utc(2026, 3, 29),
           initialCategories: {'category-1': testCategory()},
           initialBudgets: {
             'budget-monthly': testBudget(
@@ -1495,6 +1513,18 @@ void main() {
               categoryId: 'category-1',
               timestamp: DateTime.utc(2026, 3, 28),
             ),
+            'orphan-day': testTransaction(
+              id: 'orphan-day',
+              categoryId: 'category-1',
+              amountMinorUnits: 500,
+              timestamp: DateTime.utc(2026, 3, 29),
+            ),
+            'next-window': testTransaction(
+              id: 'next-window',
+              categoryId: 'category-1',
+              amountMinorUnits: 700,
+              timestamp: DateTime.utc(2026, 3, 31),
+            ),
           },
         );
 
@@ -1508,7 +1538,7 @@ void main() {
             categoryId: 'category-1',
             categoryName: 'Food',
             allocatedAmountMinorUnits: 10000,
-            spentAmountMinorUnits: 5000,
+            spentAmountMinorUnits: 6500,
             level: BudgetProgressLevel.normal,
           ),
         ]);
@@ -1567,6 +1597,25 @@ void main() {
             spentAmountMinorUnits: 8500,
             level: BudgetProgressLevel.warning,
           ),
+        ]);
+      });
+
+      test('breaks budget order ties by budget id', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {'category-1': testCategory()},
+          initialBudgets: {
+            'budget-b': testBudget(id: 'budget-b'),
+            'budget-a': testBudget(id: 'budget-a'),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.budgetProgress.map((progress) => progress.budgetId), [
+          'budget-a',
+          'budget-b',
         ]);
       });
 

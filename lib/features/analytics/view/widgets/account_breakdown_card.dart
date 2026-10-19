@@ -56,6 +56,10 @@ class AccountBreakdownCard extends StatelessWidget {
       0,
       (maximum, row) => math.max(maximum, row.amountMinorUnits),
     );
+    final totalAmount = sorted.fold(
+      0,
+      (total, row) => total + row.amountMinorUnits,
+    );
     final rows = [
       for (final row in sorted)
         (
@@ -63,6 +67,9 @@ class AccountBreakdownCard extends StatelessWidget {
           amountMinorUnits: row.amountMinorUnits,
           share: maxAmount > 0
               ? (row.amountMinorUnits / maxAmount).clamp(0.0, 1.0)
+              : 0.0,
+          totalShare: totalAmount > 0
+              ? (row.amountMinorUnits / totalAmount).clamp(0.0, 1.0)
               : 0.0,
         ),
     ];
@@ -96,7 +103,7 @@ class AccountBreakdownCard extends StatelessWidget {
                             const SizedBox(height: 8),
                             Semantics(
                               label: '${row.name} ${metric.name} share',
-                              value: '${(row.share * 100).round()}%',
+                              value: '${(row.totalShare * 100).round()}%',
                               child: LinearProgressIndicator(value: row.share),
                             ),
                           ],

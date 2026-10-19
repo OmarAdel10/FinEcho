@@ -223,6 +223,17 @@ void main() {
       expect(harness.analyticsRepository.requestedRanges, isEmpty);
     });
 
+    test('ignores a period selection after close', () async {
+      final harness = AnalyticsTestHarness();
+      final cubit = AnalyticsCubit(harness.service);
+
+      await cubit.close();
+      await cubit.selectPeriod(AnalyticsPeriod.year);
+
+      expect(harness.analyticsRepository.requestedRanges, isEmpty);
+      expect(cubit.state.period, AnalyticsPeriod.month);
+    });
+
     test('queues the same pending period only once', () async {
       final harness = AnalyticsTestHarness();
       final gate = Completer<void>();
@@ -284,7 +295,7 @@ void main() {
     });
 
     test(
-      'keeps the queued period when the current period is re-selected',
+      'clears the queued period when the current period is re-selected',
       () async {
         final harness = AnalyticsTestHarness();
         final gate = Completer<void>();
@@ -298,8 +309,8 @@ void main() {
         gate.complete();
         await load;
 
-        expect(harness.analyticsRepository.requestedRanges, hasLength(4));
-        expect(cubit.state.period, AnalyticsPeriod.year);
+        expect(harness.analyticsRepository.requestedRanges, hasLength(2));
+        expect(cubit.state.period, AnalyticsPeriod.month);
         expect(cubit.state.status, AnalyticsStatus.ready);
       },
     );

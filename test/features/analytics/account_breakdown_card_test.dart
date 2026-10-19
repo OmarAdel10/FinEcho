@@ -69,7 +69,7 @@ void main() {
           .first,
     );
     expect(rowSemantics.properties.label, 'Cash expense share');
-    expect(rowSemantics.properties.value, '100%');
+    expect(rowSemantics.properties.value, '71%');
     semantics.dispose();
   });
 
@@ -178,5 +178,18 @@ void main() {
       tester.getTopLeft(find.text('Alpha')).dy,
       lessThan(tester.getTopLeft(find.text('Zeta')).dy),
     );
+  });
+
+  testWidgets('formats cents in account amounts', (tester) async {
+    await pumpCard(tester, const [
+      AccountTotal(
+        accountId: 'account-1',
+        name: 'Cash',
+        incomeMinorUnits: 0,
+        expenseMinorUnits: 5,
+      ),
+    ]);
+
+    expect(find.text('0.05'), findsOneWidget);
   });
 }

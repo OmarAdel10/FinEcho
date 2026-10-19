@@ -1,8 +1,10 @@
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/core/models/category.dart';
+import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
+import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
@@ -71,6 +73,36 @@ void main() {
     final repository = sl<AnalyticsRepository>();
 
     expect(identical(repository, sl<AnalyticsRepository>()), isTrue);
+    await sl<AnalyticsCubit>().close();
+  });
+
+  test('reads transactions seeded through the shared repositories', () async {
+    await configureDependencies();
+    await sl<CategoryRepository>().create(
+      const Category(
+        id: 'category-1',
+        name: 'Food',
+        iconKey: 'restaurant',
+        colorHex: '#FF5722',
+      ),
+    );
+    await sl<TransactionRepository>().create(
+      Transaction(
+        id: 'tx-1',
+        accountId: 'account-1',
+        amountMinorUnits: 1234,
+        timestamp: DateTime.now().toUtc(),
+        type: TransactionType.expense,
+        source: TransactionSource.manual,
+        categoryId: 'category-1',
+      ),
+    );
+
+    final dashboard = await sl<AnalyticsService>().loadDashboard(
+      period: AnalyticsPeriod.month,
+    );
+
+    expect(dashboard.totalExpenseMinorUnits, 1234);
     await sl<AnalyticsCubit>().close();
   });
 }

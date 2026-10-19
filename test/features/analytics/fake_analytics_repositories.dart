@@ -41,6 +41,9 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
     required DateTime startUtc,
     required DateTime endUtc,
   }) async {
+    if (!startUtc.isBefore(endUtc)) {
+      throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
+    }
     requestedRanges.add((startUtc, endUtc));
     final gate = this.gate;
     if (gate != null) {

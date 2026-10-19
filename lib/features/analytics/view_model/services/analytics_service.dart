@@ -1,4 +1,5 @@
 import 'package:finecho/core/models/account.dart';
+import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/transaction.dart';
@@ -73,6 +74,7 @@ class AnalyticsService {
 
   /// Derives the dashboard for [period] from current local history.
   ///
+  /// Calendar ranges use UTC to match the stored transaction timestamps.
   /// Aggregates assume every account shares one display currency; totals are
   /// summed in minor units without conversion.
   Future<AnalyticsDashboard> loadDashboard({
@@ -90,6 +92,9 @@ class AnalyticsService {
       previousStartUtc: previousStartUtc,
       previousEndUtc: previousEndUtc,
     );
+    final hasPreviousComparison = previousComparisonEndUtc.isAfter(
+      previousStartUtc,
+    );
 
     final (
       summary,
@@ -100,10 +105,20 @@ class AnalyticsService {
       categories,
     ) = await (
       _analytics.summaryForRange(startUtc: startUtc, endUtc: endUtc),
-      _analytics.summaryForRange(
-        startUtc: previousStartUtc,
-        endUtc: previousComparisonEndUtc,
-      ),
+      hasPreviousComparison
+          ? _analytics.summaryForRange(
+              startUtc: previousStartUtc,
+              endUtc: previousComparisonEndUtc,
+            )
+          : Future<AnalyticsSummary>.value(
+              AnalyticsSummary(
+                startUtc: previousStartUtc,
+                endUtc: previousEndUtc,
+                totalIncomeMinorUnits: 0,
+                totalExpenseMinorUnits: 0,
+                categoryExpenseTotals: const [],
+              ),
+            ),
       _transactions.list(),
       _accounts.list(),
       _budgets.list(),
@@ -584,55 +599,54 @@ class AnalyticsService {
   /// When [nowUtc] precedes the anchor, the first window is returned.
   static (DateTime, DateTime) _budgetWindow(Budget budget, DateTime nowUtc) {
     final anchor = budget.startDate.toUtc();
-    if (nowUtc.isBefore(anchor)) {
-      return (anchor, _addBudgetPeriod(anchor, budget.period));
-    }
-    final DateTime start;
     switch (budget.period) {
       case BudgetPeriod.daily:
-        start = anchor.add(Duration(days: nowUtc.difference(anchor).inDays));
+        final start = nowUtc.isBefore(anchor)
+            ? anchor
+            : anchor.add(Duration(days: nowUtc.difference(anchor).inDays));
+        return (start, start.add(const Duration(days: 1)));
       case BudgetPeriod.weekly:
-        start = anchor.add(
-          Duration(days: nowUtc.difference(anchor).inDays ~/ 7 * 7),
-        );
+        final start = nowUtc.isBefore(anchor)
+            ? anchor
+            : anchor.add(
+                Duration(days: nowUtc.difference(anchor).inDays ~/ 7 * 7),
+              );
+        return (start, start.add(const Duration(days: 7)));
       case BudgetPeriod.monthly:
-        start = _monthAnchoredStart(anchor, nowUtc, months: 1);
+        return _monthAnchoredWindow(anchor, nowUtc, months: 1);
       case BudgetPeriod.yearly:
-        start = _monthAnchoredStart(anchor, nowUtc, months: 12);
+        return _monthAnchoredWindow(anchor, nowUtc, months: 12);
     }
-    return (start, _addBudgetPeriod(start, budget.period));
   }
 
-  static DateTime _monthAnchoredStart(
+  /// Returns the month-based window containing [nowUtc], derived from the same
+  /// anchor sequence so clamped months never leave a gap before the next
+  /// anchor day.
+  static (DateTime, DateTime) _monthAnchoredWindow(
     DateTime anchor,
     DateTime nowUtc, {
     required int months,
   }) {
+    if (nowUtc.isBefore(anchor)) {
+      return (anchor, _addMonths(anchor, months));
+    }
     final elapsedMonths =
         (nowUtc.year - anchor.year) * 12 + nowUtc.month - anchor.month;
-    final elapsedPeriods = elapsedMonths ~/ months * months;
-    final start = _addMonths(anchor, elapsedPeriods);
-    if (start.isAfter(nowUtc)) {
-      return _addMonths(anchor, elapsedPeriods - months);
+    var elapsedPeriods = elapsedMonths ~/ months * months;
+    if (_addMonths(anchor, elapsedPeriods).isAfter(nowUtc)) {
+      elapsedPeriods -= months;
     }
-    return start;
-  }
-
-  static DateTime _addBudgetPeriod(DateTime start, BudgetPeriod period) {
-    switch (period) {
-      case BudgetPeriod.daily:
-        return start.add(const Duration(days: 1));
-      case BudgetPeriod.weekly:
-        return start.add(const Duration(days: 7));
-      case BudgetPeriod.monthly:
-        return _addMonths(start, 1);
-      case BudgetPeriod.yearly:
-        return _addMonths(start, 12);
-    }
+    return (
+      _addMonths(anchor, elapsedPeriods),
+      _addMonths(anchor, elapsedPeriods + months),
+    );
   }
 
   /// Adds [months] to [start], clamping the day to the target month length.
+  ///
+  /// [months] must not be negative; callers only move forward from an anchor.
   static DateTime _addMonths(DateTime start, int months) {
+    assert(months >= 0, 'months must not be negative');
     final zeroBasedMonth = start.month - 1 + months;
     final targetYear = start.year + zeroBasedMonth ~/ 12;
     final targetMonth = zeroBasedMonth % 12 + 1;

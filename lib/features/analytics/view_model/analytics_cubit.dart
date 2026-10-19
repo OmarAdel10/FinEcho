@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
+import 'package:flutter/foundation.dart';
 
 const String _loadErrorMessage =
     'Could not load your statistics. Please try again.';
@@ -39,7 +40,11 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   /// A selection made while a load is in flight is queued and applied as soon
   /// as the running load settles.
   Future<void> selectPeriod(AnalyticsPeriod period) async {
-    if (period == state.period || period == _pendingPeriod) {
+    if (period == state.period) {
+      _pendingPeriod = null;
+      return;
+    }
+    if (period == _pendingPeriod) {
       return;
     }
     if (_isLoading) {
@@ -98,12 +103,14 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
       }
     } on Object catch (error, stackTrace) {
       if (!isClosed) {
-        log(
-          'Analytics dashboard load failed',
-          name: 'AnalyticsCubit',
-          error: error,
-          stackTrace: stackTrace,
-        );
+        if (kDebugMode) {
+          log(
+            'Analytics dashboard load failed',
+            name: 'AnalyticsCubit',
+            error: error,
+            stackTrace: stackTrace,
+          );
+        }
         emit(
           state.copyWith(
             status: AnalyticsStatus.failure,

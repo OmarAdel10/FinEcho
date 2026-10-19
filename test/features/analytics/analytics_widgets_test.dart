@@ -95,6 +95,23 @@ void main() {
 
       expect(find.text('No previous period to compare'), findsOneWidget);
     });
+
+    testWidgets('formats cents and negative cents', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AnalyticsSummaryCard(
+            totalIncomeMinorUnits: 12345,
+            totalExpenseMinorUnits: 5,
+            netAmountMinorUnits: -12345,
+            expenseChangeRatio: null,
+          ),
+        ),
+      );
+
+      expect(find.text('123.45'), findsOneWidget);
+      expect(find.text('0.05'), findsOneWidget);
+      expect(find.text('-123.45'), findsOneWidget);
+    });
   });
 
   group('CategoryBreakdownCard', () {
@@ -185,6 +202,64 @@ void main() {
       expect(find.text('10.00'), findsOneWidget);
       expect(find.text('100%'), findsOneWidget);
     });
+
+    testWidgets('formats cents in the legend', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 5,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('0.05'), findsOneWidget);
+    });
+
+    testWidgets('repaints when ring slices change', (tester) async {
+      Widget card(List<CategoryTotal> totals) {
+        return _wrap(CategoryBreakdownCard(categoryTotals: totals));
+      }
+
+      await tester.pumpWidget(
+        card(const [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 7500,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 2500,
+          ),
+        ]),
+      );
+      final before = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      expect(before.shouldRepaint(before), isFalse);
+
+      await tester.pumpWidget(
+        card(const [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 5000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 5000,
+          ),
+        ]),
+      );
+      final after = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      expect(after.shouldRepaint(before), isTrue);
+    });
   });
 
   group('BudgetProgressCard', () {
@@ -265,6 +340,27 @@ void main() {
       expect(indicator.color, FinEchoColors.coral);
       expect(find.text('150.00 / 100.00'), findsOneWidget);
     });
+
+    testWidgets('formats cents in spent and allocated amounts', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const BudgetProgressCard(
+            budgetProgress: [
+              BudgetProgress(
+                budgetId: 'budget-1',
+                categoryId: 'category-1',
+                categoryName: 'Food',
+                allocatedAmountMinorUnits: 12345,
+                spentAmountMinorUnits: 5,
+                level: BudgetProgressLevel.normal,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('0.05 / 123.45'), findsOneWidget);
+    });
   });
 
   group('InsightsCard', () {
@@ -293,6 +389,25 @@ void main() {
       expect(find.text('No recurring charges yet.'), findsOneWidget);
       expect(find.text('Unusual spending'), findsOneWidget);
       expect(find.text('No unusual spending.'), findsOneWidget);
+    });
+
+    testWidgets('formats cents in the forecast', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const InsightsCard(
+            forecast: MonthlyForecast(
+              elapsedDays: 15,
+              daysInMonth: 31,
+              expenseSoFarMinorUnits: 5000,
+              projectedExpenseMinorUnits: 12345,
+            ),
+            recurringCharges: [],
+            unusualSpikes: [],
+          ),
+        ),
+      );
+
+      expect(find.text('123.45'), findsOneWidget);
     });
   });
 }

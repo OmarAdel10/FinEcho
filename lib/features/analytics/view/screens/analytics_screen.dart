@@ -20,8 +20,6 @@ const String _tryAgainLabel = 'Try again';
 const String _spendingLabel = 'Spending';
 const String _incomeLabel = 'Income';
 const String _patternsLabel = 'Patterns';
-const String _reloadFailureMessage =
-    'Could not refresh your statistics. Please try again.';
 
 enum _AnalyticsMode { spending, income, patterns }
 
@@ -45,9 +43,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         return;
       }
       final cubit = context.read<AnalyticsCubit>();
-      if (cubit.state.status == AnalyticsStatus.loading) {
-        unawaited(cubit.load());
-      }
+      // Reload on every mount so aggregates reflect transactions recorded
+      // elsewhere in the app while this screen was off-screen.
+      unawaited(cubit.load());
     });
   }
 
@@ -61,13 +59,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               current.status == AnalyticsStatus.failure &&
               current.dashboard != null,
           listener: (context, state) {
+            final errorMessage = state.errorMessage;
+            if (errorMessage == null) {
+              return;
+            }
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage ?? _reloadFailureMessage),
-                ),
-              );
+              ..showSnackBar(SnackBar(content: Text(errorMessage)));
           },
           child: BlocBuilder<AnalyticsCubit, AnalyticsState>(
             builder: (context, state) {
