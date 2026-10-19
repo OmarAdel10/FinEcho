@@ -45,3 +45,29 @@ Deferred during the round-two review; tracked in Plane:
 - Use largest-remainder rounding for category legend percentages (FINECHO-18).
 - Cover the remaining analytics boundary branches with tests (FINECHO-19).
 - Add an income breakdown by category to analytics (FINECHO-20).
+
+## Analytics review round 3
+
+Fixed:
+
+- Anchor-based budget windows now keep clamped months contiguous, so spending
+  around an anchor day of 29-31 is never orphaned.
+- Added a Statistics action to the transactions app bar so the screen is
+  reachable without a deep link.
+- Skipped the previous-period query when a period has just started, avoiding an
+  empty range rejected by the SQLite repository.
+- Account share semantics now announce share of total instead of share of the
+  largest row; bar lengths still scale to the largest row.
+- The dashboard reloads on every mount so aggregates reflect transactions
+  recorded elsewhere.
+- Documented the UTC calendar policy in the analytics service.
+- Reset a queued period when the current period is re-selected, asserted
+  non-negative month offsets, and limited failure logging to debug builds.
+
+Deferred; tracked in Plane:
+
+- Convert analytics calendar boundaries from UTC to device-local (FINECHO-22).
+- Add ring painter output and golden tests (FINECHO-21).
+- Distinguish zero previous spend from no comparison (FINECHO-23).
+- The round-two items FINECHO-8, FINECHO-9, and FINECHO-20 remain open;
+  model-equality isolation is covered by FINECHO-19.
