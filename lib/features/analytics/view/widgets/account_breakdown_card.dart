@@ -24,7 +24,7 @@ class AccountBreakdownCard extends StatelessWidget {
     super.key,
   });
 
-  /// Income and expenses per account, highest expense first.
+  /// Income and expenses per account as derived by the service.
   final List<AccountTotal> accountTotals;
 
   /// The metric highlighted by the progress bars and trailing amounts.
@@ -33,17 +33,36 @@ class AccountBreakdownCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final metricAmounts = accountTotals
-        .map((accountTotal) => _metricAmount(accountTotal, metric))
-        .toList();
-    final maxAmount = metricAmounts.fold(0, math.max);
+    final sorted =
+        [
+          for (final accountTotal in accountTotals)
+            (
+              name: accountTotal.name,
+              accountId: accountTotal.accountId,
+              amountMinorUnits: _metricAmount(accountTotal, metric),
+            ),
+        ]..sort((a, b) {
+          final byAmount = b.amountMinorUnits.compareTo(a.amountMinorUnits);
+          if (byAmount != 0) {
+            return byAmount;
+          }
+          final byName = a.name.compareTo(b.name);
+          if (byName != 0) {
+            return byName;
+          }
+          return a.accountId.compareTo(b.accountId);
+        });
+    final maxAmount = sorted.fold(
+      0,
+      (maximum, row) => math.max(maximum, row.amountMinorUnits),
+    );
     final rows = [
-      for (var index = 0; index < accountTotals.length; index++)
+      for (final row in sorted)
         (
-          name: accountTotals[index].name,
-          amountMinorUnits: metricAmounts[index],
+          name: row.name,
+          amountMinorUnits: row.amountMinorUnits,
           share: maxAmount > 0
-              ? (metricAmounts[index] / maxAmount).clamp(0.0, 1.0)
+              ? (row.amountMinorUnits / maxAmount).clamp(0.0, 1.0)
               : 0.0,
         ),
     ];
@@ -77,6 +96,7 @@ class AccountBreakdownCard extends StatelessWidget {
                             const SizedBox(height: 8),
                             Semantics(
                               label: '${row.name} ${metric.name} share',
+                              value: '${(row.share * 100).round()}%',
                               child: LinearProgressIndicator(value: row.share),
                             ),
                           ],

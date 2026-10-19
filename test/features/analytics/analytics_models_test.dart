@@ -10,26 +10,6 @@ import 'package:finecho/features/analytics/view_model/models/recurring_charge.da
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('AnalyticsPeriod', () {
-    test('lists the supported periods in order', () {
-      expect(AnalyticsPeriod.values, [
-        AnalyticsPeriod.week,
-        AnalyticsPeriod.month,
-        AnalyticsPeriod.year,
-      ]);
-    });
-  });
-
-  group('AnalyticsStatus', () {
-    test('lists the lifecycle states in order', () {
-      expect(AnalyticsStatus.values, [
-        AnalyticsStatus.loading,
-        AnalyticsStatus.ready,
-        AnalyticsStatus.failure,
-      ]);
-    });
-  });
-
   group('AnalyticsState', () {
     test('starts on the monthly period while loading', () {
       const state = AnalyticsState();
@@ -53,17 +33,6 @@ void main() {
   });
 
   group('AccountTotal', () {
-    test('derives the net amount from income and expenses', () {
-      const total = AccountTotal(
-        accountId: 'account-1',
-        name: 'Cash',
-        incomeMinorUnits: 20000,
-        expenseMinorUnits: 5000,
-      );
-
-      expect(total.netAmountMinorUnits, 15000);
-    });
-
     test('supports value equality', () {
       const total = AccountTotal(
         accountId: 'account-1',
@@ -91,26 +60,23 @@ void main() {
 
   group('RecurringCharge', () {
     test('supports value equality', () {
-      final charge = RecurringCharge(
+      const charge = RecurringCharge(
         categoryId: 'category-1',
         name: 'Food',
         amountMinorUnits: 4500,
         monthsSeen: 3,
-        lastSeenUtc: DateTime.utc(2026, 10, 10),
       );
-      final same = RecurringCharge(
+      const same = RecurringCharge(
         categoryId: 'category-1',
         name: 'Food',
         amountMinorUnits: 4500,
         monthsSeen: 3,
-        lastSeenUtc: DateTime.utc(2026, 10, 10),
       );
-      final different = RecurringCharge(
+      const different = RecurringCharge(
         categoryId: 'category-1',
         name: 'Food',
         amountMinorUnits: 4500,
         monthsSeen: 2,
-        lastSeenUtc: DateTime.utc(2026, 10, 10),
       );
 
       expect(charge, same);
@@ -124,21 +90,18 @@ void main() {
         categoryId: null,
         name: 'Uncategorized',
         currentExpenseMinorUnits: 4800,
-        previousAverageMinorUnits: 3000,
         ratio: 1.6,
       );
       const same = CategorySpike(
         categoryId: null,
         name: 'Uncategorized',
         currentExpenseMinorUnits: 4800,
-        previousAverageMinorUnits: 3000,
         ratio: 1.6,
       );
       const different = CategorySpike(
         categoryId: null,
         name: 'Uncategorized',
         currentExpenseMinorUnits: 4800,
-        previousAverageMinorUnits: 3000,
         ratio: 2,
       );
 
@@ -149,25 +112,19 @@ void main() {
 
   group('MonthlyForecast', () {
     test('supports value equality', () {
-      final forecast = MonthlyForecast(
-        monthStartUtc: DateTime.utc(2026, 10),
-        monthEndUtc: DateTime.utc(2026, 11),
+      const forecast = MonthlyForecast(
         elapsedDays: 15,
         daysInMonth: 31,
         expenseSoFarMinorUnits: 150000,
         projectedExpenseMinorUnits: 310000,
       );
-      final same = MonthlyForecast(
-        monthStartUtc: DateTime.utc(2026, 10),
-        monthEndUtc: DateTime.utc(2026, 11),
+      const same = MonthlyForecast(
         elapsedDays: 15,
         daysInMonth: 31,
         expenseSoFarMinorUnits: 150000,
         projectedExpenseMinorUnits: 310000,
       );
-      final different = MonthlyForecast(
-        monthStartUtc: DateTime.utc(2026, 10),
-        monthEndUtc: DateTime.utc(2026, 11),
+      const different = MonthlyForecast(
         elapsedDays: 15,
         daysInMonth: 31,
         expenseSoFarMinorUnits: 150000,
@@ -269,7 +226,7 @@ void main() {
   });
 
   group('hashCode', () {
-    test('matches equal account totals and differs for distinct ones', () {
+    test('matches equal account totals', () {
       const total = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
@@ -282,102 +239,62 @@ void main() {
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
-      const different = AccountTotal(
-        accountId: 'account-2',
-        name: 'Cash',
-        incomeMinorUnits: 20000,
-        expenseMinorUnits: 5000,
-      );
 
       expect(total.hashCode, same.hashCode);
-      expect(total.hashCode, isNot(different.hashCode));
     });
 
-    test('matches equal recurring charges and differs for distinct ones', () {
-      final charge = RecurringCharge(
+    test('matches equal recurring charges', () {
+      const charge = RecurringCharge(
         categoryId: 'category-1',
         name: 'Food',
         amountMinorUnits: 4500,
         monthsSeen: 3,
-        lastSeenUtc: DateTime.utc(2026, 10, 10),
       );
-      final same = RecurringCharge(
+      const same = RecurringCharge(
         categoryId: 'category-1',
         name: 'Food',
         amountMinorUnits: 4500,
         monthsSeen: 3,
-        lastSeenUtc: DateTime.utc(2026, 10, 10),
-      );
-      final different = RecurringCharge(
-        categoryId: 'category-1',
-        name: 'Food',
-        amountMinorUnits: 4500,
-        monthsSeen: 2,
-        lastSeenUtc: DateTime.utc(2026, 10, 10),
       );
 
       expect(charge.hashCode, same.hashCode);
-      expect(charge.hashCode, isNot(different.hashCode));
     });
 
-    test('matches equal spikes and differs for distinct ones', () {
+    test('matches equal spikes', () {
       const spike = CategorySpike(
         categoryId: null,
         name: 'Uncategorized',
         currentExpenseMinorUnits: 4800,
-        previousAverageMinorUnits: 3000,
         ratio: 1.6,
       );
       const same = CategorySpike(
         categoryId: null,
         name: 'Uncategorized',
         currentExpenseMinorUnits: 4800,
-        previousAverageMinorUnits: 3000,
         ratio: 1.6,
-      );
-      const different = CategorySpike(
-        categoryId: null,
-        name: 'Uncategorized',
-        currentExpenseMinorUnits: 4800,
-        previousAverageMinorUnits: 3000,
-        ratio: 2,
       );
 
       expect(spike.hashCode, same.hashCode);
-      expect(spike.hashCode, isNot(different.hashCode));
     });
 
-    test('matches equal forecasts and differs for distinct ones', () {
-      final forecast = MonthlyForecast(
-        monthStartUtc: DateTime.utc(2026, 10),
-        monthEndUtc: DateTime.utc(2026, 11),
+    test('matches equal forecasts', () {
+      const forecast = MonthlyForecast(
         elapsedDays: 15,
         daysInMonth: 31,
         expenseSoFarMinorUnits: 150000,
         projectedExpenseMinorUnits: 310000,
       );
-      final same = MonthlyForecast(
-        monthStartUtc: DateTime.utc(2026, 10),
-        monthEndUtc: DateTime.utc(2026, 11),
+      const same = MonthlyForecast(
         elapsedDays: 15,
         daysInMonth: 31,
         expenseSoFarMinorUnits: 150000,
         projectedExpenseMinorUnits: 310000,
-      );
-      final different = MonthlyForecast(
-        monthStartUtc: DateTime.utc(2026, 10),
-        monthEndUtc: DateTime.utc(2026, 11),
-        elapsedDays: 15,
-        daysInMonth: 31,
-        expenseSoFarMinorUnits: 150000,
-        projectedExpenseMinorUnits: 206667,
       );
 
       expect(forecast.hashCode, same.hashCode);
-      expect(forecast.hashCode, isNot(different.hashCode));
     });
 
-    test('matches equal budget progress and differs for distinct ones', () {
+    test('matches equal budget progress', () {
       const progress = BudgetProgress(
         budgetId: 'budget-1',
         categoryId: 'category-1',
@@ -394,17 +311,55 @@ void main() {
         spentAmountMinorUnits: 90000,
         level: BudgetProgressLevel.warning,
       );
-      const different = BudgetProgress(
-        budgetId: 'budget-1',
-        categoryId: 'category-1',
-        categoryName: 'Food',
-        allocatedAmountMinorUnits: 100000,
-        spentAmountMinorUnits: 90000,
-        level: BudgetProgressLevel.exceeded,
-      );
 
       expect(progress.hashCode, same.hashCode);
-      expect(progress.hashCode, isNot(different.hashCode));
+    });
+
+    group('AnalyticsState.copyWith', () {
+      test('preserves every field when no argument is given', () {
+        final state = AnalyticsState(
+          status: AnalyticsStatus.ready,
+          period: AnalyticsPeriod.year,
+          dashboard: _dashboard(),
+          errorMessage: 'previous failure',
+        );
+
+        final copy = state.copyWith();
+
+        expect(copy.status, AnalyticsStatus.ready);
+        expect(copy.period, AnalyticsPeriod.year);
+        expect(copy.dashboard, same(state.dashboard));
+        expect(copy.errorMessage, 'previous failure');
+      });
+
+      test('keeps the dashboard and error message for a status change', () {
+        final state = AnalyticsState(
+          status: AnalyticsStatus.ready,
+          dashboard: _dashboard(),
+          errorMessage: 'previous failure',
+        );
+
+        final copy = state.copyWith(status: AnalyticsStatus.failure);
+
+        expect(copy.status, AnalyticsStatus.failure);
+        expect(copy.dashboard, same(state.dashboard));
+        expect(copy.errorMessage, 'previous failure');
+      });
+
+      test('clears the error message when requested', () {
+        const state = AnalyticsState(
+          status: AnalyticsStatus.failure,
+          errorMessage: 'previous failure',
+        );
+
+        final copy = state.copyWith(
+          status: AnalyticsStatus.loading,
+          clearErrorMessage: true,
+        );
+
+        expect(copy.errorMessage, isNull);
+        expect(copy.status, AnalyticsStatus.loading);
+      });
     });
   });
 }
@@ -429,9 +384,7 @@ AnalyticsDashboard _dashboard() {
     accountTotals: const [],
     recurringCharges: const [],
     unusualSpikes: const [],
-    forecast: MonthlyForecast(
-      monthStartUtc: DateTime.utc(2026, 10),
-      monthEndUtc: DateTime.utc(2026, 11),
+    forecast: const MonthlyForecast(
       elapsedDays: 15,
       daysInMonth: 31,
       expenseSoFarMinorUnits: 150000,

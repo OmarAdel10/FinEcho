@@ -16,9 +16,9 @@ import 'package:finecho/features/analytics/view_model/models/monthly_forecast.da
 import 'package:finecho/features/analytics/view_model/models/recurring_charge.dart';
 
 /// Expenses are grouped into amount buckets of this size for recurrence.
-const int _recurringAmountBucketMinorUnits = 100;
+const int _recurringAmountBucketMinorUnits = 50;
 
-/// Distinct months required before an expense counts as recurring.
+/// Consecutive months required before an expense counts as recurring.
 const int _recurringMinimumMonths = 2;
 
 /// The current expense must reach this multiple of the recent average.
@@ -72,6 +72,9 @@ class AnalyticsService {
   final DateTime Function() _now;
 
   /// Derives the dashboard for [period] from current local history.
+  ///
+  /// Aggregates assume every account shares one display currency; totals are
+  /// summed in minor units without conversion.
   Future<AnalyticsDashboard> loadDashboard({
     required AnalyticsPeriod period,
   }) async {
@@ -88,18 +91,24 @@ class AnalyticsService {
       previousEndUtc: previousEndUtc,
     );
 
-    final summary = await _analytics.summaryForRange(
-      startUtc: startUtc,
-      endUtc: endUtc,
-    );
-    final previousSummary = await _analytics.summaryForRange(
-      startUtc: previousStartUtc,
-      endUtc: previousComparisonEndUtc,
-    );
-    final transactions = await _transactions.list();
-    final accounts = await _accounts.list();
-    final budgets = await _budgets.list();
-    final categories = await _categories.list();
+    final (
+      summary,
+      previousSummary,
+      transactions,
+      accounts,
+      budgets,
+      categories,
+    ) = await (
+      _analytics.summaryForRange(startUtc: startUtc, endUtc: endUtc),
+      _analytics.summaryForRange(
+        startUtc: previousStartUtc,
+        endUtc: previousComparisonEndUtc,
+      ),
+      _transactions.list(),
+      _accounts.list(),
+      _budgets.list(),
+      _categories.list(),
+    ).wait;
 
     final accountsById = <String, Account>{
       for (final account in accounts) account.id: account,
@@ -178,8 +187,8 @@ class AnalyticsService {
     }
   }
 
-  /// Compares like for like: the previous period runs up to the same elapsed
-  /// day count as the current period, so a partial current period is never
+  /// Compares like for like: the previous period runs for the same elapsed
+  /// duration as the current period, so a partial current period is never
   /// measured against a complete previous one.
   static DateTime _previousComparisonEnd({
     required DateTime startUtc,
@@ -187,8 +196,7 @@ class AnalyticsService {
     required DateTime previousStartUtc,
     required DateTime previousEndUtc,
   }) {
-    final elapsedDays = nowUtc.difference(startUtc).inDays + 1;
-    final comparisonEnd = previousStartUtc.add(Duration(days: elapsedDays));
+    final comparisonEnd = previousStartUtc.add(nowUtc.difference(startUtc));
     return comparisonEnd.isAfter(previousEndUtc)
         ? previousEndUtc
         : comparisonEnd;
@@ -319,7 +327,7 @@ class AnalyticsService {
 
     final charges = <RecurringCharge>[];
     for (final entry in latestByGroup.entries) {
-      final monthsSeen = monthsByGroup[entry.key]!.length;
+      final monthsSeen = _consecutiveMonthRun(monthsByGroup[entry.key]!);
       if (monthsSeen < _recurringMinimumMonths) {
         continue;
       }
@@ -330,7 +338,6 @@ class AnalyticsService {
           name: _categoryName(transaction.categoryId, categoriesById),
           amountMinorUnits: transaction.amountMinorUnits,
           monthsSeen: monthsSeen,
-          lastSeenUtc: transaction.timestamp.toUtc(),
         ),
       );
     }
@@ -356,6 +363,27 @@ class AnalyticsService {
     return (amountMinorUnits + _recurringAmountBucketMinorUnits ~/ 2) ~/
         _recurringAmountBucketMinorUnits *
         _recurringAmountBucketMinorUnits;
+  }
+
+  /// The longest run of consecutive calendar months in [months].
+  static int _consecutiveMonthRun(Set<int> months) {
+    if (months.isEmpty) {
+      return 0;
+    }
+    final sorted = months.toList()..sort();
+    var longest = 1;
+    var current = 1;
+    for (var index = 1; index < sorted.length; index++) {
+      if (sorted[index] == sorted[index - 1] + 1) {
+        current += 1;
+        if (current > longest) {
+          longest = current;
+        }
+      } else {
+        current = 1;
+      }
+    }
+    return longest;
   }
 
   static List<CategorySpike> _unusualSpikes(
@@ -411,7 +439,6 @@ class AnalyticsService {
           categoryId: entry.key,
           name: _categoryName(entry.key, categoriesById),
           currentExpenseMinorUnits: entry.value,
-          previousAverageMinorUnits: average.round(),
           ratio: entry.value / average,
         ),
       );
@@ -448,14 +475,16 @@ class AnalyticsService {
     }
     final elapsedDays = nowUtc.day;
     final daysInMonth = DateTime.utc(nowUtc.year, nowUtc.month + 1, 0).day;
+    final elapsedFraction =
+        nowUtc.difference(monthStart).inMicroseconds /
+        Duration.microsecondsPerDay;
     return MonthlyForecast(
-      monthStartUtc: monthStart,
-      monthEndUtc: monthEnd,
       elapsedDays: elapsedDays,
       daysInMonth: daysInMonth,
       expenseSoFarMinorUnits: expenseSoFar,
-      projectedExpenseMinorUnits: (expenseSoFar * daysInMonth / elapsedDays)
-          .round(),
+      projectedExpenseMinorUnits: elapsedFraction > 0
+          ? (expenseSoFar * daysInMonth / elapsedFraction).round()
+          : expenseSoFar,
     );
   }
 
@@ -465,10 +494,30 @@ class AnalyticsService {
     Map<String, Category> categoriesById,
     DateTime nowUtc,
   ) {
+    if (budgets.isEmpty) {
+      return const <BudgetProgress>[];
+    }
+
+    final windows = [
+      for (final budget in budgets) _budgetWindow(budget, nowUtc),
+    ];
+    var windowStartUtc = windows.first.$1;
+    var windowEndUtc = windows.first.$2;
+    for (final (startUtc, endUtc) in windows.skip(1)) {
+      if (startUtc.isBefore(windowStartUtc)) {
+        windowStartUtc = startUtc;
+      }
+      if (endUtc.isAfter(windowEndUtc)) {
+        windowEndUtc = endUtc;
+      }
+    }
+
     final expensesByCategory = <String, List<Transaction>>{};
     for (final transaction in transactions) {
       final categoryId = transaction.categoryId;
-      if (transaction.type != TransactionType.expense || categoryId == null) {
+      if (transaction.type != TransactionType.expense ||
+          categoryId == null ||
+          !_isWithin(transaction, windowStartUtc, windowEndUtc)) {
         continue;
       }
       expensesByCategory
@@ -477,8 +526,9 @@ class AnalyticsService {
     }
 
     final progress = <BudgetProgress>[];
-    for (final budget in budgets) {
-      final (startUtc, endUtc) = _budgetWindow(budget, nowUtc);
+    for (var index = 0; index < budgets.length; index++) {
+      final budget = budgets[index];
+      final (startUtc, endUtc) = windows[index];
       var spent = 0;
       for (final transaction
           in expensesByCategory[budget.categoryId] ?? const <Transaction>[]) {
@@ -491,7 +541,7 @@ class AnalyticsService {
       final allocated = budget.allocatedAmountMinorUnits;
       final ratio = allocated > 0 ? spent / allocated : 0.0;
       final BudgetProgressLevel level;
-      if (ratio >= 1) {
+      if ((allocated <= 0 && spent > 0) || ratio >= 1) {
         level = BudgetProgressLevel.exceeded;
       } else if (ratio >= _budgetWarningShare) {
         level = BudgetProgressLevel.warning;
@@ -528,8 +578,10 @@ class AnalyticsService {
     return progress;
   }
 
-  /// The budget window containing [nowUtc], anchored to the first period
-  /// that started at [Budget.startDate].
+  /// The budget window for [nowUtc], anchored to the first period that started
+  /// at [Budget.startDate].
+  ///
+  /// When [nowUtc] precedes the anchor, the first window is returned.
   static (DateTime, DateTime) _budgetWindow(Budget budget, DateTime nowUtc) {
     final anchor = budget.startDate.toUtc();
     if (nowUtc.isBefore(anchor)) {

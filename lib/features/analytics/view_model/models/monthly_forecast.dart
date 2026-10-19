@@ -5,19 +5,11 @@ import 'package:flutter/foundation.dart';
 class MonthlyForecast {
   /// Creates an immutable monthly forecast snapshot.
   const new({
-    required this.monthStartUtc,
-    required this.monthEndUtc,
     required this.elapsedDays,
     required this.daysInMonth,
     required this.expenseSoFarMinorUnits,
     required this.projectedExpenseMinorUnits,
   });
-
-  /// The inclusive UTC start of the forecast month.
-  final DateTime monthStartUtc;
-
-  /// The exclusive UTC end of the forecast month.
-  final DateTime monthEndUtc;
 
   /// The number of elapsed days in the forecast month.
   final int elapsedDays;
@@ -36,8 +28,6 @@ class MonthlyForecast {
   bool operator ==(Object other) {
     return identical(this, other) ||
         other is MonthlyForecast &&
-            monthStartUtc == other.monthStartUtc &&
-            monthEndUtc == other.monthEndUtc &&
             elapsedDays == other.elapsedDays &&
             daysInMonth == other.daysInMonth &&
             expenseSoFarMinorUnits == other.expenseSoFarMinorUnits &&
@@ -47,8 +37,6 @@ class MonthlyForecast {
   /// A hash code derived from every monthly forecast field.
   @override
   int get hashCode => Object.hash(
-    monthStartUtc,
-    monthEndUtc,
     elapsedDays,
     daysInMonth,
     expenseSoFarMinorUnits,

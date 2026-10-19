@@ -8,7 +8,6 @@ class CategorySpike {
     required this.categoryId,
     required this.name,
     required this.currentExpenseMinorUnits,
-    required this.previousAverageMinorUnits,
     required this.ratio,
   });
 
@@ -21,9 +20,6 @@ class CategorySpike {
   /// Expenses recorded this month in minor units.
   final int currentExpenseMinorUnits;
 
-  /// The average monthly expense of the prior baseline window in minor units.
-  final int previousAverageMinorUnits;
-
   /// The current expense divided by the prior monthly average.
   final double ratio;
 
@@ -35,17 +31,11 @@ class CategorySpike {
             categoryId == other.categoryId &&
             name == other.name &&
             currentExpenseMinorUnits == other.currentExpenseMinorUnits &&
-            previousAverageMinorUnits == other.previousAverageMinorUnits &&
             ratio == other.ratio;
   }
 
   /// A hash code derived from every category spike field.
   @override
-  int get hashCode => Object.hash(
-    categoryId,
-    name,
-    currentExpenseMinorUnits,
-    previousAverageMinorUnits,
-    ratio,
-  );
+  int get hashCode =>
+      Object.hash(categoryId, name, currentExpenseMinorUnits, ratio);
 }

@@ -23,9 +23,6 @@ class AccountTotal {
   /// Total expenses in the account currency's minor units.
   final int expenseMinorUnits;
 
-  /// Income minus expenses in the account currency's minor units.
-  int get netAmountMinorUnits => incomeMinorUnits - expenseMinorUnits;
-
   /// Whether [other] is an account total with the same field values.
   @override
   bool operator ==(Object other) {

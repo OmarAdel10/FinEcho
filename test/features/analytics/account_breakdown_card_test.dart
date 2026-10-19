@@ -32,6 +32,7 @@ void main() {
   });
 
   testWidgets('renders expense shares and amounts per account', (tester) async {
+    final semantics = tester.ensureSemantics();
     await pumpCard(tester, const [
       AccountTotal(
         accountId: 'account-1',
@@ -59,6 +60,17 @@ void main() {
         .map((indicator) => indicator.value)
         .toList();
     expect(values, [1.0, 0.4]);
+    final rowSemantics = tester.widget<Semantics>(
+      find
+          .ancestor(
+            of: find.byType(LinearProgressIndicator).first,
+            matching: find.byType(Semantics),
+          )
+          .first,
+    );
+    expect(rowSemantics.properties.label, 'Cash expense share');
+    expect(rowSemantics.properties.value, '100%');
+    semantics.dispose();
   });
 
   testWidgets('keeps zero progress when no account spent', (tester) async {
@@ -106,5 +118,65 @@ void main() {
         .map((indicator) => indicator.value)
         .toList();
     expect(values, [1.0, 0.0]);
+  });
+
+  testWidgets('reorders accounts by the selected metric', (tester) async {
+    const totals = [
+      AccountTotal(
+        accountId: 'account-1',
+        name: 'Cash',
+        incomeMinorUnits: 1000,
+        expenseMinorUnits: 5000,
+      ),
+      AccountTotal(
+        accountId: 'account-2',
+        name: 'Bank',
+        incomeMinorUnits: 4000,
+        expenseMinorUnits: 2000,
+      ),
+    ];
+
+    await pumpCard(tester, totals);
+
+    expect(
+      tester.getTopLeft(find.text('Cash')).dy,
+      lessThan(tester.getTopLeft(find.text('Bank')).dy),
+    );
+
+    await pumpCard(tester, totals, metric: AccountBreakdownMetric.income);
+
+    expect(
+      tester.getTopLeft(find.text('Bank')).dy,
+      lessThan(tester.getTopLeft(find.text('Cash')).dy),
+    );
+    final values = tester
+        .widgetList<LinearProgressIndicator>(
+          find.byType(LinearProgressIndicator),
+        )
+        .map((indicator) => indicator.value)
+        .toList();
+    expect(values, [1.0, 0.25]);
+  });
+
+  testWidgets('tie-breaks equal amounts by account name', (tester) async {
+    await pumpCard(tester, const [
+      AccountTotal(
+        accountId: 'account-1',
+        name: 'Zeta',
+        incomeMinorUnits: 500,
+        expenseMinorUnits: 500,
+      ),
+      AccountTotal(
+        accountId: 'account-2',
+        name: 'Alpha',
+        incomeMinorUnits: 500,
+        expenseMinorUnits: 500,
+      ),
+    ]);
+
+    expect(
+      tester.getTopLeft(find.text('Alpha')).dy,
+      lessThan(tester.getTopLeft(find.text('Zeta')).dy),
+    );
   });
 }

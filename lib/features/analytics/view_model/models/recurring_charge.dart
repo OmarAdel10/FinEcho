@@ -9,7 +9,6 @@ class RecurringCharge {
     required this.name,
     required this.amountMinorUnits,
     required this.monthsSeen,
-    required this.lastSeenUtc,
   });
 
   /// The identifier of the charge category, or `null` when uncategorized.
@@ -21,11 +20,8 @@ class RecurringCharge {
   /// The amount of the most recent occurrence in minor units.
   final int amountMinorUnits;
 
-  /// The number of distinct months with a matching charge.
+  /// The number of consecutive months with a matching charge.
   final int monthsSeen;
-
-  /// The UTC timestamp of the most recent occurrence.
-  final DateTime lastSeenUtc;
 
   /// Whether [other] is a recurring charge with the same field values.
   @override
@@ -35,12 +31,11 @@ class RecurringCharge {
             categoryId == other.categoryId &&
             name == other.name &&
             amountMinorUnits == other.amountMinorUnits &&
-            monthsSeen == other.monthsSeen &&
-            lastSeenUtc == other.lastSeenUtc;
+            monthsSeen == other.monthsSeen;
   }
 
   /// A hash code derived from every recurring charge field.
   @override
   int get hashCode =>
-      Object.hash(categoryId, name, amountMinorUnits, monthsSeen, lastSeenUtc);
+      Object.hash(categoryId, name, amountMinorUnits, monthsSeen);
 }

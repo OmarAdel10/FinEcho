@@ -72,9 +72,18 @@ class _BudgetRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: progress.usedRatio.clamp(0.0, 1.0),
-            color: isWarning ? FinEchoColors.coral : theme.colorScheme.primary,
+          Semantics(
+            label: '${progress.categoryName} budget',
+            value:
+                '${_formatMinorUnits(progress.spentAmountMinorUnits)} of '
+                '${_formatMinorUnits(progress.allocatedAmountMinorUnits)} '
+                'spent',
+            child: LinearProgressIndicator(
+              value: progress.usedRatio.clamp(0.0, 1.0),
+              color: isWarning
+                  ? FinEchoColors.coral
+                  : theme.colorScheme.primary,
+            ),
           ),
         ],
       ),

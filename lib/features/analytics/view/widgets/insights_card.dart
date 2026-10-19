@@ -5,6 +5,7 @@ import 'package:finecho/features/analytics/view_model/models/recurring_charge.da
 import 'package:flutter/material.dart';
 
 const String _title = 'Insights';
+const String _monthNote = 'Current calendar month';
 const String _forecastTitle = 'Projected month-end spending';
 const String _recurringTitle = 'Recurring charges';
 const String _spikesTitle = 'Unusual spending';
@@ -43,6 +44,13 @@ class InsightsCard extends StatelessWidget {
               _title,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _monthNote,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),

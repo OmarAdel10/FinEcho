@@ -109,6 +109,7 @@ void main() {
     });
 
     testWidgets('renders a ring and legend percentages', (tester) async {
+      final semantics = tester.ensureSemantics();
       await tester.pumpWidget(
         _wrap(
           const CategoryBreakdownCard(
@@ -129,12 +130,19 @@ void main() {
       );
 
       expect(_ringPainter(), findsOneWidget);
+      final ringSemantics = tester.widget<Semantics>(
+        find
+            .ancestor(of: _ringPainter(), matching: find.byType(Semantics))
+            .first,
+      );
+      expect(ringSemantics.properties.label, 'Spending ring by category');
       expect(find.text('Food'), findsOneWidget);
       expect(find.text('75.00'), findsOneWidget);
       expect(find.text('75%'), findsOneWidget);
       expect(find.text('Transport'), findsOneWidget);
       expect(find.text('25.00'), findsOneWidget);
       expect(find.text('25%'), findsOneWidget);
+      semantics.dispose();
     });
 
     testWidgets('guards percentages when the total is zero', (tester) async {
@@ -192,6 +200,7 @@ void main() {
     testWidgets('keeps a normal budget on the theme primary color', (
       tester,
     ) async {
+      final semantics = tester.ensureSemantics();
       await tester.pumpWidget(
         _wrap(
           const BudgetProgressCard(
@@ -216,6 +225,17 @@ void main() {
       expect(indicator.value, 0.5);
       expect(indicator.color, Theme.of(context).colorScheme.primary);
       expect(find.text('50.00 / 100.00'), findsOneWidget);
+      final rowSemantics = tester.widget<Semantics>(
+        find
+            .ancestor(
+              of: find.byType(LinearProgressIndicator),
+              matching: find.byType(Semantics),
+            )
+            .first,
+      );
+      expect(rowSemantics.properties.label, 'Food budget');
+      expect(rowSemantics.properties.value, '50.00 of 100.00 spent');
+      semantics.dispose();
     });
 
     testWidgets('clamps an exceeded budget and uses the coral accent', (
@@ -251,21 +271,21 @@ void main() {
     testWidgets('shows the empty section messages', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          InsightsCard(
+          const InsightsCard(
             forecast: MonthlyForecast(
-              monthStartUtc: DateTime.utc(2026, 10),
-              monthEndUtc: DateTime.utc(2026, 11),
               elapsedDays: 15,
               daysInMonth: 31,
               expenseSoFarMinorUnits: 0,
               projectedExpenseMinorUnits: 0,
             ),
-            recurringCharges: const [],
-            unusualSpikes: const [],
+            recurringCharges: [],
+            unusualSpikes: [],
           ),
         ),
       );
 
+      expect(find.text('Insights'), findsOneWidget);
+      expect(find.text('Current calendar month'), findsOneWidget);
       expect(find.text('Projected month-end spending'), findsOneWidget);
       expect(find.text('0.00'), findsOneWidget);
       expect(find.text('Based on 15 of 31 days so far'), findsOneWidget);

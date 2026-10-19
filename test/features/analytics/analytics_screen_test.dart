@@ -159,9 +159,14 @@ void main() {
     expect(find.text('Bank'), findsOneWidget);
     expect(find.text('100.00'), findsOneWidget);
 
+    expect(find.byType(InsightsCard), findsNothing);
+
+    await tester.tap(find.text('Patterns'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Insights'), findsOneWidget);
     expect(find.text('Projected month-end spending'), findsOneWidget);
-    expect(find.text('723.33'), findsOneWidget);
+    expect(find.text('748.28'), findsOneWidget);
     expect(find.text('Based on 15 of 31 days so far'), findsOneWidget);
     expect(find.text('No recurring charges yet.'), findsOneWidget);
     expect(find.text('No unusual spending.'), findsOneWidget);
@@ -179,7 +184,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Something went wrong'), findsOneWidget);
-    expect(harness.analyticsRepository.requestedRanges, hasLength(1));
+    expect(harness.analyticsRepository.requestedRanges, hasLength(2));
 
     harness.analyticsRepository.error = null;
     await tester.tap(find.text('Try again'));
@@ -187,7 +192,7 @@ void main() {
 
     expect(find.text('Something went wrong'), findsNothing);
     expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
-    expect(harness.analyticsRepository.requestedRanges, hasLength(3));
+    expect(harness.analyticsRepository.requestedRanges, hasLength(4));
   });
 
   testWidgets('switches period from the segmented control', (tester) async {
@@ -207,9 +212,9 @@ void main() {
     expect(cubit.state.period, AnalyticsPeriod.year);
     expect(harness.analyticsRepository.requestedRanges, [
       (DateTime.utc(2026, 10), DateTime.utc(2026, 11)),
-      (DateTime.utc(2026, 9), DateTime.utc(2026, 9, 16)),
+      (DateTime.utc(2026, 9), DateTime.utc(2026, 9, 15, 12)),
       (DateTime.utc(2026), DateTime.utc(2027)),
-      (DateTime.utc(2025), DateTime.utc(2025, 10, 16)),
+      (DateTime.utc(2025), DateTime.utc(2025, 10, 15, 12)),
     ]);
   });
 
@@ -224,6 +229,7 @@ void main() {
 
     expect(find.text('Spending by category'), findsOneWidget);
     expect(find.byType(AccountBreakdownCard), findsOneWidget);
+    expect(find.byType(InsightsCard), findsNothing);
 
     await tester.tap(find.text('Income').first);
     await tester.pumpAndSettle();
@@ -281,6 +287,8 @@ void main() {
       find.text('Could not load your statistics. Please try again.'),
       findsOneWidget,
     );
+    expect(cubit.state.period, AnalyticsPeriod.month);
+    expect(cubit.state.dashboard?.period, AnalyticsPeriod.month);
   });
 
   testWidgets('shows the empty category, account, and insight messages', (
@@ -296,6 +304,11 @@ void main() {
 
     expect(find.text('No spending in this period.'), findsOneWidget);
     expect(find.text('No account activity in this period.'), findsOneWidget);
+    expect(find.byType(InsightsCard), findsNothing);
+
+    await tester.tap(find.text('Patterns'));
+    await tester.pumpAndSettle();
+
     expect(find.text('No recurring charges yet.'), findsOneWidget);
     expect(find.text('No unusual spending.'), findsOneWidget);
     expect(find.byType(BudgetProgressCard), findsNothing);
@@ -378,8 +391,11 @@ void main() {
     await tester.pumpWidget(_wrap(cubit));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Patterns'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Projected month-end spending'), findsOneWidget);
-    expect(find.text('620.00'), findsOneWidget);
+    expect(find.text('641.38'), findsOneWidget);
     expect(find.text('Based on 15 of 31 days so far'), findsOneWidget);
     expect(find.text('Recurring charges'), findsOneWidget);
     expect(find.text('Rent'), findsOneWidget);
@@ -424,6 +440,9 @@ void main() {
     await tester.pumpWidget(_wrap(cubit));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Patterns'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Dining'), findsOneWidget);
     expect(find.text('100% above the recent average'), findsOneWidget);
     expect(
@@ -435,5 +454,44 @@ void main() {
     );
     final icon = tester.widget<Icon>(find.byIcon(Icons.warning_amber_rounded));
     expect(icon.color, FinEchoColors.coral);
+  });
+
+  testWidgets('shows a spinner while switching periods', (tester) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    final gate = Completer<void>();
+    harness.analyticsRepository.gate = gate;
+    await tester.tap(find.text('Yearly'));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(AnalyticsSummaryCard), findsNothing);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
+    expect(cubit.state.period, AnalyticsPeriod.year);
+  });
+
+  testWidgets('does not reload a ready dashboard on mount', (tester) async {
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+    await cubit.load();
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(harness.analyticsRepository.requestedRanges, hasLength(2));
+    expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
   });
 }

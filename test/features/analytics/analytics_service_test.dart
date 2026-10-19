@@ -38,7 +38,7 @@ void main() {
 
         expect(harness.analyticsRepository.requestedRanges, [
           (DateTime.utc(2026, 10), DateTime.utc(2026, 11)),
-          (DateTime.utc(2026, 9), DateTime.utc(2026, 9, 16)),
+          (DateTime.utc(2026, 9), DateTime.utc(2026, 9, 15, 12)),
         ]);
         expect(dashboard.period, AnalyticsPeriod.month);
         expect(dashboard.startUtc, DateTime.utc(2026, 10));
@@ -83,7 +83,7 @@ void main() {
 
         expect(harness.analyticsRepository.requestedRanges, [
           (DateTime.utc(2026, 10, 12), DateTime.utc(2026, 10, 19)),
-          (DateTime.utc(2026, 10, 5), DateTime.utc(2026, 10, 9)),
+          (DateTime.utc(2026, 10, 5), DateTime.utc(2026, 10, 8, 12)),
         ]);
         expect(dashboard.startUtc, DateTime.utc(2026, 10, 12));
         expect(dashboard.endUtc, DateTime.utc(2026, 10, 19));
@@ -98,7 +98,7 @@ void main() {
 
         expect(harness.analyticsRepository.requestedRanges, [
           (DateTime.utc(2026), DateTime.utc(2027)),
-          (DateTime.utc(2025), DateTime.utc(2025, 10, 16)),
+          (DateTime.utc(2025), DateTime.utc(2025, 10, 15, 12)),
         ]);
         expect(dashboard.startUtc, DateTime.utc(2026));
         expect(dashboard.endUtc, DateTime.utc(2027));
@@ -115,7 +115,7 @@ void main() {
 
         expect(december.analyticsRepository.requestedRanges, [
           (DateTime.utc(2026, 12), DateTime.utc(2027)),
-          (DateTime.utc(2026, 11), DateTime.utc(2026, 11, 16)),
+          (DateTime.utc(2026, 11), DateTime.utc(2026, 11, 15)),
         ]);
       });
 
@@ -130,7 +130,37 @@ void main() {
 
         expect(january.analyticsRepository.requestedRanges, [
           (DateTime.utc(2027), DateTime.utc(2027, 2)),
-          (DateTime.utc(2026, 12), DateTime.utc(2026, 12, 16)),
+          (DateTime.utc(2026, 12), DateTime.utc(2026, 12, 15)),
+        ]);
+      });
+
+      test('clamps the previous month to its end when it is shorter', () async {
+        final march = AnalyticsTestHarness(
+          onSummary: (startUtc, endUtc) =>
+              _summary(startUtc: startUtc, endUtc: endUtc),
+          now: () => DateTime.utc(2026, 3, 31),
+        );
+
+        await march.service.loadDashboard(period: AnalyticsPeriod.month);
+
+        expect(march.analyticsRepository.requestedRanges, [
+          (DateTime.utc(2026, 3), DateTime.utc(2026, 4)),
+          (DateTime.utc(2026, 2), DateTime.utc(2026, 3)),
+        ]);
+      });
+
+      test('clamps the previous year to its end when it is shorter', () async {
+        final december = AnalyticsTestHarness(
+          onSummary: (startUtc, endUtc) =>
+              _summary(startUtc: startUtc, endUtc: endUtc),
+          now: () => DateTime.utc(2028, 12, 31, 23, 59),
+        );
+
+        await december.service.loadDashboard(period: AnalyticsPeriod.year);
+
+        expect(december.analyticsRepository.requestedRanges, [
+          (DateTime.utc(2028), DateTime.utc(2029)),
+          (DateTime.utc(2027), DateTime.utc(2028)),
         ]);
       });
 
@@ -140,7 +170,49 @@ void main() {
 
         await expectLater(
           harness.service.loadDashboard(period: AnalyticsPeriod.month),
-          throwsA(isA<Exception>()),
+          throwsA(isA<Error>()),
+        );
+      });
+    });
+
+    group('repository failures', () {
+      test('propagates transaction load failures', () async {
+        final harness = AnalyticsTestHarness();
+        harness.transactionRepository.listError = Exception('boom');
+
+        await expectLater(
+          harness.service.loadDashboard(period: AnalyticsPeriod.month),
+          throwsA(isA<Error>()),
+        );
+      });
+
+      test('propagates account load failures', () async {
+        final harness = AnalyticsTestHarness();
+        harness.accountRepository.listError = Exception('boom');
+
+        await expectLater(
+          harness.service.loadDashboard(period: AnalyticsPeriod.month),
+          throwsA(isA<Error>()),
+        );
+      });
+
+      test('propagates budget load failures', () async {
+        final harness = AnalyticsTestHarness();
+        harness.budgetRepository.listError = Exception('boom');
+
+        await expectLater(
+          harness.service.loadDashboard(period: AnalyticsPeriod.month),
+          throwsA(isA<Error>()),
+        );
+      });
+
+      test('propagates category load failures', () async {
+        final harness = AnalyticsTestHarness();
+        harness.categoryRepository.listError = Exception('boom');
+
+        await expectLater(
+          harness.service.loadDashboard(period: AnalyticsPeriod.month),
+          throwsA(isA<Error>()),
         );
       });
     });
@@ -298,6 +370,37 @@ void main() {
           ),
         ]);
       });
+
+      test('orders accounts by id when every other field ties', () async {
+        final harness = AnalyticsTestHarness(
+          initialAccounts: {
+            'account-1': testAccount(),
+            'account-2': testAccount(id: 'account-2'),
+          },
+          initialTransactions: {
+            't1': testTransaction(
+              id: 't1',
+              timestamp: DateTime.utc(2026, 10, 5),
+              amountMinorUnits: 5000,
+            ),
+            't2': testTransaction(
+              id: 't2',
+              timestamp: DateTime.utc(2026, 10, 6),
+              amountMinorUnits: 5000,
+              accountId: 'account-2',
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(
+          dashboard.accountTotals.map((total) => total.accountId).toList(),
+          ['account-1', 'account-2'],
+        );
+      });
     });
 
     group('recurring charges', () {
@@ -314,7 +417,7 @@ void main() {
             'r1': testTransaction(
               id: 'r1',
               categoryId: 'category-1',
-              amountMinorUnits: 4500,
+              amountMinorUnits: 4530,
               timestamp: DateTime.utc(2026, 9, 10),
             ),
             'r2': testTransaction(
@@ -384,27 +487,24 @@ void main() {
           period: AnalyticsPeriod.month,
         );
 
-        expect(dashboard.recurringCharges, [
+        expect(dashboard.recurringCharges, const [
           RecurringCharge(
             categoryId: 'category-2',
             name: 'Transport',
             amountMinorUnits: 2000,
             monthsSeen: 3,
-            lastSeenUtc: DateTime.utc(2026, 10, 15),
           ),
           RecurringCharge(
             categoryId: null,
             name: 'Uncategorized',
             amountMinorUnits: 6000,
             monthsSeen: 2,
-            lastSeenUtc: DateTime.utc(2026, 10, 14),
           ),
           RecurringCharge(
             categoryId: 'category-1',
             name: 'Food',
             amountMinorUnits: 4530,
             monthsSeen: 2,
-            lastSeenUtc: DateTime.utc(2026, 10, 10),
           ),
         ]);
       });
@@ -416,7 +516,7 @@ void main() {
             'b1': testTransaction(
               id: 'b1',
               categoryId: 'category-1',
-              amountMinorUnits: 4550,
+              amountMinorUnits: 4575,
               timestamp: DateTime.utc(2026, 9, 10),
             ),
             'b2': testTransaction(
@@ -432,15 +532,86 @@ void main() {
           period: AnalyticsPeriod.month,
         );
 
-        expect(dashboard.recurringCharges, [
+        expect(dashboard.recurringCharges, const [
           RecurringCharge(
             categoryId: 'category-1',
             name: 'Food',
             amountMinorUnits: 4600,
             monthsSeen: 2,
-            lastSeenUtc: DateTime.utc(2026, 10, 10),
           ),
         ]);
+      });
+
+      test('ignores charges that skip a month', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {'category-1': testCategory()},
+          initialTransactions: {
+            'aug': testTransaction(
+              id: 'aug',
+              categoryId: 'category-1',
+              amountMinorUnits: 4500,
+              timestamp: DateTime.utc(2026, 8, 10),
+            ),
+            'oct': testTransaction(
+              id: 'oct',
+              categoryId: 'category-1',
+              amountMinorUnits: 4500,
+              timestamp: DateTime.utc(2026, 10, 10),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.recurringCharges, isEmpty);
+      });
+
+      test('orders equal charges by category id', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {
+            'category-1': testCategory(),
+            'category-2': testAnalyticsCategory(id: 'category-2', name: 'Food'),
+          },
+          initialTransactions: {
+            'food-1-sep': testTransaction(
+              id: 'food-1-sep',
+              categoryId: 'category-1',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 9, 10),
+            ),
+            'food-1-oct': testTransaction(
+              id: 'food-1-oct',
+              categoryId: 'category-1',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 10),
+            ),
+            'food-2-sep': testTransaction(
+              id: 'food-2-sep',
+              categoryId: 'category-2',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 9, 15),
+            ),
+            'food-2-oct': testTransaction(
+              id: 'food-2-oct',
+              categoryId: 'category-2',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 15),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(
+          dashboard.recurringCharges
+              .map((charge) => charge.categoryId)
+              .toList(),
+          ['category-1', 'category-2'],
+        );
       });
     });
 
@@ -541,21 +712,18 @@ void main() {
             categoryId: 'category-1',
             name: 'Food',
             currentExpenseMinorUnits: 6000,
-            previousAverageMinorUnits: 3000,
             ratio: 2,
           ),
           CategorySpike(
             categoryId: null,
             name: 'Uncategorized',
             currentExpenseMinorUnits: 4800,
-            previousAverageMinorUnits: 3000,
             ratio: 1.6,
           ),
           CategorySpike(
             categoryId: 'category-3',
             name: 'Shopping',
             currentExpenseMinorUnits: 13500,
-            previousAverageMinorUnits: 9000,
             ratio: 1.5,
           ),
         ]);
@@ -569,6 +737,31 @@ void main() {
               categoryId: 'category-2',
               amountMinorUnits: 5000,
               timestamp: DateTime.utc(2026, 10, 7),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.unusualSpikes, isEmpty);
+      });
+
+      test('ignores a category with a single baseline month', () async {
+        final harness = AnalyticsTestHarness(
+          initialTransactions: {
+            'sep': testTransaction(
+              id: 'sep',
+              categoryId: 'category-2',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 9, 5),
+            ),
+            'oct': testTransaction(
+              id: 'oct',
+              categoryId: 'category-2',
+              amountMinorUnits: 6000,
+              timestamp: DateTime.utc(2026, 10, 5),
             ),
           },
         );
@@ -650,17 +843,83 @@ void main() {
             categoryId: 'category-2',
             name: 'Transport',
             currentExpenseMinorUnits: 8000,
-            previousAverageMinorUnits: 4000,
             ratio: 2,
           ),
           CategorySpike(
             categoryId: 'category-1',
             name: 'Food',
             currentExpenseMinorUnits: 6000,
-            previousAverageMinorUnits: 3000,
             ratio: 2,
           ),
         ]);
+      });
+
+      test('orders equal spikes by category id', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {
+            'category-1': testCategory(),
+            'category-2': testAnalyticsCategory(id: 'category-2', name: 'Food'),
+          },
+          initialTransactions: {
+            'first-jul': testTransaction(
+              id: 'first-jul',
+              categoryId: 'category-1',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 7, 5),
+            ),
+            'first-aug': testTransaction(
+              id: 'first-aug',
+              categoryId: 'category-1',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 8, 5),
+            ),
+            'first-sep': testTransaction(
+              id: 'first-sep',
+              categoryId: 'category-1',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 9, 5),
+            ),
+            'first-oct': testTransaction(
+              id: 'first-oct',
+              categoryId: 'category-1',
+              amountMinorUnits: 6000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+            'second-jul': testTransaction(
+              id: 'second-jul',
+              categoryId: 'category-2',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 7, 6),
+            ),
+            'second-aug': testTransaction(
+              id: 'second-aug',
+              categoryId: 'category-2',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 8, 6),
+            ),
+            'second-sep': testTransaction(
+              id: 'second-sep',
+              categoryId: 'category-2',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 9, 6),
+            ),
+            'second-oct': testTransaction(
+              id: 'second-oct',
+              categoryId: 'category-2',
+              amountMinorUnits: 6000,
+              timestamp: DateTime.utc(2026, 10, 6),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(
+          dashboard.unusualSpikes.map((spike) => spike.categoryId).toList(),
+          ['category-1', 'category-2'],
+        );
       });
     });
 
@@ -696,12 +955,10 @@ void main() {
           period: AnalyticsPeriod.month,
         );
 
-        expect(dashboard.forecast.monthStartUtc, DateTime.utc(2026, 10));
-        expect(dashboard.forecast.monthEndUtc, DateTime.utc(2026, 11));
         expect(dashboard.forecast.elapsedDays, 15);
         expect(dashboard.forecast.daysInMonth, 31);
         expect(dashboard.forecast.expenseSoFarMinorUnits, 100000);
-        expect(dashboard.forecast.projectedExpenseMinorUnits, 206667);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 213793);
       });
 
       test('projects the calendar month for every selected period', () async {
@@ -720,10 +977,10 @@ void main() {
         );
 
         expect(dashboard.forecast.expenseSoFarMinorUnits, 150000);
-        expect(dashboard.forecast.projectedExpenseMinorUnits, 310000);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 320690);
       });
 
-      test('projects a full month from a single elapsed day', () async {
+      test('does not extrapolate at the start of the month', () async {
         final harness = AnalyticsTestHarness(
           now: () => DateTime.utc(2026, 11),
           initialTransactions: {
@@ -742,7 +999,27 @@ void main() {
         expect(dashboard.forecast.elapsedDays, 1);
         expect(dashboard.forecast.daysInMonth, 30);
         expect(dashboard.forecast.expenseSoFarMinorUnits, 5000);
-        expect(dashboard.forecast.projectedExpenseMinorUnits, 150000);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 5000);
+      });
+
+      test('extrapolates from the elapsed part of the first day', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 11, 1, 12),
+          initialTransactions: {
+            'nov': testTransaction(
+              id: 'nov',
+              amountMinorUnits: 5000,
+              timestamp: DateTime.utc(2026, 11),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.forecast.expenseSoFarMinorUnits, 5000);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 300000);
       });
 
       test('projects the spent total on the last day of the month', () async {
@@ -762,7 +1039,7 @@ void main() {
         );
 
         expect(dashboard.forecast.elapsedDays, 31);
-        expect(dashboard.forecast.projectedExpenseMinorUnits, 100000);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 103333);
       });
     });
 
@@ -945,6 +1222,38 @@ void main() {
         ]);
       });
 
+      test('reports spending against a zero allocation as exceeded', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {'category-1': testCategory()},
+          initialBudgets: {
+            'budget-1': testBudget(allocatedAmountMinorUnits: 0),
+          },
+          initialTransactions: {
+            'food': testTransaction(
+              id: 'food',
+              categoryId: 'category-1',
+              amountMinorUnits: 5000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.budgetProgress, const [
+          BudgetProgress(
+            budgetId: 'budget-1',
+            categoryId: 'category-1',
+            categoryName: 'Food',
+            allocatedAmountMinorUnits: 0,
+            spentAmountMinorUnits: 5000,
+            level: BudgetProgressLevel.exceeded,
+          ),
+        ]);
+      });
+
       test('anchors budget windows at the budget start date', () async {
         final harness = AnalyticsTestHarness(
           initialCategories: {
@@ -1015,6 +1324,262 @@ void main() {
             spentAmountMinorUnits: 2000,
             level: BudgetProgressLevel.normal,
           ),
+        ]);
+      });
+
+      test(
+        'uses the first window for a budget starting in the future',
+        () async {
+          final harness = AnalyticsTestHarness(
+            initialCategories: {'category-1': testCategory()},
+            initialBudgets: {
+              'budget-future': testBudget(
+                id: 'budget-future',
+                startDate: DateTime.utc(2026, 11),
+              ),
+            },
+            initialTransactions: {
+              'oct': testTransaction(
+                id: 'oct',
+                categoryId: 'category-1',
+                amountMinorUnits: 7000,
+                timestamp: DateTime.utc(2026, 10, 5),
+              ),
+              'nov': testTransaction(
+                id: 'nov',
+                categoryId: 'category-1',
+                amountMinorUnits: 4000,
+                timestamp: DateTime.utc(2026, 11, 5),
+              ),
+            },
+          );
+
+          final dashboard = await harness.service.loadDashboard(
+            period: AnalyticsPeriod.month,
+          );
+
+          expect(dashboard.budgetProgress, const [
+            BudgetProgress(
+              budgetId: 'budget-future',
+              categoryId: 'category-1',
+              categoryName: 'Food',
+              allocatedAmountMinorUnits: 10000,
+              spentAmountMinorUnits: 4000,
+              level: BudgetProgressLevel.normal,
+            ),
+          ]);
+        },
+      );
+
+      test(
+        'keeps the anchored window when the next one has not started',
+        () async {
+          final harness = AnalyticsTestHarness(
+            initialCategories: {'category-1': testCategory()},
+            initialBudgets: {
+              'budget-monthly': testBudget(
+                id: 'budget-monthly',
+                startDate: DateTime.utc(2026, 9, 20),
+              ),
+            },
+            initialTransactions: {
+              'before': testTransaction(
+                id: 'before',
+                categoryId: 'category-1',
+                timestamp: DateTime.utc(2026, 9, 10),
+              ),
+              'sept': testTransaction(
+                id: 'sept',
+                categoryId: 'category-1',
+                amountMinorUnits: 3000,
+                timestamp: DateTime.utc(2026, 9, 25),
+              ),
+              'oct': testTransaction(
+                id: 'oct',
+                categoryId: 'category-1',
+                amountMinorUnits: 2000,
+                timestamp: DateTime.utc(2026, 10, 5),
+              ),
+            },
+          );
+
+          final dashboard = await harness.service.loadDashboard(
+            period: AnalyticsPeriod.month,
+          );
+
+          expect(dashboard.budgetProgress, const [
+            BudgetProgress(
+              budgetId: 'budget-monthly',
+              categoryId: 'category-1',
+              categoryName: 'Food',
+              allocatedAmountMinorUnits: 10000,
+              spentAmountMinorUnits: 5000,
+              level: BudgetProgressLevel.normal,
+            ),
+          ]);
+        },
+      );
+
+      test('starts a new window on the anchor day', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 10, 20),
+          initialCategories: {'category-1': testCategory()},
+          initialBudgets: {
+            'budget-monthly': testBudget(
+              id: 'budget-monthly',
+              startDate: DateTime.utc(2026, 9, 20),
+            ),
+          },
+          initialTransactions: {
+            'yesterday': testTransaction(
+              id: 'yesterday',
+              categoryId: 'category-1',
+              timestamp: DateTime.utc(2026, 10, 19),
+            ),
+            'today': testTransaction(
+              id: 'today',
+              categoryId: 'category-1',
+              amountMinorUnits: 2500,
+              timestamp: DateTime.utc(2026, 10, 20),
+            ),
+            'tomorrow': testTransaction(
+              id: 'tomorrow',
+              categoryId: 'category-1',
+              amountMinorUnits: 500,
+              timestamp: DateTime.utc(2026, 10, 21),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.budgetProgress, const [
+          BudgetProgress(
+            budgetId: 'budget-monthly',
+            categoryId: 'category-1',
+            categoryName: 'Food',
+            allocatedAmountMinorUnits: 10000,
+            spentAmountMinorUnits: 3000,
+            level: BudgetProgressLevel.normal,
+          ),
+        ]);
+      });
+
+      test('clamps anchored windows to shorter months', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 3, 15),
+          initialCategories: {'category-1': testCategory()},
+          initialBudgets: {
+            'budget-monthly': testBudget(
+              id: 'budget-monthly',
+              startDate: DateTime.utc(2026, 1, 31),
+            ),
+          },
+          initialTransactions: {
+            'window-start': testTransaction(
+              id: 'window-start',
+              categoryId: 'category-1',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 2, 28),
+            ),
+            'in-window': testTransaction(
+              id: 'in-window',
+              categoryId: 'category-1',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 3, 10),
+            ),
+            'window-end': testTransaction(
+              id: 'window-end',
+              categoryId: 'category-1',
+              timestamp: DateTime.utc(2026, 3, 28),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.budgetProgress, const [
+          BudgetProgress(
+            budgetId: 'budget-monthly',
+            categoryId: 'category-1',
+            categoryName: 'Food',
+            allocatedAmountMinorUnits: 10000,
+            spentAmountMinorUnits: 5000,
+            level: BudgetProgressLevel.normal,
+          ),
+        ]);
+      });
+
+      test('marks the warning and exceeded boundaries inclusively', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {
+            'category-1': testCategory(),
+            'category-2': testAnalyticsCategory(
+              id: 'category-2',
+              name: 'Transport',
+            ),
+          },
+          initialBudgets: {
+            'budget-warning': testBudget(id: 'budget-warning'),
+            'budget-exceeded': testBudget(
+              id: 'budget-exceeded',
+              categoryId: 'category-2',
+            ),
+          },
+          initialTransactions: {
+            'warning': testTransaction(
+              id: 'warning',
+              categoryId: 'category-1',
+              amountMinorUnits: 8500,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+            'exceeded': testTransaction(
+              id: 'exceeded',
+              categoryId: 'category-2',
+              amountMinorUnits: 10000,
+              timestamp: DateTime.utc(2026, 10, 6),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.budgetProgress, const [
+          BudgetProgress(
+            budgetId: 'budget-exceeded',
+            categoryId: 'category-2',
+            categoryName: 'Transport',
+            allocatedAmountMinorUnits: 10000,
+            spentAmountMinorUnits: 10000,
+            level: BudgetProgressLevel.exceeded,
+          ),
+          BudgetProgress(
+            budgetId: 'budget-warning',
+            categoryId: 'category-1',
+            categoryName: 'Food',
+            allocatedAmountMinorUnits: 10000,
+            spentAmountMinorUnits: 8500,
+            level: BudgetProgressLevel.warning,
+          ),
+        ]);
+      });
+
+      test('compares the full previous month on the last day', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 10, 31),
+        );
+
+        await harness.service.loadDashboard(period: AnalyticsPeriod.month);
+
+        expect(harness.analyticsRepository.requestedRanges, [
+          (DateTime.utc(2026, 10), DateTime.utc(2026, 11)),
+          (DateTime.utc(2026, 9), DateTime.utc(2026, 10)),
         ]);
       });
     });

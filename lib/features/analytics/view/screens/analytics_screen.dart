@@ -44,7 +44,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       if (!mounted) {
         return;
       }
-      unawaited(context.read<AnalyticsCubit>().load());
+      final cubit = context.read<AnalyticsCubit>();
+      if (cubit.state.status == AnalyticsStatus.loading) {
+        unawaited(cubit.load());
+      }
     });
   }
 
@@ -78,6 +81,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 );
               }
               if (dashboard == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (dashboard.period != state.period) {
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -148,12 +154,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         const SizedBox(height: 12),
                         AccountBreakdownCard(
                           accountTotals: dashboard.accountTotals,
-                        ),
-                        const SizedBox(height: 12),
-                        InsightsCard(
-                          forecast: dashboard.forecast,
-                          recurringCharges: dashboard.recurringCharges,
-                          unusualSpikes: dashboard.unusualSpikes,
                         ),
                       ],
                       _AnalyticsMode.income => [
