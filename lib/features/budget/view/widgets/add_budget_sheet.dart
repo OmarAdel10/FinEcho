@@ -57,6 +57,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<BudgetCubit, BudgetState>(
+      buildWhen: (previous, current) => previous.status != current.status,
       builder: (context, state) {
         if (state.categories.isEmpty) {
           return Padding(

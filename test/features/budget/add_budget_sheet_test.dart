@@ -185,16 +185,28 @@ void main() {
     );
     final cubit = await _loadedCubit(harness);
     harness.budgetRepository.createGate = Completer<void>();
+    await tester.pumpWidget(_wrap(cubit, const AddBudgetSheet()));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextFormField).first, '10');
+    await tester.pumpAndSettle();
+
     final pending = cubit.createBudget(
       categoryId: 'category-1',
       allocatedAmountMinorUnits: 1000,
       period: 'monthly',
       startDate: DateTime.utc(2026, 10),
     );
-    await tester.pumpWidget(_wrap(cubit, const AddBudgetSheet()));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.byType(TextFormField).evaluate().isEmpty, isFalse);
+    expect(cubit.state.isSubmitting, isTrue);
+    expect(
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).first)
+          .controller!
+          .text,
+      equals('10'),
+    );
     expect(
       tester.widget<TextFormField>(find.byType(TextFormField).first).enabled,
       isFalse,
@@ -204,16 +216,16 @@ void main() {
           .widget<DropdownButtonFormField<String>>(
             find.byType(DropdownButtonFormField<String>).first,
           )
-          .enabled,
-      isFalse,
+          .onChanged,
+      isNull,
     );
     expect(
       tester
           .widget<DropdownButtonFormField<String>>(
             find.byType(DropdownButtonFormField<String>).last,
           )
-          .enabled,
-      isFalse,
+          .onChanged,
+      isNull,
     );
     expect(
       tester

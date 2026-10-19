@@ -50,6 +50,7 @@ void main() {
     final harness = BudgetTestHarness(
       initialCategories: {'category-1': testCategory()},
     );
+    harness.budgetRepository.listGate = Completer<void>();
     final cubit = BudgetCubit(harness.service);
     addTearDown(cubit.close);
 
