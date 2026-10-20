@@ -219,11 +219,15 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 ## Security model
 
 - App-lock metadata and the PIN verifier use platform secure storage (Android
-  Keystore-backed storage, or the platform keychain where available). The
+  Keystore-backed storage; Android is the only configured platform). The
   verifier is a random-salted HMAC-SHA256 hash; the raw PIN is never stored.
   Tests and explicitly configured in-memory graphs may substitute fakes.
+- The startup flow loads the persisted security state before showing any route.
+  Configured users are routed to the protected area, where the gate shows the
+  lock screen until the PIN is verified; unreadable secure storage shows a
+  recovery screen instead of content.
 - The security gate relocks the app when it is paused, and Android applies
-  `FLAG_SECURE` so financial screens are excluded from screenshots and recents
+  `FLAG_SECURE` app-wide so screens are excluded from screenshots and recents
   previews.
 - Generate the database key using a cryptographically secure source.
 - Store that key only in Android Keystore/iOS Keychain through secure storage.

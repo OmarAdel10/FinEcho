@@ -94,20 +94,31 @@ changed units. A final approved batch fixed:
 
 Deferred; tracked in Plane:
 
-- None from this batch; FINECHO-11 and FINECHO-25 were resolved in the security
-  hardening branch.
+- FINECHO-27 guard PIN setup against a relock race.
+- FINECHO-28 move the lifecycle observer to app scope.
+- FINECHO-29 version the secure-storage security JSON codec.
+- FINECHO-30 harden PIN lockout and verifier derivation.
+- FINECHO-31 verify `FLAG_SECURE` on a device.
+- FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
 
 Fixed:
 
+- Persisted lock state is loaded before routing: configured users start at the
+  lock screen, and onboarding/security setup redirect to the protected area.
+  This closes the cold-start gap in FINECHO-25.
+- Secure-storage read and decode failures show a recovery screen with retry and
+  an explicit app-lock reset instead of an infinite spinner.
+- A stored verifier without lock metadata fails closed; PIN setup refuses to
+  overwrite an existing verifier and rolls back if state persistence fails.
+- Android secure storage uses encrypted shared preferences and is excluded from
+  backup/device transfer.
 - The security gate relocks on `AppLifecycleState.paused`; an in-flight PIN
-  verification cannot complete an unlock after the app is paused.
-- Android applies `FLAG_SECURE` so protected screens are excluded from
+  verification cannot complete an unlock after the app is paused, and the PIN
+  field clears on relock.
+- Android applies `FLAG_SECURE` app-wide so screens are excluded from
   screenshots and recent-app previews.
-- Production DI now persists app-lock metadata and the salted PIN verifier in
-  platform secure storage through `flutter_secure_storage`; in-memory
-  repositories remain the default for tests and explicit in-memory graphs.
 - The shared PIN hasher uses a constant-time verifier comparison.
-- The app-lock repository, credential repository, hasher, lifecycle relock,
-  and secure/development DI paths are covered by tests.
+- Secure repositories, hasher, lifecycle relock, recovery flow, startup
+  routing, bootstrap, and DI paths are covered by tests.
