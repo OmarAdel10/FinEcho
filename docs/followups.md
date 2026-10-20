@@ -71,3 +71,18 @@ Deferred; tracked in Plane:
 - Distinguish zero previous spend from no comparison (FINECHO-23).
 - The round-two items FINECHO-8, FINECHO-9, and FINECHO-20 remain open;
   model-equality isolation is covered by FINECHO-19.
+
+## Analytics review round 4
+
+Open at the three-round fix cap; the coverage review passed with no untested
+changed units.
+
+- Clamp the first-day forecast denominator so a small elapsed fraction cannot
+  project an absurd month total (FINECHO-24).
+- Close the round-four low batch: lapsed recurring charges, budget severity
+  visuals, zero-allocation progress, controls during a period switch,
+  narrow-width layout, chart semantics, fixture consistency, and the DI test
+  clock (FINECHO-26).
+- Persist app lock and credentials across restarts; the DI graph still uses
+  in-memory security repositories (FINECHO-25, high, pre-existing).
+- FINECHO-11 (FLAG_SECURE and lock on pause) remains a release blocker.
