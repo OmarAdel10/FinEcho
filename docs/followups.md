@@ -84,12 +84,15 @@ changed units. A final approved batch fixed:
 - A zero-allocation budget with spending now reports a full used ratio.
 - The category ring announces every slice name and amount.
 - The DI test captures one clock reading before seeding its transaction.
+- Budget warning and exceeded states now render distinctly, with visible labels
+  and level-aware semantics (FINECHO-26).
+- The statistics controls stay visible while a period switch is loading, with
+  an inline spinner instead of a blank screen (FINECHO-26).
+- Added a 320 dp / 1.5x text-scale layout test and aligned the screen fixture
+  totals with its seeded transactions (FINECHO-26).
 
 Deferred; tracked in Plane:
 
-- Close the remaining round-four low batch: budget severity visuals, controls
-  during a period switch, narrow-width layout, and fixture consistency
-  (FINECHO-26).
 - Persist app lock and credentials across restarts; the DI graph still uses
   in-memory security repositories (FINECHO-25, high, pre-existing).
 - FINECHO-11 (FLAG_SECURE and lock on pause) remains a release blocker.
