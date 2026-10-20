@@ -30,7 +30,8 @@ when it is paused while a protected screen is open, and Android sets
 storage cannot be read, the app shows a recovery screen instead of protected
 content. That screen offers retry and an explicitly destructive `Erase app
 data` action; because the verifier is unreadable in this state, the action is
-unauthenticated by design and clears local data before the app can continue.
+unauthenticated by design. It removes the saved PIN and app-lock settings and
+returns the app to onboarding so the lock can be set up again.
 
 ### Screenshots
 

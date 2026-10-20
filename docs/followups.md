@@ -114,12 +114,17 @@ Fixed:
   an explicitly destructive `Erase app data` action instead of an infinite
   spinner. Reset attempts clearing the verifier and metadata independently; if
   both fail, the screen directs the user to clear app data in system settings.
+  A successful erase returns the app to onboarding so the lock can be set up
+  again, and a failed reload asks the user to try again instead of wiping the
+  app.
 - A stored verifier without lock metadata fails closed and repairs the metadata.
   Configured metadata without a readable verifier enters the recovery screen.
+  A metadata repair that cannot be persisted still leaves the app locked.
   PIN setup refuses to overwrite an existing verifier and reports when a setup
   rollback also fails.
-- Startup security loading is bounded by a timeout, and the load-before-router
-  composition is covered by a production-graph test.
+- Startup security loading is bounded by a timeout, the load-before-router
+  composition is covered by a production-graph test, and the bound is
+  regression-tested.
 - Android secure storage uses encrypted shared preferences; cloud backup and
   Android 12+ device-to-device transfer exclude app data through
   `dataExtractionRules`, with `allowBackup=false` and
