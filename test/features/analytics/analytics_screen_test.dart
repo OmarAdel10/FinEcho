@@ -8,6 +8,7 @@ import 'package:finecho/features/analytics/view/screens/analytics_screen.dart';
 import 'package:finecho/features/analytics/view/widgets/account_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/analytics_summary_card.dart';
 import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dart';
+import 'package:finecho/features/analytics/view/widgets/category_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/insights_card.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
@@ -17,8 +18,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_analytics_repositories.dart';
 
-Widget _wrap(AnalyticsCubit cubit) {
+Widget _wrap(AnalyticsCubit cubit, {TextScaler? textScaler}) {
   return MaterialApp(
+    builder: textScaler == null
+        ? null
+        : (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+            child: child!,
+          ),
     home: BlocProvider<AnalyticsCubit>.value(
       value: cubit,
       child: const AnalyticsScreen(),
@@ -55,18 +62,17 @@ AnalyticsSummary _dashboardSummary(DateTime startUtc, DateTime endUtc) {
   return _summary(
     startUtc: startUtc,
     endUtc: endUtc,
-    income: 500000,
-    expense: 125000,
+    expense: 35000,
     categories: const [
       CategoryTotal(
         categoryId: 'category-1',
         name: 'Food',
-        expenseMinorUnits: 75000,
+        expenseMinorUnits: 25000,
       ),
       CategoryTotal(
         categoryId: 'category-2',
         name: 'Transport',
-        expenseMinorUnits: 50000,
+        expenseMinorUnits: 10000,
       ),
     ],
   );
@@ -138,26 +144,62 @@ void main() {
     expect(find.text('Spending'), findsOneWidget);
     expect(find.text('Income'), findsNWidgets(2));
     expect(find.text('Patterns'), findsOneWidget);
-    expect(find.text('5000.00'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AnalyticsSummaryCard),
+        matching: find.text('0.00'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Expenses'), findsOneWidget);
-    expect(find.text('1250.00'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AnalyticsSummaryCard),
+        matching: find.text('350.00'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Net'), findsOneWidget);
-    expect(find.text('3750.00'), findsOneWidget);
-    expect(find.text('Spending up 25% vs previous period'), findsOneWidget);
+    expect(find.text('-350.00'), findsOneWidget);
+    expect(find.text('Spending down 65% vs previous period'), findsOneWidget);
 
     expect(find.text('Spending by category'), findsOneWidget);
     expect(find.text('Food'), findsOneWidget);
-    expect(find.text('750.00'), findsOneWidget);
-    expect(find.text('60%'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(CategoryBreakdownCard),
+        matching: find.text('250.00'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('71%'), findsOneWidget);
     expect(find.text('Transport'), findsOneWidget);
-    expect(find.text('500.00'), findsOneWidget);
-    expect(find.text('40%'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(CategoryBreakdownCard),
+        matching: find.text('100.00'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('29%'), findsOneWidget);
 
     expect(find.text('By account'), findsOneWidget);
     expect(find.text('Cash'), findsOneWidget);
-    expect(find.text('250.00'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AccountBreakdownCard),
+        matching: find.text('250.00'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Bank'), findsOneWidget);
-    expect(find.text('100.00'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AccountBreakdownCard),
+        matching: find.text('100.00'),
+      ),
+      findsOneWidget,
+    );
 
     expect(find.byType(InsightsCard), findsNothing);
 
@@ -347,6 +389,7 @@ void main() {
 
     expect(find.byType(BudgetProgressCard), findsOneWidget);
     expect(find.text('250.00 / 280.00'), findsOneWidget);
+    expect(find.text('Close to limit'), findsOneWidget);
     final indicator = tester.widget<LinearProgressIndicator>(
       find.descendant(
         of: find.byType(BudgetProgressCard),
@@ -462,7 +505,7 @@ void main() {
     expect(icon.color, FinEchoColors.coral);
   });
 
-  testWidgets('shows a spinner while switching periods', (tester) async {
+  testWidgets('keeps controls visible while switching periods', (tester) async {
     _useTallSurface(tester);
     final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
     final cubit = AnalyticsCubit(harness.service);
@@ -478,6 +521,10 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.byType(AnalyticsSummaryCard), findsNothing);
+    expect(find.text('Weekly'), findsOneWidget);
+    expect(find.text('Monthly'), findsOneWidget);
+    expect(find.text('Yearly'), findsOneWidget);
+    expect(find.text('Spending'), findsOneWidget);
 
     gate.complete();
     await tester.pumpAndSettle();
@@ -485,6 +532,23 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
     expect(cubit.state.period, AnalyticsPeriod.year);
+  });
+
+  testWidgets('lays out at 320dp with 1.5x text scale', (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      _wrap(cubit, textScaler: const TextScaler.linear(1.5)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
   });
 
   testWidgets('refreshes a ready dashboard on mount', (tester) async {
