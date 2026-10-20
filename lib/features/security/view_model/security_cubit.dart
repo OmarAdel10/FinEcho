@@ -35,7 +35,9 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       ),
     );
     try {
-      final securityState = await _service.load();
+      final securityState = await _service.load().timeout(
+        const Duration(seconds: 5),
+      );
       if (isClosed) {
         return;
       }
@@ -130,14 +132,17 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       );
       return true;
     } on Object {
-      await _clearPinAfterFailedSetup();
+      final cleared = await _clearPinAfterFailedSetup();
       if (isClosed) {
         return false;
       }
       emit(
         state.copyWith(
           status: SecurityAccessStatus.failure,
-          errorMessage: 'Could not save app lock. Please try again.',
+          errorMessage: cleared
+              ? 'Could not save app lock. Please try again.'
+              : 'Could not finish setting up app lock. Clear FinEcho app data '
+                    'from system settings and relaunch.',
         ),
       );
       return false;
@@ -155,23 +160,39 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         clearErrorMessage: true,
       ),
     );
-    try {
-      await _service.reset();
-      await load();
-      return !isClosed && state.status != SecurityAccessStatus.error;
-    } on Object {
-      if (isClosed) {
-        return false;
-      }
+    final reset = await _service.reset();
+    if (isClosed) {
+      return false;
+    }
+    if (!reset) {
       emit(
         SecurityAccessState(
           securityState: state.securityState,
           status: SecurityAccessStatus.error,
-          errorMessage: 'Could not reset app lock. Please try again.',
+          errorMessage:
+              'Could not reset app lock. Clear FinEcho app data '
+              'from system settings and relaunch.',
         ),
       );
       return false;
     }
+    await load();
+    if (isClosed) {
+      return false;
+    }
+    if (state.status == SecurityAccessStatus.error) {
+      emit(
+        SecurityAccessState(
+          securityState: state.securityState,
+          status: SecurityAccessStatus.error,
+          errorMessage:
+              'Could not reset app lock. Clear FinEcho app data '
+              'from system settings and relaunch.',
+        ),
+      );
+      return false;
+    }
+    return true;
   }
 
   /// Verifies the six-digit PIN and unlocks the app on success.
@@ -247,11 +268,12 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
     }
   }
 
-  Future<void> _clearPinAfterFailedSetup() async {
+  Future<bool> _clearPinAfterFailedSetup() async {
     try {
       await _service.clearPin();
+      return true;
     } on Object {
-      // The original setup failure remains the user-facing error.
+      return false;
     }
   }
 }

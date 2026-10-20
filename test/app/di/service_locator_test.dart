@@ -1,6 +1,8 @@
 import 'package:finecho/app/bootstrap/app_bootstrap.dart';
+import 'package:finecho/app/bootstrap/app_startup.dart';
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/core/models/category.dart';
+import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
@@ -20,6 +22,8 @@ import 'package:finecho/features/security/data/repositories/in_memory_security_r
 import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
+import 'package:finecho/features/security/view_model/models/security_access_state.dart';
+import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 
@@ -100,6 +104,27 @@ void main() {
       sl<SecurityCredentialRepository>(),
       isA<SecureStorageSecurityCredentialRepository>(),
     );
+  });
+
+  test('loads security before creating the production router', () async {
+    await configureDependencies();
+    await sl<SecurityRepository>().update(
+      SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+    );
+    await sl<SecurityCredentialRepository>().savePin('123456');
+
+    final appRouter = await startAppRouter();
+
+    expect(sl<SecurityCubit>().state.status, SecurityAccessStatus.ready);
+    expect(sl<SecurityCubit>().state.isLocked, isTrue);
+    addTearDown(appRouter.router.dispose);
+    await sl<SecurityCubit>().close();
   });
 
   test('registers the analytics dependency graph', () async {

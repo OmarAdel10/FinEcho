@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view/widgets/security_gate.dart';
@@ -158,14 +160,123 @@ void main() {
     expect(find.text('Security settings unavailable'), findsOneWidget);
 
     harness.securityRepository.getError = null;
-    await tester.tap(find.text('Reset app lock'));
+    await tester.tap(find.text('Erase app data'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Reset app lock'));
+    expect(find.text('Erase app data?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
     await tester.pumpAndSettle();
 
     expect(find.text('Security settings unavailable'), findsNothing);
     expect(find.text('Protected content'), findsOneWidget);
     expect(await harness.credentialRepository.hasPin(), isFalse);
+  });
+
+  testWidgets('hides protected content while erasing app data', (tester) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+    harness.securityRepository.getError = null;
+    final clearGate = Completer<void>();
+    harness.credentialRepository.clearGate = clearGate;
+
+    await tester.tap(find.text('Erase app data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+
+    clearGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Protected content'), findsOneWidget);
+  });
+
+  testWidgets('keeps the recovery screen when erasing app data fails', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+    harness.securityRepository.getError = null;
+    harness.securityRepository.updateError = Exception('keystore write');
+    harness.credentialRepository.clearError = Exception('keystore delete');
+
+    await tester.tap(find.text('Erase app data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+    expect(
+      find.text(
+        'Could not reset app lock. Clear FinEcho app data from system settings '
+        'and relaunch.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('keeps app lock when erasing app data is cancelled', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+    harness.securityRepository.getError = null;
+
+    await tester.tap(find.text('Erase app data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+    expect(await harness.credentialRepository.hasPin(), isTrue);
+    expect(harness.securityRepository.state, isNull);
   });
 
   testWidgets('removes its lifecycle observer when disposed', (tester) async {

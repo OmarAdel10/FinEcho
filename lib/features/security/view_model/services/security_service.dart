@@ -23,22 +23,36 @@ class SecurityService {
   /// The duration of the temporary lockout.
   static const Duration lockoutDuration = Duration(minutes: 1);
 
-  /// Loads persisted security state, or a safe disabled default.
+  /// Loads persisted security state and reconciles it with the verifier.
   ///
-  /// A verifier without lock metadata fails closed instead of silently
-  /// unlocking the app.
+  /// A verifier without lock metadata fails closed, and lock metadata without
+  /// a readable verifier reports an error so the recovery screen can reset it.
   Future<SecurityState> load() async {
     final state = await _repository.get();
-    if (state != null) {
+    final hasPin = await _credentials.hasPin();
+
+    if (state == null) {
+      if (hasPin) {
+        return await _persistConfigured(_defaultState());
+      }
+      return _defaultState();
+    }
+
+    if (state.appLockEnabled && state.pinConfigured) {
+      if (!hasPin) {
+        throw StateError('A configured app lock has no PIN verifier.');
+      }
       return state;
     }
-    if (await _credentials.hasPin()) {
-      return _defaultState().copyWith(
-        appLockEnabled: true,
-        pinConfigured: true,
-      );
+
+    if (hasPin) {
+      return await _persistConfigured(state);
     }
-    return _defaultState();
+
+    if (state.appLockEnabled || state.pinConfigured) {
+      throw StateError('App lock metadata is incomplete.');
+    }
+    return state;
   }
 
   /// Stores a new six-digit PIN verifier.
@@ -54,9 +68,23 @@ class SecurityService {
   Future<bool> verifyPin(String pin) => _credentials.verifyPin(pin);
 
   /// Clears app-lock metadata and the PIN verifier after a load failure.
-  Future<void> reset() async {
-    await _repository.update(_defaultState());
-    await _credentials.clear();
+  ///
+  /// Each step is attempted independently so a partially broken secure store
+  /// still has the best chance of recovery. Returns whether both steps
+  /// succeeded.
+  Future<bool> reset() async {
+    var cleared = true;
+    try {
+      await _credentials.clear();
+    } on Object {
+      cleared = false;
+    }
+    try {
+      await _repository.update(_defaultState());
+    } on Object {
+      cleared = false;
+    }
+    return cleared;
   }
 
   /// Clears a failed-attempt streak and temporary lockout after success.
@@ -106,6 +134,20 @@ class SecurityService {
       secureKeyReady: false,
       updatedAt: _now().toUtc(),
     );
+  }
+
+  Future<SecurityState> _persistConfigured(SecurityState state) async {
+    final configured = state.copyWith(
+      appLockEnabled: true,
+      pinConfigured: true,
+      updatedAt: _now().toUtc(),
+    );
+    try {
+      await _repository.update(configured);
+    } on Object {
+      // The verifier still forces a locked state even if repair cannot persist.
+    }
+    return configured;
   }
 
   Future<SecurityState> _save(SecurityState state) async {

@@ -40,10 +40,10 @@ class _SecurityGateState extends State<SecurityGate>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset app lock?'),
+        title: const Text('Erase app data?'),
         content: const Text(
-          'This removes the saved PIN and lock settings. You will need to set '
-          'up app lock again.',
+          'This permanently removes FinEcho local data, including the saved '
+          'PIN and app-lock settings. You will need to set up the app again.',
         ),
         actions: [
           TextButton(
@@ -52,7 +52,7 @@ class _SecurityGateState extends State<SecurityGate>
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Reset app lock'),
+            child: const Text('Erase app data'),
           ),
         ],
       ),
@@ -80,7 +80,9 @@ class _SecurityGateState extends State<SecurityGate>
     return BlocBuilder<SecurityCubit, SecurityAccessState>(
       bloc: _cubit,
       builder: (context, state) {
-        if (state.status == SecurityAccessStatus.loading) {
+        if (state.status == SecurityAccessStatus.loading ||
+            (state.status == SecurityAccessStatus.submitting &&
+                !state.isLocked)) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -150,7 +152,7 @@ class _SecurityLoadFailure extends StatelessWidget {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: onReset,
-                  child: const Text('Reset app lock'),
+                  child: const Text('Erase app data'),
                 ),
               ],
             ),

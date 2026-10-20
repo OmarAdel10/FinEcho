@@ -56,6 +56,12 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Error thrown by the next [hasPin] call.
   Exception? hasPinError;
 
+  /// Error thrown by the next [clear] call.
+  Exception? clearError;
+
+  /// Blocks [clear] until completed, when provided.
+  Completer<void>? clearGate;
+
   /// Every PIN supplied to [verifyPin].
   final List<String> verifiedPins = <String>[];
 
@@ -96,6 +102,14 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
 
   @override
   Future<void> clear() async {
+    final error = clearError;
+    if (error != null) {
+      throw error;
+    }
+    final gate = clearGate;
+    if (gate != null) {
+      await gate.future;
+    }
     _pin = null;
   }
 }
