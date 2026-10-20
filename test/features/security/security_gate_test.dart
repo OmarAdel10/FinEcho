@@ -8,9 +8,23 @@ import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 
 import 'fake_security_repositories.dart';
+
+/// A cubit that can emit a load failure without a user-facing message.
+class _ErrorOnlySecurityCubit(super.service) extends SecurityCubit {
+  /// Emits an error state that carries no explanation.
+  void failWithoutMessage() {
+    emit(
+      SecurityAccessState(
+        securityState: state.securityState,
+        status: SecurityAccessStatus.error,
+      ),
+    );
+  }
+}
 
 void main() {
   testWidgets('locks, unlocks, and relocks when the app pauses', (
@@ -277,6 +291,74 @@ void main() {
     expect(find.text('Security settings unavailable'), findsOneWidget);
     expect(await harness.credentialRepository.hasPin(), isTrue);
     expect(harness.securityRepository.state, isNull);
+  });
+
+  testWidgets('returns to setup after erasing app data', (tester) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(
+          path: '/home',
+          builder: (context, state) => BlocProvider<SecurityCubit>.value(
+            value: cubit,
+            child: const SecurityGate(child: Text('Protected content')),
+          ),
+        ),
+        GoRoute(
+          path: '/welcome',
+          builder: (context, state) => const Text('Welcome to FinEcho'),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+
+    harness.securityRepository.getError = null;
+    await tester.tap(find.text('Erase app data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome to FinEcho'), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+  });
+
+  testWidgets('shows a generic message when the failure has no details', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    final cubit = _ErrorOnlySecurityCubit(harness.service);
+    addTearDown(cubit.close);
+    cubit.failWithoutMessage();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('Could not load security settings. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.text('Protected content'), findsNothing);
   });
 
   testWidgets('removes its lifecycle observer when disposed', (tester) async {

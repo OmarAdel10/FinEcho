@@ -6,6 +6,7 @@ import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
 import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:finecho/features/transactions/view/screens/transactions_screen.dart';
 import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,7 +64,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(LockScreen), findsOneWidget);
-    expect(find.text('Home'), findsNothing);
+    expect(find.byType(TransactionsScreen), findsNothing);
 
     await tester.enterText(find.byType(Pinput), '123456');
     await tester.pump();

@@ -22,8 +22,10 @@ import 'package:finecho/features/security/data/repositories/in_memory_security_r
 import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
+import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 
@@ -106,7 +108,9 @@ void main() {
     );
   });
 
-  test('loads security before creating the production router', () async {
+  testWidgets('loads security before creating the production router', (
+    tester,
+  ) async {
     await configureDependencies();
     await sl<SecurityRepository>().update(
       SecurityState(
@@ -123,8 +127,15 @@ void main() {
 
     expect(sl<SecurityCubit>().state.status, SecurityAccessStatus.ready);
     expect(sl<SecurityCubit>().state.isLocked, isTrue);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: appRouter.router));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(find.text('Welcome to FinEcho'), findsNothing);
+
     addTearDown(appRouter.router.dispose);
-    await sl<SecurityCubit>().close();
   });
 
   test('registers the analytics dependency graph', () async {

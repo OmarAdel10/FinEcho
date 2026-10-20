@@ -87,6 +87,43 @@ void main() {
       await cubit.close();
     });
 
+    test('fails closed when the security read times out', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      harness.securityRepository.getGate = Completer<void>();
+      final cubit = SecurityCubit(
+        harness.service,
+        loadTimeout: const Duration(milliseconds: 50),
+      );
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(cubit.state.hasLoadError, isTrue);
+      expect(
+        cubit.state.errorMessage,
+        'Could not load security settings. Please try again.',
+      );
+      await cubit.close();
+    });
+
+    test('fails closed when the metadata repair cannot be persisted', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      harness.securityRepository.updateError = Exception('disk full');
+      final cubit = SecurityCubit(harness.service);
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(cubit.state.isLocked, isTrue);
+      expect(harness.securityRepository.state, isNull);
+      await cubit.close();
+    });
+
     test('fails closed when configured metadata has no verifier', () async {
       final harness = SecurityTestHarness(
         initialState: _configuredState(),
@@ -203,8 +240,7 @@ void main() {
       expect(cubit.state.status, SecurityAccessStatus.error);
       expect(
         cubit.state.errorMessage,
-        'Could not reset app lock. Clear FinEcho app data from system settings '
-        'and relaunch.',
+        'Could not reload app lock settings. Tap Try again.',
       );
       expect(await harness.credentialRepository.hasPin(), isFalse);
       await cubit.close();
@@ -336,6 +372,26 @@ void main() {
         'system settings and relaunch.',
       );
       expect(await harness.credentialRepository.hasPin(), isTrue);
+      await cubit.close();
+    });
+
+    test('reports a failure when the PIN verifier cannot be written', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      harness.credentialRepository.saveError = Exception('keystore write');
+
+      final configured = await cubit.configure('123456');
+
+      expect(configured, isFalse);
+      expect(cubit.state.status, SecurityAccessStatus.failure);
+      expect(
+        cubit.state.errorMessage,
+        'Could not save app lock. Please try again.',
+      );
+      expect(await harness.credentialRepository.hasPin(), isFalse);
       await cubit.close();
     });
 

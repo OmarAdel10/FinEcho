@@ -21,6 +21,9 @@ class FakeSecurityRepository implements SecurityRepository {
   /// Error thrown by the next [update] call.
   Exception? updateError;
 
+  /// Blocks [get] until completed, when provided.
+  Completer<void>? getGate;
+
   SecurityState? get state => _state;
 
   @override
@@ -28,6 +31,10 @@ class FakeSecurityRepository implements SecurityRepository {
     final error = getError;
     if (error != null) {
       throw error;
+    }
+    final gate = getGate;
+    if (gate != null) {
+      await gate.future;
     }
     return _state;
   }

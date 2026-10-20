@@ -87,6 +87,37 @@ void main() {
       await cubit.close();
     });
 
+    testWidgets('rejects a short PIN submitted from the unlock button', (
+      tester,
+    ) async {
+      final harness = SecurityTestHarness(
+        initialState: SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final pinController = TextEditingController();
+      addTearDown(pinController.dispose);
+      final cubit = await createCubit(harness);
+      await tester.pumpWidget(wrapScreen(cubit, pinController));
+      await tester.pump();
+      await tester.pump();
+
+      await tester.enterText(find.byType(Pinput), '12345');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
+      await tester.pump();
+
+      expect(cubit.state.status, SecurityAccessStatus.failure);
+      expect(find.text('Enter a six-digit PIN.'), findsOneWidget);
+      expect(harness.credentialRepository.verifiedPins, isEmpty);
+      await cubit.close();
+    });
+
     testWidgets('clears the entered PIN when the app relocks mid-verify', (
       tester,
     ) async {
