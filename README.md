@@ -23,7 +23,9 @@ steps so users can resume where they left off.
 The app lock protects the home, accounts, statistics, and settings surfaces.
 During onboarding, the user configures a six-digit PIN. FinEcho stores only a
 salted HMAC-SHA256 PIN verifier, never the raw PIN, and applies a temporary
-lockout after five consecutive failed attempts.
+lockout after five consecutive failed attempts. Lock metadata and the verifier
+live in platform secure storage, the app relocks whenever it is backgrounded,
+and Android sets `FLAG_SECURE` to block screenshots and recents previews.
 
 ### Screenshots
 

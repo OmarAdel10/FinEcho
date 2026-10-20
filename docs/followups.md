@@ -35,7 +35,8 @@ Deferred during the round-two review; tracked in Plane:
 - Support multiple currencies in analytics aggregation (FINECHO-8).
 - Make budget warning thresholds configurable (FINECHO-9).
 - Add period totals to the home dashboard (FINECHO-10).
-- Protect financial screens with FLAG_SECURE and lock on pause (FINECHO-11).
+- Protect financial screens with FLAG_SECURE and lock on pause (FINECHO-11);
+  resolved in the security hardening branch.
 - Add a navigation shell entry for statistics (FINECHO-12).
 - Identify recurring charges by payee instead of an amount bucket (FINECHO-13).
 - Push analytics aggregation into repository queries (FINECHO-14).
@@ -93,6 +94,20 @@ changed units. A final approved batch fixed:
 
 Deferred; tracked in Plane:
 
-- Persist app lock and credentials across restarts; the DI graph still uses
-  in-memory security repositories (FINECHO-25, high, pre-existing).
-- FINECHO-11 (FLAG_SECURE and lock on pause) remains a release blocker.
+- None from this batch; FINECHO-11 and FINECHO-25 were resolved in the security
+  hardening branch.
+
+## Security hardening
+
+Fixed:
+
+- The security gate relocks on `AppLifecycleState.paused`; an in-flight PIN
+  verification cannot complete an unlock after the app is paused.
+- Android applies `FLAG_SECURE` so protected screens are excluded from
+  screenshots and recent-app previews.
+- Production DI now persists app-lock metadata and the salted PIN verifier in
+  platform secure storage through `flutter_secure_storage`; in-memory
+  repositories remain the default for tests and explicit in-memory graphs.
+- The shared PIN hasher uses a constant-time verifier comparison.
+- The app-lock repository, credential repository, hasher, lifecycle relock,
+  and secure/development DI paths are covered by tests.

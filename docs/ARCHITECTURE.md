@@ -218,9 +218,13 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 
 ## Security model
 
-- During the current development phase, app-lock metadata and the PIN verifier
-  use in-memory repositories. The verifier is a random-salted HMAC-SHA256 hash;
-  the raw PIN is never stored.
+- App-lock metadata and the PIN verifier use platform secure storage (Android
+  Keystore-backed storage, or the platform keychain where available). The
+  verifier is a random-salted HMAC-SHA256 hash; the raw PIN is never stored.
+  Tests and explicitly configured in-memory graphs may substitute fakes.
+- The security gate relocks the app when it is paused, and Android applies
+  `FLAG_SECURE` so financial screens are excluded from screenshots and recents
+  previews.
 - Generate the database key using a cryptographically secure source.
 - Store that key only in Android Keystore/iOS Keychain through secure storage.
 - Open the local SQLCipher database only after the startup security flow succeeds.
