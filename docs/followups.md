@@ -74,15 +74,22 @@ Deferred; tracked in Plane:
 
 ## Analytics review round 4
 
-Open at the three-round fix cap; the coverage review passed with no untested
-changed units.
+The three-round fix cap was reached; the coverage review passed with no untested
+changed units. A final approved batch fixed:
 
-- Clamp the first-day forecast denominator so a small elapsed fraction cannot
-  project an absurd month total (FINECHO-24).
-- Close the round-four low batch: lapsed recurring charges, budget severity
-  visuals, zero-allocation progress, controls during a period switch,
-  narrow-width layout, chart semantics, fixture consistency, and the DI test
-  clock (FINECHO-26).
+- First-day forecast now clamps its elapsed denominator to one day, so a small
+  fraction cannot project an absurd month total (FINECHO-24).
+- Lapsed recurring charges are no longer listed once the current month has no
+  occurrence.
+- A zero-allocation budget with spending now reports a full used ratio.
+- The category ring announces every slice name and amount.
+- The DI test captures one clock reading before seeding its transaction.
+
+Deferred; tracked in Plane:
+
+- Close the remaining round-four low batch: budget severity visuals, controls
+  during a period switch, narrow-width layout, and fixture consistency
+  (FINECHO-26).
 - Persist app lock and credentials across restarts; the DI graph still uses
   in-memory security repositories (FINECHO-25, high, pre-existing).
 - FINECHO-11 (FLAG_SECURE and lock on pause) remains a release blocker.
