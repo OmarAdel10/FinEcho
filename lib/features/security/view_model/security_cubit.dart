@@ -6,8 +6,9 @@ import 'package:finecho/features/security/view_model/services/security_service.d
 /// The app-lock ViewModel.
 class SecurityCubit extends Cubit<SecurityAccessState> {
   /// Creates an app-lock ViewModel.
-  new(this._service)
-    : super(
+  new(SecurityService service, {this.loadTimeout = const Duration(seconds: 5)})
+    : _service = service,
+      super(
         SecurityAccessState(
           securityState: SecurityState(
             appLockEnabled: false,
@@ -20,6 +21,9 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       );
 
   final SecurityService _service;
+
+  /// The maximum time a security read may take before the app fails closed.
+  final Duration loadTimeout;
 
   int _lockEpoch = 0;
 
@@ -35,9 +39,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       ),
     );
     try {
-      final securityState = await _service.load().timeout(
-        const Duration(seconds: 5),
-      );
+      final securityState = await _service.load().timeout(loadTimeout);
       if (isClosed) {
         return;
       }
@@ -185,9 +187,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         SecurityAccessState(
           securityState: state.securityState,
           status: SecurityAccessStatus.error,
-          errorMessage:
-              'Could not reset app lock. Clear FinEcho app data '
-              'from system settings and relaunch.',
+          errorMessage: 'Could not reload app lock settings. Tap Try again.',
         ),
       );
       return false;
@@ -254,7 +254,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         ),
       );
       return true;
-    } on Exception {
+    } on Object {
       if (isClosed) {
         return false;
       }

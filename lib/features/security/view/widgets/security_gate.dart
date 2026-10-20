@@ -5,6 +5,7 @@ import 'package:finecho/features/security/view_model/models/security_access_stat
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 /// Hides protected app content until the configured app lock is satisfied.
 class SecurityGate extends StatefulWidget {
@@ -42,8 +43,8 @@ class _SecurityGateState extends State<SecurityGate>
       builder: (context) => AlertDialog(
         title: const Text('Erase app data?'),
         content: const Text(
-          'This permanently removes FinEcho local data, including the saved '
-          'PIN and app-lock settings. You will need to set up the app again.',
+          'This removes the saved PIN and app-lock settings from this device. '
+          'You will set up the app again.',
         ),
         actions: [
           TextButton(
@@ -58,7 +59,13 @@ class _SecurityGateState extends State<SecurityGate>
       ),
     );
     if (confirmed == true) {
-      await _cubit.resetLock();
+      final reset = await _cubit.resetLock();
+      if (!reset || !mounted) {
+        return;
+      }
+      // The app lock is gone, so send the user back into onboarding instead
+      // of leaving the protected area without a way to set the lock again.
+      GoRouter.maybeOf(context)?.go('/welcome');
     }
   }
 
