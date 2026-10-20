@@ -293,7 +293,7 @@ void main() {
     expect(harness.securityRepository.state, isNull);
   });
 
-  testWidgets('returns to setup after erasing app data', (tester) async {
+  testWidgets('routes to welcome after erasing app data', (tester) async {
     final harness = SecurityTestHarness(
       now: () => DateTime.utc(2026, 10, 15, 12),
     );
@@ -301,22 +301,7 @@ void main() {
     harness.securityRepository.getError = const FormatException('corrupt');
     final cubit = SecurityCubit(harness.service);
     addTearDown(cubit.close);
-    final router = GoRouter(
-      initialLocation: '/home',
-      routes: [
-        GoRoute(
-          path: '/home',
-          builder: (context, state) => BlocProvider<SecurityCubit>.value(
-            value: cubit,
-            child: const SecurityGate(child: Text('Protected content')),
-          ),
-        ),
-        GoRoute(
-          path: '/welcome',
-          builder: (context, state) => const Text('Welcome to FinEcho'),
-        ),
-      ],
-    );
+    final router = _routerWithGate(cubit);
     addTearDown(router.dispose);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
@@ -328,6 +313,68 @@ void main() {
     await tester.tap(find.text('Erase app data'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome to FinEcho'), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+  });
+
+  testWidgets('returns to setup when a retry finds no configured lock', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+    final router = _routerWithGate(cubit);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+
+    harness.securityRepository.getError = null;
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome to FinEcho'), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+  });
+
+  testWidgets('returns to setup when an erase reload fails and a retry works', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+    final router = _routerWithGate(cubit);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+
+    await tester.tap(find.text('Erase app data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Could not reload app lock settings. Tap Try again.'),
+      findsOneWidget,
+    );
+    expect(find.text('Protected content'), findsNothing);
+
+    harness.securityRepository.getError = null;
+    await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome to FinEcho'), findsOneWidget);
@@ -401,4 +448,24 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
+}
+
+/// Builds a router that gates the protected area and exposes the setup route.
+GoRouter _routerWithGate(SecurityCubit cubit) {
+  return GoRouter(
+    initialLocation: '/home',
+    routes: [
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+      GoRoute(
+        path: '/welcome',
+        builder: (context, state) => const Text('Welcome to FinEcho'),
+      ),
+    ],
+  );
 }

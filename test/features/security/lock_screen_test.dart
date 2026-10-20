@@ -56,6 +56,7 @@ void main() {
       expect(cubit.state.status, SecurityAccessStatus.failure);
       expect(find.text('Incorrect PIN. Try again.'), findsOneWidget);
       expect(harness.securityRepository.state?.failedUnlockAttempts, 1);
+      expect(pinController.text, isEmpty);
       await cubit.close();
     });
 

@@ -256,6 +256,25 @@ void main() {
       expect(await cubit.resetLock(), isFalse);
     });
 
+    test('reports a resetting state while erasing app data', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      final gate = Completer<void>();
+      harness.credentialRepository.clearGate = gate;
+
+      final reset = cubit.resetLock();
+
+      expect(cubit.state.status, SecurityAccessStatus.resetting);
+      gate.complete();
+      expect(await reset, isTrue);
+      expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      await cubit.close();
+    });
+
     test('loads configured security in its locked ready state', () async {
       final persistedState = _configuredState();
       final harness = SecurityTestHarness(

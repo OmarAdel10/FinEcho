@@ -253,6 +253,10 @@ void main() {
       store.values[SecureStorageSecurityCredentialRepository.credentialKey] =
           '{"salt": 1, "hash": "value"}';
       await expectLater(repository.hasPin(), throwsFormatException);
+
+      store.values[SecureStorageSecurityCredentialRepository.credentialKey] =
+          '[]';
+      await expectLater(repository.hasPin(), throwsFormatException);
     });
   });
 }

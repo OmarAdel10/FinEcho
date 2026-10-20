@@ -37,7 +37,7 @@ void main() {
     await configureDependencies();
 
     expect(sl<BudgetRepository>(), isA<BudgetRepository>());
-    expect(sl<BudgetService>().listBudgets(), completion(isEmpty));
+    await expectLater(sl<BudgetService>().listBudgets(), completion(isEmpty));
     expect(sl<BudgetCubit>().state.status, BudgetStatus.loading);
     await sl<BudgetCubit>().close();
   });
