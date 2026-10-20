@@ -45,6 +45,20 @@ category management arrive with their own features.
 | --- | --- | --- |
 | Home ledger | `![Home ledger light](docs/screenshots/transaction/home_ledger_light.png)` | `![Home ledger dark](docs/screenshots/transaction/home_ledger_dark.png)` |
 
+## Statistics
+
+The statistics surface summarizes weekly, monthly, and yearly income and
+spending from local history. It shows per-category and per-account breakdowns,
+projected month-end spending, recurring charges, unusual-spending detection,
+and budget progress, all computed on device.
+
+### Screenshots
+
+| Screen | Light | Dark |
+| --- | --- | --- |
+| Statistics overview | `![Statistics light](docs/screenshots/analytics/statistics_light.png)` | `![Statistics dark](docs/screenshots/analytics/statistics_dark.png)` |
+| Insights and budgets | `![Insights light](docs/screenshots/analytics/insights_light.png)` | `![Insights dark](docs/screenshots/analytics/insights_dark.png)` |
+
 ## CI/CD
 
 GitHub Actions provides a FAST gate for formatting, code generation, static

@@ -1,5 +1,6 @@
 import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/budget/view/screens/budget_screen.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
@@ -11,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pinput/pinput.dart';
 
+import '../../features/analytics/fake_analytics_repositories.dart';
 import '../../features/budget/fake_budget_repositories.dart';
 import '../../features/onboarding/fake_onboarding_repository.dart';
 import '../../features/security/fake_security_repositories.dart';
@@ -39,11 +41,13 @@ void main() {
     final transactionsCubit = TransactionsCubit(
       TransactionsTestHarness().service,
     );
+    final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
     final appRouter = AppRouter(
       onboardingCubit: onboardingCubit,
       securityCubit: securityCubit,
       transactionsCubit: transactionsCubit,
       budgetCubit: budgetCubit,
+      analyticsCubit: analyticsCubit,
     );
     final router = appRouter.router;
     addTearDown(router.dispose);
@@ -51,6 +55,7 @@ void main() {
     addTearDown(securityCubit.close);
     addTearDown(transactionsCubit.close);
     addTearDown(budgetCubit.close);
+    addTearDown(analyticsCubit.close);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     router.go('/budgets');
@@ -86,11 +91,13 @@ void main() {
     final transactionsCubit = TransactionsCubit(
       TransactionsTestHarness().service,
     );
+    final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
     final appRouter = AppRouter(
       onboardingCubit: onboardingCubit,
       securityCubit: securityCubit,
       transactionsCubit: transactionsCubit,
       budgetCubit: budgetCubit,
+      analyticsCubit: analyticsCubit,
     );
     final router = appRouter.router;
     addTearDown(router.dispose);
@@ -98,6 +105,7 @@ void main() {
     addTearDown(securityCubit.close);
     addTearDown(transactionsCubit.close);
     addTearDown(budgetCubit.close);
+    addTearDown(analyticsCubit.close);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     router.go('/budgets');
