@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
@@ -131,6 +133,61 @@ void main() {
       expect(harness.securityRepository.state?.failedUnlockAttempts, isZero);
       expect(harness.securityRepository.state?.lockedUntil, isNull);
       expect(harness.securityRepository.state?.updatedAt, now);
+      await cubit.close();
+    });
+
+    test('relocks an unlocked app without changing persisted state', () async {
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(),
+        now: () => DateTime.utc(2026, 10, 15, 12, 30),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      await cubit.unlockWithPin('123456');
+      final unlockedState = cubit.state.securityState;
+
+      cubit.lock();
+
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(cubit.state.isLocked, isTrue);
+      expect(cubit.state.securityState, unlockedState);
+      expect(harness.securityRepository.updates, hasLength(1));
+      await cubit.close();
+    });
+
+    test('does not lock when the app lock is disabled', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+
+      cubit.lock();
+
+      expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      expect(cubit.state.isLocked, isFalse);
+      await cubit.close();
+    });
+
+    test('stays locked when the app pauses during PIN verification', () async {
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(),
+        now: () => DateTime.utc(2026, 10, 15, 12, 30),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      final gate = Completer<void>();
+      harness.credentialRepository.verifyGate = gate;
+
+      final unlock = cubit.unlockWithPin('123456');
+      cubit.lock();
+      gate.complete();
+
+      expect(await unlock, isFalse);
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(cubit.state.isLocked, isTrue);
       await cubit.close();
     });
 

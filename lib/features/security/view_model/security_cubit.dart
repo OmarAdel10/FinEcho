@@ -21,6 +21,8 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   final SecurityService _service;
 
+  int _lockEpoch = 0;
+
   /// Loads the persisted security snapshot.
   Future<void> load() async {
     emit(state.copyWith(status: SecurityAccessStatus.loading));
@@ -34,6 +36,26 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         status: securityState.appLockEnabled && securityState.pinConfigured
             ? SecurityAccessStatus.ready
             : SecurityAccessStatus.unlocked,
+      ),
+    );
+  }
+
+  /// Relocks the app without changing the persisted security state.
+  ///
+  /// Does nothing when the app lock is disabled or no PIN is configured.
+  void lock() {
+    if (isClosed) {
+      return;
+    }
+    final securityState = state.securityState;
+    if (!securityState.appLockEnabled || !securityState.pinConfigured) {
+      return;
+    }
+    _lockEpoch++;
+    emit(
+      SecurityAccessState(
+        securityState: securityState,
+        status: SecurityAccessStatus.ready,
       ),
     );
   }
@@ -106,6 +128,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       return false;
     }
 
+    final lockEpoch = _lockEpoch;
     try {
       final matches = await _service.verifyPin(pin);
       if (!matches) {
@@ -128,8 +151,8 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       }
 
       final securityState = await _service.markUnlocked(state.securityState);
-      if (isClosed) {
-        return true;
+      if (isClosed || lockEpoch != _lockEpoch) {
+        return false;
       }
       emit(
         SecurityAccessState(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
@@ -38,6 +40,9 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Every PIN supplied to [verifyPin].
   final List<String> verifiedPins = <String>[];
 
+  /// Blocks [verifyPin] until completed, when provided.
+  Completer<void>? verifyGate;
+
   @override
   Future<bool> hasPin() async => _pin != null;
 
@@ -55,6 +60,10 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     final error = verifyError;
     if (error != null) {
       throw error;
+    }
+    final gate = verifyGate;
+    if (gate != null) {
+      await gate.future;
     }
     verifiedPins.add(pin);
     return pin == _pin;

@@ -5,7 +5,7 @@ import 'package:finecho/app/router/app_router.dart';
 import 'package:flutter/widgets.dart';
 
 Future<void> main() async {
-  await AppBootstrap.ensureInitialized();
+  await AppBootstrap.ensureInitialized(useSecureStorage: true);
   final router = sl<AppRouter>().router;
   runApp(FinEchoApp(router: router));
 }

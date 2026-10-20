@@ -18,12 +18,14 @@ class SecurityGate extends StatefulWidget {
   State<SecurityGate> createState() => _SecurityGateState();
 }
 
-class _SecurityGateState extends State<SecurityGate> {
+class _SecurityGateState extends State<SecurityGate>
+    with WidgetsBindingObserver {
   late final SecurityCubit _cubit;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _cubit = context.read<SecurityCubit>();
     if (_cubit.state.status == SecurityAccessStatus.loading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -32,6 +34,19 @@ class _SecurityGateState extends State<SecurityGate> {
         }
       });
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _cubit.lock();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
+import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
@@ -13,6 +14,9 @@ import 'package:finecho/features/analytics/view_model/services/analytics_service
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
+import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
+import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
+import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 
@@ -52,6 +56,19 @@ void main() {
     expect(await repository.list(), hasLength(1));
     await sl<BudgetCubit>().close();
   });
+
+  test(
+    'registers secure platform security repositories when requested',
+    () async {
+      await configureDependencies(useSecureStorage: true);
+
+      expect(sl<SecurityRepository>(), isA<SecureStorageSecurityRepository>());
+      expect(
+        sl<SecurityCredentialRepository>(),
+        isA<SecureStorageSecurityCredentialRepository>(),
+      );
+    },
+  );
 
   test('registers the analytics dependency graph', () async {
     await configureDependencies();

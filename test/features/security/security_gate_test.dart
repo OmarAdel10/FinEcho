@@ -11,7 +11,7 @@ import 'package:pinput/pinput.dart';
 import 'fake_security_repositories.dart';
 
 void main() {
-  testWidgets('shows the lock first and protected content after unlocking', (
+  testWidgets('locks, unlocks, and relocks when the app pauses', (
     tester,
   ) async {
     final harness = SecurityTestHarness(
@@ -48,6 +48,22 @@ void main() {
     expect(find.byType(LockScreen), findsNothing);
     expect(find.text('Protected content'), findsOneWidget);
     expect(harness.securityRepository.state?.failedUnlockAttempts, isZero);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(cubit.state.status, SecurityAccessStatus.ready);
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(find.byType(LockScreen), findsOneWidget);
     await cubit.close();
   });
 }
