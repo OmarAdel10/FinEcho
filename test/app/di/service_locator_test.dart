@@ -1,3 +1,4 @@
+import 'package:finecho/app/bootstrap/app_bootstrap.dart';
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/transaction.dart';
@@ -14,6 +15,8 @@ import 'package:finecho/features/analytics/view_model/services/analytics_service
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
+import 'package:finecho/features/security/data/repositories/in_memory_security_credential_repository.dart';
+import 'package:finecho/features/security/data/repositories/in_memory_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
@@ -57,6 +60,16 @@ void main() {
     await sl<BudgetCubit>().close();
   });
 
+  test('registers in-memory security repositories by default', () async {
+    await configureDependencies();
+
+    expect(sl<SecurityRepository>(), isA<InMemorySecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<InMemorySecurityCredentialRepository>(),
+    );
+  });
+
   test(
     'registers secure platform security repositories when requested',
     () async {
@@ -67,8 +80,27 @@ void main() {
         sl<SecurityCredentialRepository>(),
         isA<SecureStorageSecurityCredentialRepository>(),
       );
+      final stateRepository =
+          sl<SecurityRepository>() as SecureStorageSecurityRepository;
+      final credentialRepository =
+          sl<SecurityCredentialRepository>()
+              as SecureStorageSecurityCredentialRepository;
+      expect(
+        identical(stateRepository.store, credentialRepository.store),
+        isTrue,
+      );
     },
   );
+
+  test('forwards secure storage configuration from bootstrap', () async {
+    await AppBootstrap.ensureInitialized(useSecureStorage: true);
+
+    expect(sl<SecurityRepository>(), isA<SecureStorageSecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<SecureStorageSecurityCredentialRepository>(),
+    );
+  });
 
   test('registers the analytics dependency graph', () async {
     await configureDependencies();

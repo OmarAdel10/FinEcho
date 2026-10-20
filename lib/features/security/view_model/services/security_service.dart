@@ -24,16 +24,40 @@ class SecurityService {
   static const Duration lockoutDuration = Duration(minutes: 1);
 
   /// Loads persisted security state, or a safe disabled default.
+  ///
+  /// A verifier without lock metadata fails closed instead of silently
+  /// unlocking the app.
   Future<SecurityState> load() async {
     final state = await _repository.get();
-    return state ?? _defaultState();
+    if (state != null) {
+      return state;
+    }
+    if (await _credentials.hasPin()) {
+      return _defaultState().copyWith(
+        appLockEnabled: true,
+        pinConfigured: true,
+      );
+    }
+    return _defaultState();
   }
 
   /// Stores a new six-digit PIN verifier.
   Future<void> configurePin(String pin) => _credentials.savePin(pin);
 
+  /// Whether a PIN verifier is already stored.
+  Future<bool> hasPin() => _credentials.hasPin();
+
+  /// Removes the stored PIN verifier.
+  Future<void> clearPin() => _credentials.clear();
+
   /// Returns whether the supplied PIN matches the configured verifier.
   Future<bool> verifyPin(String pin) => _credentials.verifyPin(pin);
+
+  /// Clears app-lock metadata and the PIN verifier after a load failure.
+  Future<void> reset() async {
+    await _repository.update(_defaultState());
+    await _credentials.clear();
+  }
 
   /// Clears a failed-attempt streak and temporary lockout after success.
   Future<SecurityState> markUnlocked(SecurityState state) {

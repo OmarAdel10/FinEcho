@@ -35,8 +35,29 @@ class AppRouter {
     _transactionsCubit = transactions;
     _budgetsCubit = budgets;
     _analyticsCubit = analytics;
+    final securityAccess = security.state;
+    final startProtected =
+        securityAccess.hasLoadError ||
+        (securityAccess.securityState.appLockEnabled &&
+            securityAccess.securityState.pinConfigured);
     router = GoRouter(
-      initialLocation: '/welcome',
+      initialLocation: startProtected ? '/home' : '/welcome',
+      redirect: (context, state) {
+        final access = _securityCubit.state;
+        final configured =
+            access.securityState.appLockEnabled &&
+            access.securityState.pinConfigured;
+        if (!configured) {
+          return null;
+        }
+        final path = state.uri.path;
+        if (path == '/welcome' ||
+            path == '/onboarding' ||
+            path == '/security-setup') {
+          return '/home';
+        }
+        return null;
+      },
       routes: [
         GoRoute(
           path: '/welcome',

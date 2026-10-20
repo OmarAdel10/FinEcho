@@ -64,6 +64,148 @@ void main() {
     await tester.pump();
 
     expect(find.byType(LockScreen), findsOneWidget);
+
+    await tester.enterText(find.byType(Pinput), '123456');
+    await tester.pump();
+
+    expect(cubit.state.status, SecurityAccessStatus.unlocked);
+    expect(find.text('Protected content'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
     await cubit.close();
+  });
+
+  testWidgets('loads security state when the gate mounts', (tester) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pump();
+
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+  });
+
+  testWidgets('shows a recoverable error when security state cannot load', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+
+    harness.securityRepository.getError = null;
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Security settings unavailable'), findsNothing);
+    expect(find.text('Protected content'), findsOneWidget);
+  });
+
+  testWidgets('resets app lock after confirmation', (tester) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+
+    harness.securityRepository.getError = null;
+    await tester.tap(find.text('Reset app lock'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Reset app lock'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Security settings unavailable'), findsNothing);
+    expect(find.text('Protected content'), findsOneWidget);
+    expect(await harness.credentialRepository.hasPin(), isFalse);
+  });
+
+  testWidgets('removes its lifecycle observer when disposed', (tester) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    final cubit = SecurityCubit(harness.service);
+    await cubit.load();
+    await cubit.unlockWithPin('123456');
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(cubit.state.status, SecurityAccessStatus.unlocked);
+
+    await tester.pumpWidget(const SizedBox());
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(cubit.state.status, SecurityAccessStatus.unlocked);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
 }

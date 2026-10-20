@@ -25,19 +25,40 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   /// Loads the persisted security snapshot.
   Future<void> load() async {
-    emit(state.copyWith(status: SecurityAccessStatus.loading));
-    final securityState = await _service.load();
     if (isClosed) {
       return;
     }
     emit(
-      SecurityAccessState(
-        securityState: securityState,
-        status: securityState.appLockEnabled && securityState.pinConfigured
-            ? SecurityAccessStatus.ready
-            : SecurityAccessStatus.unlocked,
+      state.copyWith(
+        status: SecurityAccessStatus.loading,
+        clearErrorMessage: true,
       ),
     );
+    try {
+      final securityState = await _service.load();
+      if (isClosed) {
+        return;
+      }
+      emit(
+        SecurityAccessState(
+          securityState: securityState,
+          status: securityState.appLockEnabled && securityState.pinConfigured
+              ? SecurityAccessStatus.ready
+              : SecurityAccessStatus.unlocked,
+        ),
+      );
+    } on Object {
+      if (isClosed) {
+        return;
+      }
+      emit(
+        SecurityAccessState(
+          securityState: state.securityState,
+          status: SecurityAccessStatus.error,
+          errorMessage: 'Could not load security settings. Please try again.',
+        ),
+      );
+    }
   }
 
   /// Relocks the app without changing the persisted security state.
@@ -72,6 +93,26 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       return false;
     }
 
+    try {
+      if (state.securityState.pinConfigured || await _service.hasPin()) {
+        emit(
+          state.copyWith(
+            status: SecurityAccessStatus.failure,
+            errorMessage: 'App lock is already configured.',
+          ),
+        );
+        return false;
+      }
+    } on Object {
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Could not check app lock. Please try again.',
+        ),
+      );
+      return false;
+    }
+
     emit(state.copyWith(status: SecurityAccessStatus.submitting));
     try {
       await _service.configurePin(pin);
@@ -88,7 +129,8 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         ),
       );
       return true;
-    } on Exception {
+    } on Object {
+      await _clearPinAfterFailedSetup();
       if (isClosed) {
         return false;
       }
@@ -96,6 +138,36 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         state.copyWith(
           status: SecurityAccessStatus.failure,
           errorMessage: 'Could not save app lock. Please try again.',
+        ),
+      );
+      return false;
+    }
+  }
+
+  /// Clears app-lock metadata and the verifier after an unrecoverable load.
+  Future<bool> resetLock() async {
+    if (isClosed) {
+      return false;
+    }
+    emit(
+      state.copyWith(
+        status: SecurityAccessStatus.submitting,
+        clearErrorMessage: true,
+      ),
+    );
+    try {
+      await _service.reset();
+      await load();
+      return !isClosed && state.status != SecurityAccessStatus.error;
+    } on Object {
+      if (isClosed) {
+        return false;
+      }
+      emit(
+        SecurityAccessState(
+          securityState: state.securityState,
+          status: SecurityAccessStatus.error,
+          errorMessage: 'Could not reset app lock. Please try again.',
         ),
       );
       return false;
@@ -172,6 +244,14 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         ),
       );
       return false;
+    }
+  }
+
+  Future<void> _clearPinAfterFailedSetup() async {
+    try {
+      await _service.clearPin();
+    } on Object {
+      // The original setup failure remains the user-facing error.
     }
   }
 }

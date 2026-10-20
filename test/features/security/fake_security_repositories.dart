@@ -15,13 +15,29 @@ class FakeSecurityRepository implements SecurityRepository {
   /// Every state passed to [update], in persistence order.
   final List<SecurityState> updates = <SecurityState>[];
 
+  /// Error thrown by the next [get] call.
+  Exception? getError;
+
+  /// Error thrown by the next [update] call.
+  Exception? updateError;
+
   SecurityState? get state => _state;
 
   @override
-  Future<SecurityState?> get() async => _state;
+  Future<SecurityState?> get() async {
+    final error = getError;
+    if (error != null) {
+      throw error;
+    }
+    return _state;
+  }
 
   @override
   Future<void> update(SecurityState newState) async {
+    final error = updateError;
+    if (error != null) {
+      throw error;
+    }
     updates.add(newState);
     _state = newState;
   }
@@ -37,6 +53,9 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Errors to throw from the next [verifyPin] call.
   Exception? verifyError;
 
+  /// Error thrown by the next [hasPin] call.
+  Exception? hasPinError;
+
   /// Every PIN supplied to [verifyPin].
   final List<String> verifiedPins = <String>[];
 
@@ -44,7 +63,13 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   Completer<void>? verifyGate;
 
   @override
-  Future<bool> hasPin() async => _pin != null;
+  Future<bool> hasPin() async {
+    final error = hasPinError;
+    if (error != null) {
+      throw error;
+    }
+    return _pin != null;
+  }
 
   @override
   Future<void> savePin(String pin) async {

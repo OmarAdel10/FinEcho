@@ -15,7 +15,11 @@ abstract interface class SecureKeyValueStore {
 /// [SecureKeyValueStore] backed by the platform keystore.
 class FlutterSecureKeyValueStore implements SecureKeyValueStore {
   /// Creates a store using the platform secure-storage implementation.
-  const new({this.storage = const FlutterSecureStorage()});
+  const new({
+    this.storage = const FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    ),
+  });
 
   /// The platform secure-storage implementation.
   final FlutterSecureStorage storage;

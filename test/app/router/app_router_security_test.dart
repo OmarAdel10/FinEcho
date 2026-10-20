@@ -78,4 +78,56 @@ void main() {
       isZero,
     );
   });
+
+  testWidgets('starts configured users at the lock screen', (tester) async {
+    final now = DateTime.utc(2026, 10, 15, 12);
+    final securityHarness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: now,
+      ),
+      now: () => now,
+    );
+    await securityHarness.credentialRepository.savePin('123456');
+    final securityCubit = SecurityCubit(securityHarness.service);
+    await securityCubit.load();
+    final onboardingCubit = OnboardingCubit(
+      OnboardingService(FakeOnboardingRepository()),
+    );
+    final transactionsCubit = TransactionsCubit(
+      TransactionsTestHarness().service,
+    );
+    final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+    final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+    final appRouter = AppRouter(
+      onboardingCubit: onboardingCubit,
+      securityCubit: securityCubit,
+      transactionsCubit: transactionsCubit,
+      budgetCubit: budgetCubit,
+      analyticsCubit: analyticsCubit,
+    );
+    final router = appRouter.router;
+    addTearDown(router.dispose);
+    addTearDown(onboardingCubit.close);
+    addTearDown(securityCubit.close);
+    addTearDown(transactionsCubit.close);
+    addTearDown(budgetCubit.close);
+    addTearDown(analyticsCubit.close);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(find.text('Welcome'), findsNothing);
+
+    router.go('/security-setup');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(find.text('Set up app lock'), findsNothing);
+  });
 }

@@ -45,6 +45,64 @@ void main() {
       await cubit.close();
     });
 
+    test('fails closed when a verifier exists without metadata', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(cubit.state.isLocked, isTrue);
+      expect(cubit.state.securityState.appLockEnabled, isTrue);
+      expect(cubit.state.securityState.pinConfigured, isTrue);
+      expect(await harness.service.verifyPin('123456'), isTrue);
+      await cubit.close();
+    });
+
+    test('reports a load failure and retries successfully', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      harness.securityRepository.getError = const FormatException('corrupt');
+      final cubit = SecurityCubit(harness.service);
+
+      await cubit.load();
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(cubit.state.hasLoadError, isTrue);
+      expect(
+        cubit.state.errorMessage,
+        'Could not load security settings. Please try again.',
+      );
+
+      harness.securityRepository.getError = null;
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      await cubit.close();
+    });
+
+    test('resets app lock after a load failure', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      harness.securityRepository.getError = const FormatException('corrupt');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      expect(cubit.state.status, SecurityAccessStatus.error);
+
+      harness.securityRepository.getError = null;
+      final reset = await cubit.resetLock();
+
+      expect(reset, isTrue);
+      expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      expect(await harness.credentialRepository.hasPin(), isFalse);
+      await cubit.close();
+    });
+
     test('loads configured security in its locked ready state', () async {
       final persistedState = _configuredState();
       final harness = SecurityTestHarness(
@@ -97,12 +155,55 @@ void main() {
       await cubit.close();
     });
 
+    test('refuses to overwrite an existing PIN verifier', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+
+      final configured = await cubit.configure('654321');
+
+      expect(configured, isFalse);
+      expect(cubit.state.status, SecurityAccessStatus.failure);
+      expect(cubit.state.errorMessage, 'App lock is already configured.');
+      expect(await harness.service.verifyPin('123456'), isTrue);
+      expect(await harness.service.verifyPin('654321'), isFalse);
+      await cubit.close();
+    });
+
+    test(
+      'rolls back the verifier when configured state cannot be saved',
+      () async {
+        final harness = SecurityTestHarness(
+          now: () => DateTime.utc(2026, 10, 15, 12),
+        );
+        final cubit = SecurityCubit(harness.service);
+        await cubit.load();
+        harness.securityRepository.updateError = Exception('disk full');
+
+        final configured = await cubit.configure('123456');
+
+        expect(configured, isFalse);
+        expect(cubit.state.status, SecurityAccessStatus.failure);
+        expect(
+          cubit.state.errorMessage,
+          'Could not save app lock. Please try again.',
+        );
+        expect(await harness.credentialRepository.hasPin(), isFalse);
+        expect(harness.securityRepository.updates, isEmpty);
+        await cubit.close();
+      },
+    );
+
     test('rejects a wrong PIN and persists the failed attempt', () async {
       final harness = SecurityTestHarness(
         initialState: _configuredState(),
         now: () => DateTime.utc(2026, 10, 15, 12),
       );
       final cubit = SecurityCubit(harness.service);
+      await cubit.load();
 
       final unlocked = await cubit.unlockWithPin('000000');
 
@@ -124,6 +225,7 @@ void main() {
       );
       await harness.credentialRepository.savePin('123456');
       final cubit = SecurityCubit(harness.service);
+      await cubit.load();
 
       final unlocked = await cubit.unlockWithPin('123456');
 
@@ -191,6 +293,69 @@ void main() {
       await cubit.close();
     });
 
+    test('rejects a malformed PIN before verification', () async {
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+
+      final unlocked = await cubit.unlockWithPin('123');
+
+      expect(unlocked, isFalse);
+      expect(cubit.state.errorMessage, 'Enter a six-digit PIN.');
+      expect(harness.credentialRepository.verifiedPins, isEmpty);
+      await cubit.close();
+    });
+
+    test('ignores a second unlock while one is verifying', () async {
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      final gate = Completer<void>();
+      harness.credentialRepository.verifyGate = gate;
+
+      final first = cubit.unlockWithPin('123456');
+      final second = await cubit.unlockWithPin('123456');
+      gate.complete();
+
+      expect(second, isFalse);
+      expect(await first, isTrue);
+      expect(harness.credentialRepository.verifiedPins, hasLength(1));
+      await cubit.close();
+    });
+
+    test(
+      'reports a verification failure without recording an attempt',
+      () async {
+        final harness = SecurityTestHarness(
+          initialState: _configuredState(),
+          now: () => DateTime.utc(2026, 10, 15, 12),
+        );
+        await harness.credentialRepository.savePin('123456');
+        final cubit = SecurityCubit(harness.service);
+        await cubit.load();
+        harness.credentialRepository.verifyError = Exception('keystore');
+
+        final unlocked = await cubit.unlockWithPin('123456');
+
+        expect(unlocked, isFalse);
+        expect(cubit.state.status, SecurityAccessStatus.failure);
+        expect(
+          cubit.state.errorMessage,
+          'Could not verify PIN. Please try again.',
+        );
+        expect(harness.securityRepository.updates, isEmpty);
+        await cubit.close();
+      },
+    );
+
     test('locks out after five failures and stops further attempts', () async {
       final now = DateTime.now().toUtc().add(const Duration(hours: 1));
       final harness = SecurityTestHarness(
@@ -223,6 +388,19 @@ void main() {
       expect(harness.securityRepository.updates, hasLength(5));
       expect(harness.credentialRepository.verifiedPins, hasLength(5));
       await cubit.close();
+    });
+
+    test('ignores a load after close', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final cubit = SecurityCubit(harness.service);
+      await cubit.close();
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.loading);
+      expect(harness.securityRepository.updates, isEmpty);
     });
   });
 }

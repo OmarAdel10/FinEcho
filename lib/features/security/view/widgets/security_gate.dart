@@ -25,14 +25,40 @@ class _SecurityGateState extends State<SecurityGate>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _cubit = context.read<SecurityCubit>();
+    WidgetsBinding.instance.addObserver(this);
     if (_cubit.state.status == SecurityAccessStatus.loading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           unawaited(_cubit.load());
         }
       });
+    }
+  }
+
+  Future<void> _confirmReset() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset app lock?'),
+        content: const Text(
+          'This removes the saved PIN and lock settings. You will need to set '
+          'up app lock again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Reset app lock'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _cubit.resetLock();
     }
   }
 
@@ -59,11 +85,78 @@ class _SecurityGateState extends State<SecurityGate>
             body: Center(child: CircularProgressIndicator()),
           );
         }
+        if (state.hasLoadError) {
+          return _SecurityLoadFailure(
+            message:
+                state.errorMessage ??
+                'Could not load security settings. Please try again.',
+            onRetry: () => unawaited(_cubit.load()),
+            onReset: _confirmReset,
+          );
+        }
         if (state.isLocked) {
           return const LockScreen();
         }
         return widget.child;
       },
+    );
+  }
+}
+
+class _SecurityLoadFailure extends StatelessWidget {
+  const new({
+    required this.message,
+    required this.onRetry,
+    required this.onReset,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('FinEcho')),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Security settings unavailable',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: onRetry,
+                  child: const Text('Try again'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: onReset,
+                  child: const Text('Reset app lock'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

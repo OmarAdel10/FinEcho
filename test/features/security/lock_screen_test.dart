@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
@@ -82,6 +84,43 @@ void main() {
       expect(cubit.state.status, SecurityAccessStatus.unlocked);
       expect(find.text('Incorrect PIN. Try again.'), findsNothing);
       expect(harness.securityRepository.state?.failedUnlockAttempts, isZero);
+      await cubit.close();
+    });
+
+    testWidgets('clears the entered PIN when the app relocks mid-verify', (
+      tester,
+    ) async {
+      final harness = SecurityTestHarness(
+        initialState: SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final pinController = TextEditingController();
+      addTearDown(pinController.dispose);
+      final cubit = await createCubit(harness);
+      final gate = Completer<void>();
+      harness.credentialRepository.verifyGate = gate;
+      await tester.pumpWidget(wrapScreen(cubit, pinController));
+      await tester.pump();
+
+      await tester.enterText(find.byType(Pinput), '123456');
+      await tester.pump();
+      expect(cubit.state.status, SecurityAccessStatus.submitting);
+
+      cubit.lock();
+      await tester.pump();
+
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(pinController.text, isEmpty);
+
+      gate.complete();
+      await tester.pump();
+      expect(cubit.state.status, SecurityAccessStatus.ready);
       await cubit.close();
     });
   });

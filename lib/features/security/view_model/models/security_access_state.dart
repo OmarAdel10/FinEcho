@@ -17,6 +17,9 @@ enum SecurityAccessStatus {
 
   /// The requested security operation failed.
   failure,
+
+  /// Persisted security state could not be loaded.
+  error,
 }
 
 /// Immutable security state rendered by app-lock views.
@@ -46,6 +49,9 @@ class SecurityAccessState {
 
   /// Whether a security operation is in progress.
   bool get isSubmitting => status == SecurityAccessStatus.submitting;
+
+  /// Whether persisted security state could not be loaded.
+  bool get hasLoadError => status == SecurityAccessStatus.error;
 
   /// Whether the app is currently inside a temporary lockout window.
   bool get isLockedOut {

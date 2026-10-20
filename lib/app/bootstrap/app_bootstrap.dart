@@ -1,5 +1,6 @@
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/app/environment/environment.dart';
+import 'package:flutter/widgets.dart';
 
 /// Prepares the application before `runApp`.
 abstract final class AppBootstrap {
@@ -8,6 +9,7 @@ abstract final class AppBootstrap {
     Environment environment = Environment.development,
     bool useSecureStorage = false,
   }) async {
+    WidgetsFlutterBinding.ensureInitialized();
     await configureDependencies(
       environment: environment,
       useSecureStorage: useSecureStorage,
