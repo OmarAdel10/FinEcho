@@ -101,6 +101,9 @@ Deferred; tracked in Plane:
 - FINECHO-31 verify `FLAG_SECURE` on a device.
 - FINECHO-32 erase persisted financial data or require a device credential for
   recovery reset once the SQLCipher database is wired.
+- FINECHO-33 tighten the remaining security test clarity gaps: derive the
+  lockout window from a fixed clock, assert the secure-storage payload guards
+  separately from the JSON parse errors, and cover `main()` directly.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
@@ -116,7 +119,11 @@ Fixed:
   both fail, the screen directs the user to clear app data in system settings.
   A successful erase returns the app to onboarding so the lock can be set up
   again, and a failed reload asks the user to try again instead of wiping the
-  app.
+  app. Every recovery path that ends without a configured lock, including a
+  retry that succeeds against an empty store, routes back to onboarding, so the
+  protected area is never left reachable without a way to set the lock up.
+- The erase runs in a dedicated `resetting` state, so the progress indicator
+  depends on the operation in flight instead of the persisted lock metadata.
 - A stored verifier without lock metadata fails closed and repairs the metadata.
   Configured metadata without a readable verifier enters the recovery screen.
   A metadata repair that cannot be persisted still leaves the app locked.

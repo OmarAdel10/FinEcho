@@ -228,8 +228,9 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
   recovery screen instead of content. Retry re-reads secure storage. `Erase app
   data` is intentionally destructive and unauthenticated because the PIN
   verifier is unreadable in this state; it removes the saved PIN and app-lock
-  settings and routes the app back to onboarding so the lock can be set up
-  again.
+  settings. Whenever a recovery reload finishes without a configured lock, the
+  gate routes the app back to onboarding so the lock can be set up again. A
+  normal start never moves the user away from the route they opened.
 - The security gate relocks the app when it is paused, and Android applies
   `FLAG_SECURE` app-wide so screens are excluded from screenshots and recents
   previews. Android cloud backup and device-to-device transfer exclude app data
