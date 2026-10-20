@@ -121,13 +121,115 @@ void main() {
     await tester.pump();
 
     expect(find.byType(LockScreen), findsOneWidget);
-    expect(find.text('Welcome'), findsNothing);
+    expect(find.text('Welcome to FinEcho'), findsNothing);
 
     router.go('/security-setup');
     await tester.pump();
     await tester.pump();
 
     expect(find.byType(LockScreen), findsOneWidget);
-    expect(find.text('Set up app lock'), findsNothing);
+    expect(find.text('Security setup'), findsNothing);
+
+    router.go('/welcome');
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(find.text('Welcome to FinEcho'), findsNothing);
+
+    router.go('/onboarding');
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(LockScreen), findsOneWidget);
+  });
+
+  testWidgets('starts at recovery when security state cannot load', (
+    tester,
+  ) async {
+    final now = DateTime.utc(2026, 10, 15, 12);
+    final securityHarness = SecurityTestHarness(now: () => now);
+    securityHarness.securityRepository.getError = const FormatException(
+      'corrupt',
+    );
+    final securityCubit = SecurityCubit(securityHarness.service);
+    await securityCubit.load();
+    final onboardingCubit = OnboardingCubit(
+      OnboardingService(FakeOnboardingRepository()),
+    );
+    final transactionsCubit = TransactionsCubit(
+      TransactionsTestHarness().service,
+    );
+    final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+    final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+    final appRouter = AppRouter(
+      onboardingCubit: onboardingCubit,
+      securityCubit: securityCubit,
+      transactionsCubit: transactionsCubit,
+      budgetCubit: budgetCubit,
+      analyticsCubit: analyticsCubit,
+    );
+    final router = appRouter.router;
+    addTearDown(router.dispose);
+    addTearDown(onboardingCubit.close);
+    addTearDown(securityCubit.close);
+    addTearDown(transactionsCubit.close);
+    addTearDown(budgetCubit.close);
+    addTearDown(analyticsCubit.close);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+    expect(find.text('Welcome to FinEcho'), findsNothing);
+  });
+
+  testWidgets('routes unconfigured users through onboarding and placeholders', (
+    tester,
+  ) async {
+    final securityHarness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    final securityCubit = SecurityCubit(securityHarness.service);
+    await securityCubit.load();
+    final onboardingCubit = OnboardingCubit(
+      OnboardingService(FakeOnboardingRepository()),
+    );
+    final transactionsCubit = TransactionsCubit(
+      TransactionsTestHarness().service,
+    );
+    final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+    final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+    final appRouter = AppRouter(
+      onboardingCubit: onboardingCubit,
+      securityCubit: securityCubit,
+      transactionsCubit: transactionsCubit,
+      budgetCubit: budgetCubit,
+      analyticsCubit: analyticsCubit,
+    );
+    final router = appRouter.router;
+    addTearDown(router.dispose);
+    addTearDown(onboardingCubit.close);
+    addTearDown(securityCubit.close);
+    addTearDown(transactionsCubit.close);
+    addTearDown(budgetCubit.close);
+    addTearDown(analyticsCubit.close);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    expect(find.text('Welcome to FinEcho'), findsOneWidget);
+
+    router.go('/onboarding');
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Onboarding'), findsOneWidget);
+
+    router.go('/accounts');
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Accounts'), findsWidgets);
+
+    router.go('/settings');
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Settings'), findsWidgets);
   });
 }
