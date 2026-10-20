@@ -160,7 +160,7 @@ void main() {
       expect(progress.usedRatio, 0.9);
     });
 
-    test('reports a zero used ratio for a zero allocation', () {
+    test('reports a full used ratio for spending without an allocation', () {
       const progress = BudgetProgress(
         budgetId: 'budget-1',
         categoryId: 'category-1',
@@ -170,7 +170,7 @@ void main() {
         level: BudgetProgressLevel.exceeded,
       );
 
-      expect(progress.usedRatio, 0);
+      expect(progress.usedRatio, 1);
     });
 
     test('supports value equality', () {

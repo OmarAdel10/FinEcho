@@ -31,6 +31,11 @@ class CategoryBreakdownCard extends StatelessWidget {
       0,
       (total, categoryTotal) => total + categoryTotal.expenseMinorUnits,
     );
+    final ringSemanticsLabel = [
+      _ringSemanticsLabel,
+      for (final categoryTotal in categoryTotals)
+        _ringSliceLabel(categoryTotal),
+    ].join(', ');
 
     return Card(
       child: Padding(
@@ -50,7 +55,7 @@ class CategoryBreakdownCard extends StatelessWidget {
             else ...[
               Center(
                 child: Semantics(
-                  label: _ringSemanticsLabel,
+                  label: ringSemanticsLabel,
                   child: SizedBox(
                     width: _ringSize,
                     height: _ringSize,
@@ -204,6 +209,12 @@ class _CategoryRingPainter extends CustomPainter {
     }
     return false;
   }
+}
+
+String _ringSliceLabel(CategoryTotal categoryTotal) {
+  final name = categoryTotal.name ?? _uncategorizedLabel;
+  final amount = _formatMinorUnits(categoryTotal.expenseMinorUnits);
+  return '$name $amount';
 }
 
 String _formatMinorUnits(int amount) {

@@ -374,6 +374,12 @@ void main() {
           amountMinorUnits: 200000,
           categoryId: 'category-3',
         ),
+        'rent-october': testTransaction(
+          id: 'rent-october',
+          timestamp: DateTime.utc(2026, 10, 10),
+          amountMinorUnits: 200000,
+          categoryId: 'category-3',
+        ),
         'spend-october': testTransaction(
           id: 'spend-october',
           timestamp: DateTime.utc(2026, 10, 5),
@@ -395,11 +401,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Projected month-end spending'), findsOneWidget);
-    expect(find.text('641.38'), findsOneWidget);
+    expect(find.text('4917.24'), findsOneWidget);
     expect(find.text('Based on 15 of 31 days so far'), findsOneWidget);
     expect(find.text('Recurring charges'), findsOneWidget);
     expect(find.text('Rent'), findsOneWidget);
-    expect(find.text('2 months'), findsOneWidget);
+    expect(find.text('3 months'), findsOneWidget);
     expect(find.text('2000.00'), findsOneWidget);
     expect(find.text('No recurring charges yet.'), findsNothing);
   });

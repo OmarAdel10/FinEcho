@@ -560,6 +560,32 @@ void main() {
         ]);
       });
 
+      test('drops charges that lapsed before the current month', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {'category-1': testCategory()},
+          initialTransactions: {
+            'aug': testTransaction(
+              id: 'aug',
+              categoryId: 'category-1',
+              amountMinorUnits: 4500,
+              timestamp: DateTime.utc(2026, 8, 10),
+            ),
+            'sep': testTransaction(
+              id: 'sep',
+              categoryId: 'category-1',
+              amountMinorUnits: 4500,
+              timestamp: DateTime.utc(2026, 9, 10),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.recurringCharges, isEmpty);
+      });
+
       test('ignores charges that skip a month', () async {
         final harness = AnalyticsTestHarness(
           initialCategories: {'category-1': testCategory()},
@@ -1020,9 +1046,9 @@ void main() {
         expect(dashboard.forecast.projectedExpenseMinorUnits, 5000);
       });
 
-      test('extrapolates from the elapsed part of the first day', () async {
+      test('clamps the first-day denominator to one day', () async {
         final harness = AnalyticsTestHarness(
-          now: () => DateTime.utc(2026, 11, 1, 12),
+          now: () => DateTime.utc(2026, 11, 1, 0, 15),
           initialTransactions: {
             'nov': testTransaction(
               id: 'nov',
@@ -1037,7 +1063,7 @@ void main() {
         );
 
         expect(dashboard.forecast.expenseSoFarMinorUnits, 5000);
-        expect(dashboard.forecast.projectedExpenseMinorUnits, 300000);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 150000);
       });
 
       test('projects the spent total on the last day of the month', () async {
@@ -1260,6 +1286,7 @@ void main() {
           period: AnalyticsPeriod.month,
         );
 
+        expect(dashboard.budgetProgress.single.usedRatio, 1);
         expect(dashboard.budgetProgress, const [
           BudgetProgress(
             budgetId: 'budget-1',

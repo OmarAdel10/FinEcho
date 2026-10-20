@@ -340,10 +340,13 @@ class AnalyticsService {
           .add(timestamp.year * 12 + timestamp.month);
     }
 
+    final currentMonth = nowUtc.year * 12 + nowUtc.month;
     final charges = <RecurringCharge>[];
     for (final entry in latestByGroup.entries) {
-      final monthsSeen = _consecutiveMonthRun(monthsByGroup[entry.key]!);
-      if (monthsSeen < _recurringMinimumMonths) {
+      final months = monthsByGroup[entry.key]!;
+      final latestMonth = months.reduce((a, b) => a > b ? a : b);
+      final monthsSeen = _consecutiveMonthRun(months);
+      if (latestMonth < currentMonth || monthsSeen < _recurringMinimumMonths) {
         continue;
       }
       final transaction = entry.value;
@@ -493,12 +496,13 @@ class AnalyticsService {
     final elapsedFraction =
         nowUtc.difference(monthStart).inMicroseconds /
         Duration.microsecondsPerDay;
+    final denominator = elapsedFraction < 1 ? 1.0 : elapsedFraction;
     return MonthlyForecast(
       elapsedDays: elapsedDays,
       daysInMonth: daysInMonth,
       expenseSoFarMinorUnits: expenseSoFar,
       projectedExpenseMinorUnits: elapsedFraction > 0
-          ? (expenseSoFar * daysInMonth / elapsedFraction).round()
+          ? (expenseSoFar * daysInMonth / denominator).round()
           : expenseSoFar,
     );
   }

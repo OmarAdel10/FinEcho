@@ -46,7 +46,7 @@ class BudgetProgress {
   /// The spent share of the allocation between 0 and beyond 1.
   double get usedRatio {
     if (allocatedAmountMinorUnits <= 0) {
-      return 0;
+      return spentAmountMinorUnits > 0 ? 1 : 0;
     }
     return spentAmountMinorUnits / allocatedAmountMinorUnits;
   }

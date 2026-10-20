@@ -152,7 +152,10 @@ void main() {
             .ancestor(of: _ringPainter(), matching: find.byType(Semantics))
             .first,
       );
-      expect(ringSemantics.properties.label, 'Spending ring by category');
+      expect(
+        ringSemantics.properties.label,
+        'Spending ring by category, Food 75.00, Transport 25.00',
+      );
       expect(find.text('Food'), findsOneWidget);
       expect(find.text('75.00'), findsOneWidget);
       expect(find.text('75%'), findsOneWidget);

@@ -78,6 +78,7 @@ void main() {
 
   test('reads transactions seeded through the shared repositories', () async {
     await configureDependencies();
+    final now = DateTime.now().toUtc();
     await sl<CategoryRepository>().create(
       const Category(
         id: 'category-1',
@@ -91,7 +92,7 @@ void main() {
         id: 'tx-1',
         accountId: 'account-1',
         amountMinorUnits: 1234,
-        timestamp: DateTime.now().toUtc(),
+        timestamp: DateTime.utc(now.year, now.month, 1, 12),
         type: TransactionType.expense,
         source: TransactionSource.manual,
         categoryId: 'category-1',
