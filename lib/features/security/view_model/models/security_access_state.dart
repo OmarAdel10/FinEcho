@@ -12,6 +12,9 @@ enum SecurityAccessStatus {
   /// A security operation is being persisted or verified.
   submitting,
 
+  /// The app-lock data is being erased after an unrecoverable load.
+  resetting,
+
   /// The user has successfully unlocked the app.
   unlocked,
 
@@ -48,7 +51,9 @@ class SecurityAccessState {
       status != SecurityAccessStatus.unlocked;
 
   /// Whether a security operation is in progress.
-  bool get isSubmitting => status == SecurityAccessStatus.submitting;
+  bool get isSubmitting =>
+      status == SecurityAccessStatus.submitting ||
+      status == SecurityAccessStatus.resetting;
 
   /// Whether persisted security state could not be loaded.
   bool get hasLoadError => status == SecurityAccessStatus.error;

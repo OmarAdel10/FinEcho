@@ -31,7 +31,7 @@ class _SecurityGateState extends State<SecurityGate>
     if (_cubit.state.status == SecurityAccessStatus.loading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          unawaited(_cubit.load());
+          unawaited(_loadAndRoute());
         }
       });
     }
@@ -59,14 +59,41 @@ class _SecurityGateState extends State<SecurityGate>
       ),
     );
     if (confirmed == true) {
-      final reset = await _cubit.resetLock();
-      if (!reset || !mounted) {
+      await _cubit.resetLock();
+      if (!mounted) {
         return;
       }
-      // The app lock is gone, so send the user back into onboarding instead
-      // of leaving the protected area without a way to set the lock again.
-      GoRouter.maybeOf(context)?.go('/welcome');
+      _goToSetupWhenUnconfigured();
     }
+  }
+
+  /// Reloads the persisted lock state.
+  ///
+  /// A reload started from the recovery screen must send the user back to
+  /// setup when the store is readable but no lock is configured any more. A
+  /// reload started on a normal start must never move the user away from the
+  /// route they opened.
+  Future<void> _loadAndRoute({bool fromRecovery = false}) async {
+    final recovering = fromRecovery || _cubit.state.hasLoadError;
+    await _cubit.load();
+    if (!mounted) {
+      return;
+    }
+    if (recovering) {
+      _goToSetupWhenUnconfigured();
+    }
+  }
+
+  /// Sends the user back into onboarding when the app lock is gone, so the
+  /// protected area never stays reachable without a way to set the lock up.
+  void _goToSetupWhenUnconfigured() {
+    final access = _cubit.state;
+    final security = access.securityState;
+    final configured = security.appLockEnabled && security.pinConfigured;
+    if (configured || access.status == SecurityAccessStatus.error) {
+      return;
+    }
+    GoRouter.maybeOf(context)?.go('/welcome');
   }
 
   @override
@@ -88,8 +115,7 @@ class _SecurityGateState extends State<SecurityGate>
       bloc: _cubit,
       builder: (context, state) {
         if (state.status == SecurityAccessStatus.loading ||
-            (state.status == SecurityAccessStatus.submitting &&
-                !state.isLocked)) {
+            state.status == SecurityAccessStatus.resetting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -99,7 +125,7 @@ class _SecurityGateState extends State<SecurityGate>
             message:
                 state.errorMessage ??
                 'Could not load security settings. Please try again.',
-            onRetry: () => unawaited(_cubit.load()),
+            onRetry: () => unawaited(_loadAndRoute(fromRecovery: true)),
             onReset: _confirmReset,
           );
         }

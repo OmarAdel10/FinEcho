@@ -158,7 +158,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
     }
     emit(
       state.copyWith(
-        status: SecurityAccessStatus.submitting,
+        status: SecurityAccessStatus.resetting,
         clearErrorMessage: true,
       ),
     );
@@ -197,7 +197,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   /// Verifies the six-digit PIN and unlocks the app on success.
   Future<bool> unlockWithPin(String pin) async {
-    if (state.status == SecurityAccessStatus.submitting) {
+    if (state.isSubmitting) {
       return false;
     }
     if (pin.length != 6) {
