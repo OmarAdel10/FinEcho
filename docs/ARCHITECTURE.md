@@ -225,10 +225,15 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 - The startup flow loads the persisted security state before showing any route.
   Configured users are routed to the protected area, where the gate shows the
   lock screen until the PIN is verified; unreadable secure storage shows a
-  recovery screen instead of content.
+  recovery screen instead of content. Retry re-reads secure storage. `Erase app
+  data` is intentionally destructive and unauthenticated because the PIN
+  verifier is unreadable in this state; it removes local app data, including
+  lock metadata and the verifier, before the app can continue.
 - The security gate relocks the app when it is paused, and Android applies
   `FLAG_SECURE` app-wide so screens are excluded from screenshots and recents
-  previews.
+  previews. Android cloud backup and device-to-device transfer exclude app data
+  through `dataExtractionRules`; older Android versions also disable backup.
+  Relocking on `inactive`/`hidden` and from app scope is deferred (FINECHO-28).
 - Generate the database key using a cryptographically secure source.
 - Store that key only in Android Keystore/iOS Keychain through secure storage.
 - Open the local SQLCipher database only after the startup security flow succeeds.

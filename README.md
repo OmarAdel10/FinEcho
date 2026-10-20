@@ -25,9 +25,12 @@ configures a six-digit PIN. FinEcho stores only a salted HMAC-SHA256 PIN
 verifier, never the raw PIN, and applies a temporary lockout after five
 consecutive failed attempts. Lock metadata and the verifier live in platform
 secure storage, configured users are challenged at cold start, the app relocks
-whenever it is backgrounded, and Android sets `FLAG_SECURE` app-wide to block
-screenshots and recents previews. If secure storage cannot be read, the app
-shows a recovery screen instead of protected content.
+when it is paused while a protected screen is open, and Android sets
+`FLAG_SECURE` app-wide to block screenshots and recents previews. If secure
+storage cannot be read, the app shows a recovery screen instead of protected
+content. That screen offers retry and an explicitly destructive `Erase app
+data` action; because the verifier is unreadable in this state, the action is
+unauthenticated by design and clears local data before the app can continue.
 
 ### Screenshots
 

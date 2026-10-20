@@ -99,6 +99,8 @@ Deferred; tracked in Plane:
 - FINECHO-29 version the secure-storage security JSON codec.
 - FINECHO-30 harden PIN lockout and verifier derivation.
 - FINECHO-31 verify `FLAG_SECURE` on a device.
+- FINECHO-32 erase persisted financial data or require a device credential for
+  recovery reset once the SQLCipher database is wired.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
@@ -109,11 +111,19 @@ Fixed:
   lock screen, and onboarding/security setup redirect to the protected area.
   This closes the cold-start gap in FINECHO-25.
 - Secure-storage read and decode failures show a recovery screen with retry and
-  an explicit app-lock reset instead of an infinite spinner.
-- A stored verifier without lock metadata fails closed; PIN setup refuses to
-  overwrite an existing verifier and rolls back if state persistence fails.
-- Android secure storage uses encrypted shared preferences and is excluded from
-  backup/device transfer.
+  an explicitly destructive `Erase app data` action instead of an infinite
+  spinner. Reset attempts clearing the verifier and metadata independently; if
+  both fail, the screen directs the user to clear app data in system settings.
+- A stored verifier without lock metadata fails closed and repairs the metadata.
+  Configured metadata without a readable verifier enters the recovery screen.
+  PIN setup refuses to overwrite an existing verifier and reports when a setup
+  rollback also fails.
+- Startup security loading is bounded by a timeout, and the load-before-router
+  composition is covered by a production-graph test.
+- Android secure storage uses encrypted shared preferences; cloud backup and
+  Android 12+ device-to-device transfer exclude app data through
+  `dataExtractionRules`, with `allowBackup=false` and
+  `fullBackupContent=false` for older versions.
 - The security gate relocks on `AppLifecycleState.paused`; an in-flight PIN
   verification cannot complete an unlock after the app is paused, and the PIN
   field clears on relock.
@@ -122,3 +132,8 @@ Fixed:
 - The shared PIN hasher uses a constant-time verifier comparison.
 - Secure repositories, hasher, lifecycle relock, recovery flow, startup
   routing, bootstrap, and DI paths are covered by tests.
+
+The recovery `Erase app data` action is intentionally unauthenticated because
+the stored verifier may be unreadable; it exists only to clear local data and
+restore access. When persisted financial data lands, the action must also erase
+that data or require a device credential (FINECHO-32).
