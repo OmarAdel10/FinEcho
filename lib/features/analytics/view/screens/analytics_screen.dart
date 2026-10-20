@@ -81,10 +81,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               if (dashboard == null) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (dashboard.period != state.period) {
-                return const Center(child: CircularProgressIndicator());
-              }
 
+              final isSwitchingPeriod = dashboard.period != state.period;
               return RefreshIndicator(
                 onRefresh: context.read<AnalyticsCubit>().load,
                 child: ListView(
@@ -137,44 +135,52 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    AnalyticsSummaryCard(
-                      totalIncomeMinorUnits: dashboard.totalIncomeMinorUnits,
-                      totalExpenseMinorUnits: dashboard.totalExpenseMinorUnits,
-                      netAmountMinorUnits: dashboard.netAmountMinorUnits,
-                      expenseChangeRatio: dashboard.expenseChangeRatio,
-                    ),
-                    ...switch (_mode) {
-                      _AnalyticsMode.spending => [
-                        const SizedBox(height: 12),
-                        CategoryBreakdownCard(
-                          categoryTotals: dashboard.categoryTotals,
-                        ),
-                        const SizedBox(height: 12),
-                        AccountBreakdownCard(
-                          accountTotals: dashboard.accountTotals,
-                        ),
-                      ],
-                      _AnalyticsMode.income => [
-                        const SizedBox(height: 12),
-                        AccountBreakdownCard(
-                          accountTotals: dashboard.accountTotals,
-                          metric: AccountBreakdownMetric.income,
-                        ),
-                      ],
-                      _AnalyticsMode.patterns => [
-                        const SizedBox(height: 12),
-                        InsightsCard(
-                          forecast: dashboard.forecast,
-                          recurringCharges: dashboard.recurringCharges,
-                          unusualSpikes: dashboard.unusualSpikes,
-                        ),
-                      ],
-                    },
-                    if (dashboard.budgetProgress.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      BudgetProgressCard(
-                        budgetProgress: dashboard.budgetProgress,
+                    if (isSwitchingPeriod)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 48),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else ...[
+                      AnalyticsSummaryCard(
+                        totalIncomeMinorUnits: dashboard.totalIncomeMinorUnits,
+                        totalExpenseMinorUnits:
+                            dashboard.totalExpenseMinorUnits,
+                        netAmountMinorUnits: dashboard.netAmountMinorUnits,
+                        expenseChangeRatio: dashboard.expenseChangeRatio,
                       ),
+                      ...switch (_mode) {
+                        _AnalyticsMode.spending => [
+                          const SizedBox(height: 12),
+                          CategoryBreakdownCard(
+                            categoryTotals: dashboard.categoryTotals,
+                          ),
+                          const SizedBox(height: 12),
+                          AccountBreakdownCard(
+                            accountTotals: dashboard.accountTotals,
+                          ),
+                        ],
+                        _AnalyticsMode.income => [
+                          const SizedBox(height: 12),
+                          AccountBreakdownCard(
+                            accountTotals: dashboard.accountTotals,
+                            metric: AccountBreakdownMetric.income,
+                          ),
+                        ],
+                        _AnalyticsMode.patterns => [
+                          const SizedBox(height: 12),
+                          InsightsCard(
+                            forecast: dashboard.forecast,
+                            recurringCharges: dashboard.recurringCharges,
+                            unusualSpikes: dashboard.unusualSpikes,
+                          ),
+                        ],
+                      },
+                      if (dashboard.budgetProgress.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        BudgetProgressCard(
+                          budgetProgress: dashboard.budgetProgress,
+                        ),
+                      ],
                     ],
                   ],
                 ),

@@ -1,4 +1,3 @@
-import 'package:finecho/app/theme/fin_echo_theme.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/features/analytics/view/widgets/analytics_summary_card.dart';
 import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dart';
@@ -336,12 +335,14 @@ void main() {
         ),
       );
 
+      final context = tester.element(find.byType(LinearProgressIndicator));
       final indicator = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
       expect(indicator.value, 1.0);
-      expect(indicator.color, FinEchoColors.coral);
+      expect(indicator.color, Theme.of(context).colorScheme.error);
       expect(find.text('150.00 / 100.00'), findsOneWidget);
+      expect(find.text('Over budget'), findsOneWidget);
     });
 
     testWidgets('formats cents in spent and allocated amounts', (tester) async {

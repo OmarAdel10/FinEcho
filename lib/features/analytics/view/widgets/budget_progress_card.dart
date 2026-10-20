@@ -47,7 +47,22 @@ class _BudgetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isWarning = progress.level != BudgetProgressLevel.normal;
+    final isExceeded = progress.level == BudgetProgressLevel.exceeded;
+    final isWarning = progress.level == BudgetProgressLevel.warning;
+    final statusLabel = switch (progress.level) {
+      BudgetProgressLevel.normal => null,
+      BudgetProgressLevel.warning => 'Close to limit',
+      BudgetProgressLevel.exceeded => 'Over budget',
+    };
+    final barColor = isExceeded
+        ? theme.colorScheme.error
+        : isWarning
+        ? FinEchoColors.coral
+        : theme.colorScheme.primary;
+    final semanticsValue =
+        '${_formatMinorUnits(progress.spentAmountMinorUnits)} of '
+        '${_formatMinorUnits(progress.allocatedAmountMinorUnits)} spent'
+        '${statusLabel == null ? '' : ', ${statusLabel.toLowerCase()}'}';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
@@ -74,17 +89,19 @@ class _BudgetRow extends StatelessWidget {
           const SizedBox(height: 8),
           Semantics(
             label: '${progress.categoryName} budget',
-            value:
-                '${_formatMinorUnits(progress.spentAmountMinorUnits)} of '
-                '${_formatMinorUnits(progress.allocatedAmountMinorUnits)} '
-                'spent',
+            value: semanticsValue,
             child: LinearProgressIndicator(
               value: progress.usedRatio.clamp(0.0, 1.0),
-              color: isWarning
-                  ? FinEchoColors.coral
-                  : theme.colorScheme.primary,
+              color: barColor,
             ),
           ),
+          if (statusLabel != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              statusLabel,
+              style: theme.textTheme.labelSmall?.copyWith(color: barColor),
+            ),
+          ],
         ],
       ),
     );
