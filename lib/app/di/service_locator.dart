@@ -35,9 +35,13 @@ import 'package:get_it/get_it.dart';
 final GetIt sl = GetIt.instance;
 
 /// Registers the initial application-wide dependencies.
+///
+/// Secure storage is the default so a new entry point cannot silently fall
+/// back to a non-persistent app lock. Tests opt into the in-memory graph
+/// explicitly.
 Future<void> configureDependencies({
   Environment environment = Environment.development,
-  bool useSecureStorage = false,
+  bool useInMemoryStorage = false,
 }) async {
   sl
     ..registerSingleton<EnvironmentConfig>(EnvironmentConfig(environment))
@@ -51,7 +55,15 @@ Future<void> configureDependencies({
       () => OnboardingCubit(sl<OnboardingService>()),
     );
 
-  if (useSecureStorage) {
+  if (useInMemoryStorage) {
+    sl
+      ..registerLazySingleton<SecurityRepository>(
+        InMemorySecurityRepository.new,
+      )
+      ..registerLazySingleton<SecurityCredentialRepository>(
+        InMemorySecurityCredentialRepository.new,
+      );
+  } else {
     const store = FlutterSecureKeyValueStore();
     sl
       ..registerLazySingleton<SecurityRepository>(
@@ -59,14 +71,6 @@ Future<void> configureDependencies({
       )
       ..registerLazySingleton<SecurityCredentialRepository>(
         () => const SecureStorageSecurityCredentialRepository(store: store),
-      );
-  } else {
-    sl
-      ..registerLazySingleton<SecurityRepository>(
-        InMemorySecurityRepository.new,
-      )
-      ..registerLazySingleton<SecurityCredentialRepository>(
-        InMemorySecurityCredentialRepository.new,
       );
   }
 
