@@ -82,16 +82,17 @@ class OnboardingCubit extends Cubit<OnboardingState> {
   }
 
   /// Validates and persists onboarding completion.
-  Future<bool> complete() async {
+  ///
+  /// Returns null when onboarding is completed and the failure message when it
+  /// cannot be completed.
+  Future<String?> complete() async {
     if (state.currentStep != OnboardingStep.securitySetup ||
         state.pin.length != 6) {
+      const message = 'Enter a six-digit PIN.';
       emit(
-        state.copyWith(
-          status: OnboardingStatus.failure,
-          errorMessage: 'Enter a six-digit PIN.',
-        ),
+        state.copyWith(status: OnboardingStatus.failure, errorMessage: message),
       );
-      return false;
+      return message;
     }
 
     emit(state.copyWith(status: OnboardingStatus.submitting));
@@ -105,21 +106,19 @@ class OnboardingCubit extends Cubit<OnboardingState> {
         ),
       );
       if (isClosed) {
-        return true;
+        return null;
       }
       emit(state.copyWith(status: OnboardingStatus.completed));
-      return true;
+      return null;
     } on Exception {
+      const message = 'Could not finish setup. Please try again.';
       if (isClosed) {
-        return false;
+        return message;
       }
       emit(
-        state.copyWith(
-          status: OnboardingStatus.failure,
-          errorMessage: 'Could not finish setup. Please try again.',
-        ),
+        state.copyWith(status: OnboardingStatus.failure, errorMessage: message),
       );
-      return false;
+      return message;
     }
   }
 

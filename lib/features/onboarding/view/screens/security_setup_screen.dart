@@ -27,12 +27,12 @@ class SecuritySetupScreen extends StatelessWidget {
       return;
     }
     await onboardingCubit.enterSecuritySetup();
-    final completed = await onboardingCubit.complete();
+    final failure = await onboardingCubit.complete();
     if (!context.mounted) {
       return;
     }
-    if (!completed) {
-      _showSetupWarning(context, onboardingCubit.state.errorMessage);
+    if (failure != null) {
+      _showSetupWarning(context, failure);
     }
     context.go('/home');
   }
@@ -139,15 +139,9 @@ class SecuritySetupScreen extends StatelessWidget {
       ..showSnackBar(SnackBar(content: Text(errorMessage)));
   }
 
-  void _showSetupWarning(BuildContext context, String? errorMessage) {
+  void _showSetupWarning(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            errorMessage ?? 'App lock set. Setup progress was not saved.',
-          ),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
