@@ -201,7 +201,7 @@ void main() {
       await cubit.close();
     });
 
-    test('reports terminal recovery when app data cannot be erased', () async {
+    test('fails to erase the verifier', () async {
       final harness = SecurityTestHarness(
         now: () => DateTime.utc(2026, 10, 15, 12),
       );
@@ -210,7 +210,6 @@ void main() {
       final cubit = SecurityCubit(harness.service);
       await cubit.load();
       harness.securityRepository.getError = null;
-      harness.securityRepository.updateError = Exception('keystore write');
       harness.credentialRepository.clearError = Exception('keystore delete');
 
       final reset = await cubit.resetLock();
@@ -222,6 +221,9 @@ void main() {
         'Could not reset app lock. Clear FinEcho app data from system settings '
         'and relaunch.',
       );
+      expect(harness.securityRepository.state, isNotNull);
+      expect(harness.securityRepository.state?.appLockEnabled, isFalse);
+      expect(harness.securityRepository.state?.pinConfigured, isFalse);
       await cubit.close();
     });
 
@@ -272,6 +274,65 @@ void main() {
       gate.complete();
       expect(await reset, isTrue);
       expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      await cubit.close();
+    });
+
+    test('refuses to unlock while the app lock is being erased', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      final gate = Completer<void>();
+      harness.credentialRepository.clearGate = gate;
+
+      final reset = cubit.resetLock();
+
+      expect(cubit.state.status, SecurityAccessStatus.resetting);
+      expect(cubit.state.isSubmitting, isTrue);
+      expect(await cubit.unlockWithPin('123456'), isFalse);
+      expect(harness.credentialRepository.verifiedPins, isEmpty);
+      gate.complete();
+      await reset;
+      await cubit.close();
+    });
+
+    test('keeps the app unlocked when the lock state is reloaded', () async {
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(await cubit.unlockWithPin('123456'), isTrue);
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      expect(cubit.state.isLocked, isFalse);
+      await cubit.close();
+    });
+
+    test('refuses a second setup while one is in flight', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      final gate = Completer<void>();
+      harness.credentialRepository.saveGate = gate;
+
+      final first = cubit.configure('123456');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.status, SecurityAccessStatus.submitting);
+      expect(await cubit.configure('654321'), isFalse);
+      gate.complete();
+      expect(await first, isTrue);
+      expect(harness.credentialRepository.savedPins, ['123456']);
       await cubit.close();
     });
 
@@ -516,7 +577,7 @@ void main() {
 
     test('stays locked when the app pauses during PIN verification', () async {
       final harness = SecurityTestHarness(
-        initialState: _configuredState(),
+        initialState: _configuredState(failedAttempts: 2),
         now: () => DateTime.utc(2026, 10, 15, 12, 30),
       );
       await harness.credentialRepository.savePin('123456');
@@ -532,6 +593,8 @@ void main() {
       expect(await unlock, isFalse);
       expect(cubit.state.status, SecurityAccessStatus.ready);
       expect(cubit.state.isLocked, isTrue);
+      expect(harness.securityRepository.updates, isEmpty);
+      expect(harness.securityRepository.state?.failedUnlockAttempts, 2);
       await cubit.close();
     });
 

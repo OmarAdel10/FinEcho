@@ -117,5 +117,60 @@ void main() {
       await budgetCubit.close();
       await analyticsCubit.close();
     });
+
+    testWidgets('reaches the security setup step and finishes onboarding', (
+      tester,
+    ) async {
+      await cubit.load();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      final securityHarness = SecurityTestHarness();
+      final securityCubit = SecurityCubit(securityHarness.service);
+      final transactionsCubit = TransactionsCubit(
+        TransactionsTestHarness().service,
+      );
+      final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+      final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+      final appRouter = AppRouter(
+        onboardingCubit: cubit,
+        securityCubit: securityCubit,
+        transactionsCubit: transactionsCubit,
+        budgetCubit: budgetCubit,
+        analyticsCubit: analyticsCubit,
+      );
+      addTearDown(appRouter.router.dispose);
+      addTearDown(securityCubit.close);
+      addTearDown(transactionsCubit.close);
+      addTearDown(budgetCubit.close);
+      addTearDown(analyticsCubit.close);
+
+      await tester.pumpWidget(
+        MaterialApp.router(routerConfig: appRouter.router),
+      );
+      await tester.pump();
+      appRouter.router.go('/onboarding');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Set up security'), findsOneWidget);
+      await tester.tap(find.text('Set up security'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(cubit.state.currentStep, OnboardingStep.securitySetup);
+      expect(find.text('Security setup'), findsOneWidget);
+
+      await tester.enterText(find.byType(Pinput), '123456');
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('Finish setup'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      expect(cubit.state.status, OnboardingStatus.completed);
+      expect(repository.saved.last.isCompleted, isTrue);
+      expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);
+    });
   });
 }

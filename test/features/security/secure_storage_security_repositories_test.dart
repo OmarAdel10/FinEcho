@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/features/security/data/models/pin_verifier.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_pin_hasher.dart';
@@ -126,6 +127,107 @@ void main() {
           expectedHash: 'short',
         ),
         isFalse,
+      );
+    });
+
+    test('derives the standard PBKDF2-HMAC-SHA256 verifier', () {
+      // RFC 8018 vector for PBKDF2-HMAC-SHA256, dkLen 32.
+      expect(
+        SecurityPinHasher.hash('123456', 'testsalt', iterations: 1000),
+        'mpS8LaEuQLbijkmKysBh4SJ-u9C9YTk4xHSfty-f3A0=',
+      );
+      expect(
+        SecurityPinHasher.matches(
+          pin: '123456',
+          salt: 'testsalt',
+          expectedHash: 'mpS8LaEuQLbijkmKysBh4SJ-u9C9YTk4xHSfty-f3A0=',
+          iterations: 1000,
+        ),
+        isTrue,
+      );
+    });
+
+    test('separates verifiers derived with different iteration counts', () {
+      final salt = SecurityPinHasher.createSalt();
+      final cheap = SecurityPinHasher.hash('123456', salt, iterations: 1000);
+      final costly = SecurityPinHasher.hash('123456', salt, iterations: 2000);
+
+      expect(cheap, isNot(costly));
+      expect(
+        SecurityPinHasher.matches(
+          pin: '123456',
+          salt: salt,
+          expectedHash: costly,
+          iterations: 1000,
+        ),
+        isFalse,
+      );
+    });
+
+    test('verifies the legacy single-round verifier', () {
+      expect(
+        SecurityPinHasher.legacyHash('123456', 'testsalt'),
+        '6Gd-FGoB6pAYGIQA9rQ76K1OFUbd0kZwUO8MFQgC2HM=',
+      );
+      expect(
+        SecurityPinHasher.matchesLegacy(
+          pin: '123456',
+          salt: 'testsalt',
+          expectedHash: '6Gd-FGoB6pAYGIQA9rQ76K1OFUbd0kZwUO8MFQgC2HM=',
+        ),
+        isTrue,
+      );
+      expect(
+        SecurityPinHasher.matchesLegacy(
+          pin: '654321',
+          salt: 'testsalt',
+          expectedHash: '6Gd-FGoB6pAYGIQA9rQ76K1OFUbd0kZwUO8MFQgC2HM=',
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('PinVerifier', () {
+    test('creates a verifier with the current format and derivation cost', () {
+      final verifier = PinVerifier.create('123456');
+
+      expect(verifier.version, PinVerifier.currentVersion);
+      expect(verifier.iterations, SecurityPinHasher.defaultIterations);
+      expect(base64Url.decode(verifier.salt), hasLength(16));
+      expect(verifier.matches('123456'), isTrue);
+      expect(verifier.matches('654321'), isFalse);
+    });
+
+    test('round-trips a verifier through its encoded payload', () {
+      final verifier = PinVerifier.create('123456');
+
+      final decoded = PinVerifier.decode(verifier.encode());
+
+      expect(decoded.salt, verifier.salt);
+      expect(decoded.hash, verifier.hash);
+      expect(decoded.iterations, verifier.iterations);
+      expect(decoded.version, verifier.version);
+      expect(decoded.matches('123456'), isTrue);
+    });
+
+    test('verifies a legacy verifier with the legacy derivation', () {
+      final legacy = PinVerifier(
+        salt: 'testsalt',
+        hash: SecurityPinHasher.legacyHash('123456', 'testsalt'),
+      );
+
+      expect(legacy.matches('123456'), isTrue);
+      expect(legacy.matches('654321'), isFalse);
+      expect(PinVerifier.create('123456').matches('123456'), isTrue);
+    });
+
+    test('rejects payloads that are not verifiers', () {
+      expect(() => PinVerifier.decode('[]'), throwsFormatException);
+      expect(() => PinVerifier.decode('{}'), throwsFormatException);
+      expect(
+        () => PinVerifier.decode('{"salt": 1, "hash": "value"}'),
+        throwsFormatException,
       );
     });
   });
@@ -257,6 +359,22 @@ void main() {
       store.values[SecureStorageSecurityCredentialRepository.credentialKey] =
           '[]';
       await expectLater(repository.hasPin(), throwsFormatException);
+    });
+
+    test('verifies a verifier persisted in the legacy format', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityCredentialRepository(
+        store: store,
+      );
+      store.values[SecureStorageSecurityCredentialRepository.credentialKey] =
+          jsonEncode({
+            'salt': 'testsalt',
+            'hash': SecurityPinHasher.legacyHash('123456', 'testsalt'),
+          });
+
+      expect(await repository.hasPin(), isTrue);
+      expect(await repository.verifyPin('123456'), isTrue);
+      expect(await repository.verifyPin('654321'), isFalse);
     });
   });
 }

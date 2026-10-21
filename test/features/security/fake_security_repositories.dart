@@ -69,8 +69,14 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Blocks [clear] until completed, when provided.
   Completer<void>? clearGate;
 
+  /// Blocks [savePin] until completed, when provided.
+  Completer<void>? saveGate;
+
   /// Every PIN supplied to [verifyPin].
   final List<String> verifiedPins = <String>[];
+
+  /// Every PIN supplied to [savePin].
+  final List<String> savedPins = <String>[];
 
   /// Blocks [verifyPin] until completed, when provided.
   Completer<void>? verifyGate;
@@ -90,7 +96,12 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     if (error != null) {
       throw error;
     }
+    final gate = saveGate;
+    if (gate != null) {
+      await gate.future;
+    }
     _pin = pin;
+    savedPins.add(pin);
   }
 
   @override

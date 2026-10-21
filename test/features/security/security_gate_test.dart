@@ -153,7 +153,7 @@ void main() {
     expect(find.text('Protected content'), findsOneWidget);
   });
 
-  testWidgets('resets app lock after confirmation', (tester) async {
+  testWidgets('resets the app lock after confirmation', (tester) async {
     final harness = SecurityTestHarness(
       now: () => DateTime.utc(2026, 10, 15, 12),
     );
@@ -174,10 +174,10 @@ void main() {
     expect(find.text('Security settings unavailable'), findsOneWidget);
 
     harness.securityRepository.getError = null;
-    await tester.tap(find.text('Erase app data'));
+    await tester.tap(find.text('Erase app lock'));
     await tester.pumpAndSettle();
-    expect(find.text('Erase app data?'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    expect(find.text('Erase app lock?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app lock'));
     await tester.pumpAndSettle();
 
     expect(find.text('Security settings unavailable'), findsNothing);
@@ -185,7 +185,9 @@ void main() {
     expect(await harness.credentialRepository.hasPin(), isFalse);
   });
 
-  testWidgets('hides protected content while erasing app data', (tester) async {
+  testWidgets('hides protected content while erasing the app lock', (
+    tester,
+  ) async {
     final harness = SecurityTestHarness(
       now: () => DateTime.utc(2026, 10, 15, 12),
     );
@@ -207,9 +209,9 @@ void main() {
     final clearGate = Completer<void>();
     harness.credentialRepository.clearGate = clearGate;
 
-    await tester.tap(find.text('Erase app data'));
+    await tester.tap(find.text('Erase app lock'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app lock'));
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -221,7 +223,7 @@ void main() {
     expect(find.text('Protected content'), findsOneWidget);
   });
 
-  testWidgets('keeps the recovery screen when erasing app data fails', (
+  testWidgets('keeps the recovery screen when erasing the app lock fails', (
     tester,
   ) async {
     final harness = SecurityTestHarness(
@@ -245,9 +247,9 @@ void main() {
     harness.securityRepository.updateError = Exception('keystore write');
     harness.credentialRepository.clearError = Exception('keystore delete');
 
-    await tester.tap(find.text('Erase app data'));
+    await tester.tap(find.text('Erase app lock'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app lock'));
     await tester.pumpAndSettle();
 
     expect(find.text('Security settings unavailable'), findsOneWidget);
@@ -261,7 +263,7 @@ void main() {
     );
   });
 
-  testWidgets('keeps app lock when erasing app data is cancelled', (
+  testWidgets('keeps app lock when erasing the app lock is cancelled', (
     tester,
   ) async {
     final harness = SecurityTestHarness(
@@ -283,7 +285,7 @@ void main() {
     await tester.pump();
     harness.securityRepository.getError = null;
 
-    await tester.tap(find.text('Erase app data'));
+    await tester.tap(find.text('Erase app lock'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
@@ -293,7 +295,7 @@ void main() {
     expect(harness.securityRepository.state, isNull);
   });
 
-  testWidgets('routes to welcome after erasing app data', (tester) async {
+  testWidgets('routes to welcome after erasing the app lock', (tester) async {
     final harness = SecurityTestHarness(
       now: () => DateTime.utc(2026, 10, 15, 12),
     );
@@ -310,9 +312,9 @@ void main() {
     expect(find.text('Security settings unavailable'), findsOneWidget);
 
     harness.securityRepository.getError = null;
-    await tester.tap(find.text('Erase app data'));
+    await tester.tap(find.text('Erase app lock'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app lock'));
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome to FinEcho'), findsOneWidget);
@@ -344,6 +346,41 @@ void main() {
     expect(find.text('Protected content'), findsNothing);
   });
 
+  testWidgets('keeps the route when a retry finds a configured lock', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    harness.securityRepository.getError = const FormatException('corrupt');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+    final router = _routerWithGate(cubit);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+
+    harness.securityRepository.getError = null;
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Unlock FinEcho'), findsOneWidget);
+    expect(find.text('Welcome to FinEcho'), findsNothing);
+    expect(find.text('Protected content'), findsNothing);
+  });
+
   testWidgets('returns to setup when an erase reload fails and a retry works', (
     tester,
   ) async {
@@ -362,9 +399,9 @@ void main() {
     await tester.pump();
     expect(find.text('Security settings unavailable'), findsOneWidget);
 
-    await tester.tap(find.text('Erase app data'));
+    await tester.tap(find.text('Erase app lock'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Erase app data'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Erase app lock'));
     await tester.pumpAndSettle();
 
     expect(
@@ -379,6 +416,25 @@ void main() {
 
     expect(find.text('Welcome to FinEcho'), findsOneWidget);
     expect(find.text('Protected content'), findsNothing);
+  });
+
+  testWidgets('keeps the opened route when a normal start finds no lock', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+    final router = _routerWithGate(cubit);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    expect(cubit.state.status, SecurityAccessStatus.unlocked);
+    expect(find.text('Protected content'), findsOneWidget);
+    expect(find.text('Welcome to FinEcho'), findsNothing);
   });
 
   testWidgets('shows a generic message when the failure has no details', (

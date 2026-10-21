@@ -233,4 +233,50 @@ void main() {
     await tester.pump();
     expect(find.text('Settings'), findsWidgets);
   });
+
+  testWidgets('keeps the setup route reachable after the app lock is gone', (
+    tester,
+  ) async {
+    final securityHarness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    final securityCubit = SecurityCubit(securityHarness.service);
+    await securityCubit.load();
+    final onboardingCubit = OnboardingCubit(
+      OnboardingService(FakeOnboardingRepository()),
+    );
+    final transactionsCubit = TransactionsCubit(
+      TransactionsTestHarness().service,
+    );
+    final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+    final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+    final appRouter = AppRouter(
+      onboardingCubit: onboardingCubit,
+      securityCubit: securityCubit,
+      transactionsCubit: transactionsCubit,
+      budgetCubit: budgetCubit,
+      analyticsCubit: analyticsCubit,
+    );
+    final router = appRouter.router;
+    addTearDown(router.dispose);
+    addTearDown(onboardingCubit.close);
+    addTearDown(securityCubit.close);
+    addTearDown(transactionsCubit.close);
+    addTearDown(budgetCubit.close);
+    addTearDown(analyticsCubit.close);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    router.go('/home');
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(TransactionsScreen), findsOneWidget);
+
+    router.go('/welcome');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Welcome to FinEcho'), findsOneWidget);
+    expect(find.byType(TransactionsScreen), findsNothing);
+  });
 }

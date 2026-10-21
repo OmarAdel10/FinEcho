@@ -17,6 +17,8 @@ import 'package:finecho/features/analytics/view_model/services/analytics_service
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
+import 'package:finecho/features/onboarding/view_model/models/onboarding_state.dart';
+import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/security/data/repositories/in_memory_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/in_memory_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
@@ -34,7 +36,7 @@ void main() {
   tearDown(() => GetIt.instance.reset());
 
   test('registers the budget dependency graph', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
 
     expect(sl<BudgetRepository>(), isA<BudgetRepository>());
     await expectLater(sl<BudgetService>().listBudgets(), completion(isEmpty));
@@ -43,7 +45,7 @@ void main() {
   });
 
   test('shares one budget repository across the graph', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     final repository = sl<BudgetRepository>();
 
     expect(identical(repository, sl<BudgetRepository>()), isTrue);
@@ -66,8 +68,8 @@ void main() {
     await sl<BudgetCubit>().close();
   });
 
-  test('registers in-memory security repositories by default', () async {
-    await configureDependencies();
+  test('registers in-memory security repositories when requested', () async {
+    await configureDependencies(useInMemoryStorage: true);
 
     expect(sl<SecurityRepository>(), isA<InMemorySecurityRepository>());
     expect(
@@ -76,30 +78,37 @@ void main() {
     );
   });
 
-  test(
-    'registers secure platform security repositories when requested',
-    () async {
-      await configureDependencies(useSecureStorage: true);
+  test('registers secure platform security repositories by default', () async {
+    await configureDependencies();
 
-      expect(sl<SecurityRepository>(), isA<SecureStorageSecurityRepository>());
-      expect(
-        sl<SecurityCredentialRepository>(),
-        isA<SecureStorageSecurityCredentialRepository>(),
-      );
-      final stateRepository =
-          sl<SecurityRepository>() as SecureStorageSecurityRepository;
-      final credentialRepository =
-          sl<SecurityCredentialRepository>()
-              as SecureStorageSecurityCredentialRepository;
-      expect(
-        identical(stateRepository.store, credentialRepository.store),
-        isTrue,
-      );
-    },
-  );
+    expect(sl<SecurityRepository>(), isA<SecureStorageSecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<SecureStorageSecurityCredentialRepository>(),
+    );
+    final stateRepository =
+        sl<SecurityRepository>() as SecureStorageSecurityRepository;
+    final credentialRepository =
+        sl<SecurityCredentialRepository>()
+            as SecureStorageSecurityCredentialRepository;
+    expect(
+      identical(stateRepository.store, credentialRepository.store),
+      isTrue,
+    );
+  });
 
-  test('forwards secure storage configuration from bootstrap', () async {
-    await AppBootstrap.ensureInitialized(useSecureStorage: true);
+  test('forwards the in-memory configuration from bootstrap', () async {
+    await AppBootstrap.ensureInitialized(useInMemoryStorage: true);
+
+    expect(sl<SecurityRepository>(), isA<InMemorySecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<InMemorySecurityCredentialRepository>(),
+    );
+  });
+
+  test('registers secure platform storage from bootstrap by default', () async {
+    await AppBootstrap.ensureInitialized();
 
     expect(sl<SecurityRepository>(), isA<SecureStorageSecurityRepository>());
     expect(
@@ -111,7 +120,7 @@ void main() {
   testWidgets('loads security before creating the production router', (
     tester,
   ) async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     await sl<SecurityRepository>().update(
       SecurityState(
         appLockEnabled: true,
@@ -127,6 +136,7 @@ void main() {
 
     expect(sl<SecurityCubit>().state.status, SecurityAccessStatus.ready);
     expect(sl<SecurityCubit>().state.isLocked, isTrue);
+    expect(sl<OnboardingCubit>().state.status, OnboardingStatus.ready);
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: appRouter.router));
     await tester.pump();
@@ -139,7 +149,7 @@ void main() {
   });
 
   test('registers the analytics dependency graph', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
 
     expect(sl<AnalyticsRepository>(), isA<InMemoryAnalyticsRepository>());
     expect(sl<AnalyticsCubit>().state.status, AnalyticsStatus.loading);
@@ -154,7 +164,7 @@ void main() {
   });
 
   test('shares one analytics repository across the graph', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     final repository = sl<AnalyticsRepository>();
 
     expect(identical(repository, sl<AnalyticsRepository>()), isTrue);
@@ -162,7 +172,7 @@ void main() {
   });
 
   test('reads transactions seeded through the shared repositories', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     final now = DateTime.now().toUtc();
     await sl<CategoryRepository>().create(
       const Category(

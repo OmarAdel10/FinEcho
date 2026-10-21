@@ -44,6 +44,40 @@ void main() {
       expect(cubit.state.currentStep, OnboardingStep.privacy);
     });
 
+    test('enters the security setup step and persists it', () async {
+      await cubit.load();
+      await cubit.enterSecuritySetup();
+
+      expect(cubit.state.currentStep, OnboardingStep.securitySetup);
+      expect(repository.saved.single.currentStep, OnboardingStep.securitySetup);
+      expect(repository.saved.single.isCompleted, isFalse);
+    });
+
+    test(
+      'completes onboarding after entering the security setup step',
+      () async {
+        await cubit.load();
+        await cubit.enterSecuritySetup();
+        cubit.setPin('123456');
+
+        final completed = await cubit.complete();
+
+        expect(completed, isTrue);
+        expect(cubit.state.status, OnboardingStatus.completed);
+        expect(repository.saved.last.isCompleted, isTrue);
+      },
+    );
+
+    test(
+      'ignores the security setup step before the snapshot is loaded',
+      () async {
+        await cubit.enterSecuritySetup();
+
+        expect(cubit.state.currentStep, OnboardingStep.privacy);
+        expect(repository.saved, isEmpty);
+      },
+    );
+
     test('completes onboarding with a six-digit PIN', () async {
       await cubit.load();
       await cubit.nextStep();
