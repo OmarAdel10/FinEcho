@@ -118,6 +118,13 @@ void main() {
         expect(harness.securityRepository.state, isNull);
       },
     );
+
+    test('fails closed when the store still holds unreadable data', () async {
+      final harness = SecurityTestHarness(now: () => now);
+      harness.credentialRepository.legacyDataUnreadable = true;
+
+      await expectLater(harness.service.load(), throwsStateError);
+    });
   });
 
   group('SecurityService.reset', () {
@@ -163,6 +170,37 @@ void main() {
 
       expect(cleared, isFalse);
       expect(await harness.credentialRepository.hasPin(), isFalse);
+    });
+
+    test('acknowledges unreadable data when the lock is erased', () async {
+      final harness = SecurityTestHarness(
+        initialState: configuredState(),
+        now: () => now,
+      );
+      await harness.credentialRepository.savePin('123456');
+      harness.credentialRepository.legacyDataUnreadable = true;
+
+      final cleared = await harness.service.reset();
+
+      expect(cleared, isTrue);
+      expect(harness.credentialRepository.legacyDataAcknowledged, isTrue);
+      expect(harness.credentialRepository.legacyDataUnreadable, isFalse);
+    });
+
+    test('keeps failing closed when the verifier cannot be erased', () async {
+      final harness = SecurityTestHarness(
+        initialState: configuredState(),
+        now: () => now,
+      );
+      await harness.credentialRepository.savePin('123456');
+      harness.credentialRepository.legacyDataUnreadable = true;
+      harness.credentialRepository.clearError = Exception('keystore delete');
+
+      final cleared = await harness.service.reset();
+
+      expect(cleared, isFalse);
+      expect(harness.credentialRepository.legacyDataAcknowledged, isFalse);
+      expect(harness.credentialRepository.legacyDataUnreadable, isTrue);
     });
   });
 
