@@ -53,4 +53,16 @@ void main() {
     expect(locked.hasLoadError, isFalse);
     expect(unlocked.isLocked, isFalse);
   });
+
+  test('reports the lockout window against the given clock', () {
+    final lockedUntil = DateTime.utc(2026, 10, 15, 12, 1);
+    final state = SecurityAccessState(
+      securityState: securityState.copyWith(lockedUntil: lockedUntil),
+      status: SecurityAccessStatus.ready,
+    );
+
+    expect(state.isLockedOutAt(DateTime.utc(2026, 10, 15, 12)), isTrue);
+    expect(state.isLockedOutAt(DateTime.utc(2026, 10, 15, 12, 2)), isFalse);
+    expect(state.isLockedOutAt(DateTime.utc(2026, 10, 15, 12, 1)), isFalse);
+  });
 }

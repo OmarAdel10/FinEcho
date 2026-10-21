@@ -1,4 +1,5 @@
 import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/features/security/view_model/services/security_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_security_repositories.dart';
@@ -190,7 +191,29 @@ void main() {
       final updated = await harness.service.recordFailedAttempt(state);
 
       expect(updated.failedUnlockAttempts, 5);
-      expect(updated.lockedUntil, now.add(const Duration(minutes: 1)));
+      expect(
+        updated.lockedUntil,
+        now.add(SecurityService.lockoutDurationFor(5)),
+      );
+    });
+
+    test('grows the lockout window with every failure', () {
+      expect(SecurityService.lockoutDurationFor(4), Duration.zero);
+      expect(SecurityService.lockoutDurationFor(5), const Duration(minutes: 1));
+      expect(SecurityService.lockoutDurationFor(6), const Duration(minutes: 2));
+      expect(SecurityService.lockoutDurationFor(7), const Duration(minutes: 4));
+      expect(
+        SecurityService.lockoutDurationFor(9),
+        const Duration(minutes: 16),
+      );
+      expect(
+        SecurityService.lockoutDurationFor(10),
+        SecurityService.maxLockoutDuration,
+      );
+      expect(
+        SecurityService.lockoutDurationFor(40),
+        SecurityService.maxLockoutDuration,
+      );
     });
 
     test('does not lock out while the lock is disabled', () async {
