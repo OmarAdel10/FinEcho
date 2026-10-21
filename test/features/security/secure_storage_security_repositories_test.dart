@@ -23,6 +23,9 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
     state: SecureStorageUpgradeState.ok,
   );
 
+  /// The error the fake raises when the upgrade check runs.
+  Exception? checkError;
+
   @override
   Future<String?> read({
     required String key,
@@ -76,6 +79,10 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
+    final error = checkError;
+    if (error != null) {
+      throw error;
+    }
     return upgradeStatus;
   }
 }
@@ -83,11 +90,17 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
 class _InMemorySecureKeyValueStore implements SecureKeyValueStore {
   final Map<String, String> values = <String, String>{};
 
+  /// The keys the store was asked to read, in order.
+  final List<String> reads = <String>[];
+
   /// Whether the store reports data written by an earlier backend.
   bool legacyDataUnreadable = false;
 
   @override
-  Future<String?> read(String key) async => values[key];
+  Future<String?> read(String key) async {
+    reads.add(key);
+    return values[key];
+  }
 
   @override
   Future<void> write(String key, String value) async {
@@ -409,6 +422,17 @@ void main() {
         expect(await store.hasUnreadableLegacyData(), isTrue);
       },
     );
+
+    test('fails closed when the upgrade check cannot run', () async {
+      final storage = _RecordingFlutterSecureStorage();
+      final store = FlutterSecureKeyValueStore(storage: storage);
+      storage.checkError = Exception('keystore unavailable');
+
+      await expectLater(
+        store.hasUnreadableLegacyData(),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   group('SecureStorageSecurityRepository', () {
@@ -610,6 +634,23 @@ void main() {
           SecureStorageSecurityCredentialRepository.legacyAcknowledgedKey,
         ),
       );
+    });
+
+    test('checks the store before it reads the acknowledgement', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityCredentialRepository(
+        store: store,
+      );
+
+      expect(await repository.hasUnreadableLegacyData(), isFalse);
+      expect(store.reads, isEmpty);
+
+      store.legacyDataUnreadable = true;
+
+      expect(await repository.hasUnreadableLegacyData(), isTrue);
+      expect(store.reads, <String>[
+        SecureStorageSecurityCredentialRepository.legacyAcknowledgedKey,
+      ]);
     });
   });
 }

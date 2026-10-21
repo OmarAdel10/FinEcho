@@ -155,7 +155,13 @@ void main() {
 
     test('fails closed when the store still holds unreadable data', () async {
       final harness = SecurityTestHarness(
-        initialState: _configuredState(),
+        initialState: SecurityState(
+          appLockEnabled: false,
+          pinConfigured: false,
+          failedUnlockAttempts: 0,
+          secureKeyReady: false,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
         now: () => DateTime.utc(2026, 10, 15, 12),
       );
       harness.credentialRepository.legacyDataUnreadable = true;
