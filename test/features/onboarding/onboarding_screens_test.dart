@@ -338,10 +338,13 @@ void main() {
       await tester.pump();
 
       expect(cubit.state.status, OnboardingStatus.failure);
-      expect(cubit.state.errorMessage, contains('Could not finish setup'));
+      expect(
+        cubit.state.errorMessage,
+        contains('Could not save the onboarding preferences'),
+      );
       expect(find.byType(SnackBar), findsOneWidget);
       expect(
-        find.text('Could not finish setup. Please try again.'),
+        find.text('Could not save the onboarding preferences.'),
         findsOneWidget,
       );
       expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);

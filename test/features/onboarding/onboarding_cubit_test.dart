@@ -135,9 +135,12 @@ void main() {
       repository.saveError = Exception('save failed');
       final failure = await cubit.complete();
 
-      expect(failure, 'Could not finish setup. Please try again.');
+      expect(failure, 'Could not save the onboarding preferences.');
       expect(cubit.state.status, OnboardingStatus.failure);
-      expect(cubit.state.errorMessage, contains('Could not finish setup'));
+      expect(
+        cubit.state.errorMessage,
+        contains('Could not save the onboarding preferences'),
+      );
     });
   });
 }
