@@ -106,7 +106,7 @@ Deferred; tracked in Plane:
   lockout window from a fixed clock and assert the secure-storage payload
   guards separately from the JSON parse errors.
 - FINECHO-34 either implement biometric unlock or remove the promise from the
-  security setup screen, `specs/PRD.md`, and `specs/USER_FLOW.md`; the switch is
+  security setup screen, `docs/PRD.md`, and `docs/USER_FLOW.md`; the switch is
   live in the UI but no biometric package is wired.
 - FINECHO-35 reject corrupt current-format PIN verifier payloads while
   decoding, so a bad payload reaches the recovery screen instead of locking the
@@ -121,6 +121,9 @@ Deferred; tracked in Plane:
 - FINECHO-39 render a splash while the startup security state loads; the
   native launch screen is shown for up to the load timeout.
 - FINECHO-40 pin the `flutter_secure_storage` version used by the app lock.
+- FINECHO-41 persist the onboarding snapshot: the production graph still uses
+  the in-memory onboarding repository, so the onboarding progress and the
+  security-setup step are lost when the app restarts.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
