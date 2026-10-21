@@ -227,11 +227,12 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
   failure surfaces on the recovery screen instead of silently removing the
   lock. The store is also asked whether it still holds entries that the current
   backend cannot read, because a missing entry reads as an empty value rather
-  than an error. The app fails closed on that report, so an upgrade from an
-  older backend reaches the recovery screen instead of silently dropping the
-  lock. The verifier is a random-salted PBKDF2-HMAC-SHA256 derivation (100,000
-  iterations, 32-byte output) compared in constant time; the raw PIN is never
-  stored.
+  than an error. The app asks the store before it reads anything and treats a
+  check that cannot run as unreadable as well. The app fails closed on that
+  report, so an upgrade from an older backend reaches the recovery screen
+  instead of silently dropping the lock. The verifier is a random-salted
+  PBKDF2-HMAC-SHA256 derivation (100,000 iterations, 32-byte output) compared
+  in constant time; the raw PIN is never stored.
   Verifiers persisted by earlier versions (single HMAC-SHA256 round, no version
   marker) are still verified against the legacy derivation; a newly configured
   PIN is always written in the current format. A corrupt verifier payload or an
