@@ -45,24 +45,27 @@ void main() {
       await cubit.close();
     });
 
-    test('fails closed when a verifier exists without metadata', () async {
-      final harness = SecurityTestHarness(
-        now: () => DateTime.utc(2026, 10, 15, 12),
-      );
-      await harness.credentialRepository.savePin('123456');
-      final cubit = SecurityCubit(harness.service);
+    test(
+      'repairs missing metadata when a verifier exists without state',
+      () async {
+        final harness = SecurityTestHarness(
+          now: () => DateTime.utc(2026, 10, 15, 12),
+        );
+        await harness.credentialRepository.savePin('123456');
+        final cubit = SecurityCubit(harness.service);
 
-      await cubit.load();
+        await cubit.load();
 
-      expect(cubit.state.status, SecurityAccessStatus.ready);
-      expect(cubit.state.isLocked, isTrue);
-      expect(cubit.state.securityState.appLockEnabled, isTrue);
-      expect(cubit.state.securityState.pinConfigured, isTrue);
-      expect(await harness.service.verifyPin('123456'), isTrue);
-      expect(await cubit.unlockWithPin('123456'), isTrue);
-      expect(cubit.state.status, SecurityAccessStatus.unlocked);
-      await cubit.close();
-    });
+        expect(cubit.state.status, SecurityAccessStatus.ready);
+        expect(cubit.state.isLocked, isTrue);
+        expect(cubit.state.securityState.appLockEnabled, isTrue);
+        expect(cubit.state.securityState.pinConfigured, isTrue);
+        expect(await harness.service.verifyPin('123456'), isTrue);
+        expect(await cubit.unlockWithPin('123456'), isTrue);
+        expect(cubit.state.status, SecurityAccessStatus.unlocked);
+        await cubit.close();
+      },
+    );
 
     test('repairs disabled metadata when a verifier exists', () async {
       final harness = SecurityTestHarness(
@@ -85,6 +88,15 @@ void main() {
       expect(harness.securityRepository.state?.appLockEnabled, isTrue);
       expect(harness.securityRepository.state?.pinConfigured, isTrue);
       await cubit.close();
+    });
+
+    test('uses a bounded startup load timeout by default', () {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final cubit = SecurityCubit(harness.service);
+
+      expect(cubit.loadTimeout, const Duration(seconds: 5));
     });
 
     test('fails closed when the security read times out', () async {

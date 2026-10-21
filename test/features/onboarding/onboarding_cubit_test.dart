@@ -76,9 +76,9 @@ void main() {
         await cubit.enterSecuritySetup();
         cubit.setPin('123456');
 
-        final completed = await cubit.complete();
+        final failure = await cubit.complete();
 
-        expect(completed, isTrue);
+        expect(failure, isNull);
         expect(cubit.state.status, OnboardingStatus.completed);
         expect(repository.saved.last.isCompleted, isTrue);
       },
@@ -100,9 +100,9 @@ void main() {
       await cubit.nextStep();
       await cubit.nextStep();
       cubit.setPin('123456');
-      final completed = await cubit.complete();
+      final failure = await cubit.complete();
 
-      expect(completed, isTrue);
+      expect(failure, isNull);
       expect(cubit.state.status, OnboardingStatus.completed);
       expect(repository.saved.last.isCompleted, isTrue);
       expect(repository.saved.last.currentStep, OnboardingStep.securitySetup);
@@ -114,9 +114,9 @@ void main() {
       await cubit.nextStep();
       await cubit.nextStep();
       cubit.setPin('12345');
-      final completed = await cubit.complete();
+      final failure = await cubit.complete();
 
-      expect(completed, isFalse);
+      expect(failure, 'Enter a six-digit PIN.');
       expect(cubit.state.status, OnboardingStatus.failure);
       expect(cubit.state.errorMessage, 'Enter a six-digit PIN.');
       expect(
@@ -133,9 +133,9 @@ void main() {
       await cubit.nextStep();
       cubit.setPin('123456');
       repository.saveError = Exception('save failed');
-      final completed = await cubit.complete();
+      final failure = await cubit.complete();
 
-      expect(completed, isFalse);
+      expect(failure, 'Could not finish setup. Please try again.');
       expect(cubit.state.status, OnboardingStatus.failure);
       expect(cubit.state.errorMessage, contains('Could not finish setup'));
     });

@@ -153,6 +153,11 @@ void main() {
       await tester.pump();
 
       expect(find.text('Set up security'), findsOneWidget);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.pump();
+
+      expect(cubit.state.smsAutomationEnabled, isTrue);
       await tester.tap(find.text('Set up security'));
       await tester.pump();
       await tester.pump();
@@ -160,6 +165,11 @@ void main() {
       expect(cubit.state.currentStep, OnboardingStep.securitySetup);
       expect(find.text('Security setup'), findsOneWidget);
 
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.pump();
+
+      expect(cubit.state.biometricsEnabled, isTrue);
       await tester.enterText(find.byType(Pinput), '123456');
       await tester.pump();
       await tester.pump();
@@ -170,6 +180,8 @@ void main() {
 
       expect(cubit.state.status, OnboardingStatus.completed);
       expect(repository.saved.last.isCompleted, isTrue);
+      expect(repository.saved.last.biometricsEnabled, isTrue);
+      expect(repository.saved.last.smsAutomationEnabled, isTrue);
       expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);
     });
 
@@ -327,6 +339,11 @@ void main() {
 
       expect(cubit.state.status, OnboardingStatus.failure);
       expect(cubit.state.errorMessage, contains('Could not finish setup'));
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text('Could not finish setup. Please try again.'),
+        findsOneWidget,
+      );
       expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);
     });
 
