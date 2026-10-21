@@ -81,6 +81,21 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Blocks [verifyPin] until completed, when provided.
   Completer<void>? verifyGate;
 
+  /// Whether the store still holds data this build cannot read.
+  bool legacyDataUnreadable = false;
+
+  /// Whether the unreadable legacy data was acknowledged.
+  bool legacyDataAcknowledged = false;
+
+  @override
+  Future<bool> hasUnreadableLegacyData() async => legacyDataUnreadable;
+
+  @override
+  Future<void> acknowledgeUnreadableLegacyData() async {
+    legacyDataAcknowledged = true;
+    legacyDataUnreadable = false;
+  }
+
   @override
   Future<bool> hasPin() async {
     final error = hasPinError;
