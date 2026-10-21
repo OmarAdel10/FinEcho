@@ -10,6 +10,12 @@ class InMemorySecurityCredentialRepository
   Future<bool> hasPin() async => _verifier != null;
 
   @override
+  Future<bool> hasUnreadableLegacyData() async => false;
+
+  @override
+  Future<void> acknowledgeUnreadableLegacyData() async {}
+
+  @override
   Future<void> savePin(String pin) async {
     _verifier = PinVerifier.create(pin);
   }

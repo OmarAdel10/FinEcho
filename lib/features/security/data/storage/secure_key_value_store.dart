@@ -10,6 +10,14 @@ abstract interface class SecureKeyValueStore {
 
   /// Deletes the value stored under [key].
   Future<void> delete(String key);
+
+  /// Whether the store still holds entries this build cannot read.
+  ///
+  /// The platform backend changed between secure-storage releases, so data
+  /// written by an earlier build can become unreadable without raising an
+  /// error. The store reports that state so the app can fail closed instead
+  /// of reading the missing values as a fresh install.
+  Future<bool> hasUnreadableLegacyData();
 }
 
 /// [SecureKeyValueStore] backed by the platform keystore.
@@ -22,6 +30,10 @@ abstract interface class SecureKeyValueStore {
 /// every stored value when the keystore reports an error, which would
 /// silently remove the app lock. Failing instead lets the recovery screen
 /// offer a deliberate reset.
+///
+/// The store also reports data written by an earlier build that the current
+/// backend can no longer read. The app fails closed on that report instead of
+/// treating the missing values as a fresh install.
 class FlutterSecureKeyValueStore implements SecureKeyValueStore {
   /// Creates a store using the platform secure-storage implementation.
   const new({
@@ -43,4 +55,17 @@ class FlutterSecureKeyValueStore implements SecureKeyValueStore {
 
   @override
   Future<void> delete(String key) => storage.delete(key: key);
+
+  @override
+  Future<bool> hasUnreadableLegacyData() async {
+    try {
+      final status = await storage.checkUpgradeStatus();
+      return status.state == SecureStorageUpgradeState.legacyDataUnreadable ||
+          status.state == SecureStorageUpgradeState.legacyDataDiscarded;
+    } on Object {
+      // The check is unavailable on some platforms. A broken store still
+      // fails closed because the read itself raises an error.
+      return false;
+    }
+  }
 }

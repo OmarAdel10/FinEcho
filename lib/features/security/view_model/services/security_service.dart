@@ -27,7 +27,13 @@ class SecurityService {
   ///
   /// A verifier without lock metadata fails closed, and lock metadata without
   /// a readable verifier reports an error so the recovery screen can reset it.
+  /// Data written by an earlier storage backend that this build cannot read
+  /// also fails closed, so an unreadable store is never mistaken for a fresh
+  /// install.
   Future<SecurityState> load() async {
+    if (await _credentials.hasUnreadableLegacyData()) {
+      throw StateError('Stored app lock data cannot be read by this build.');
+    }
     final state = await _repository.get();
     final hasPin = await _credentials.hasPin();
 
@@ -74,8 +80,17 @@ class SecurityService {
   /// succeeded.
   Future<bool> reset() async {
     var cleared = true;
+    var verifierCleared = false;
     try {
       await _credentials.clear();
+      verifierCleared = true;
+    } on Object {
+      cleared = false;
+    }
+    try {
+      if (verifierCleared && await _credentials.hasUnreadableLegacyData()) {
+        await _credentials.acknowledgeUnreadableLegacyData();
+      }
     } on Object {
       cleared = false;
     }
