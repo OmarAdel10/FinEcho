@@ -201,6 +201,11 @@ that data or require a device credential (FINECHO-32).
 
 Moving to the current secure-storage backend changes the store that holds the
 verifier, so a device that ran a pre-release build with the encrypted shared
-preferences backend cannot read the stored verifier any more. The recovery
-screen catches that and offers the deliberate reset, after which the app lock
-is set up again. No released version is affected.
+preferences backend cannot read the stored verifier any more. The current
+backend does not migrate the old entries, and a missing entry reads as an
+empty value rather than an error, so the app checks the store for unreadable
+legacy data before the first read. When such data is present the app fails
+closed into the recovery screen instead of treating the missing values as a
+fresh install, and the deliberate `Erase app lock` action clears the lock so it
+can be set up again. The state codec still reads a payload written before the
+codec was versioned. No released version is affected.
