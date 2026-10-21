@@ -110,8 +110,8 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       }
       emit(state.copyWith(status: OnboardingStatus.completed));
       return null;
-    } on Exception {
-      const message = 'Could not finish setup. Please try again.';
+    } on Object {
+      const message = 'Could not save the onboarding preferences.';
       if (isClosed) {
         return message;
       }
@@ -132,7 +132,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
           smsAutomationEnabled: state.smsAutomationEnabled,
         ),
       );
-    } on Exception {
+    } on Object {
       // Progress persistence is best effort while setup remains in progress.
     }
   }
