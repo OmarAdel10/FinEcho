@@ -15,11 +15,11 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
   @override
   Future<String?> read({
     required String key,
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
     WebOptions? webOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
     return values[key];
@@ -29,11 +29,11 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
   Future<void> write({
     required String key,
     required String? value,
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
     WebOptions? webOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
     if (value == null) {
@@ -46,11 +46,11 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
   @override
   Future<void> delete({
     required String key,
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
     WebOptions? webOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
     values.remove(key);
@@ -230,6 +230,56 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test('rejects a corrupt version or iteration count', () {
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "testsalt", "hash": "value", "version": "2"}',
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "testsalt", "hash": "value", "iterations": "100"}',
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "testsalt", "hash": "value", "iterations": 0}',
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => PinVerifier.decode('{"salt": "", "hash": "value", "version": 2}'),
+        throwsFormatException,
+      );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "testsalt", "hash": "", "version": 2}',
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects a payload written by a newer format', () {
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "testsalt", "hash": "value", '
+          '"version": ${PinVerifier.currentVersion + 1}}',
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('accepts a payload that names the legacy version', () {
+      final decoded = PinVerifier.decode(
+        '{"salt": "testsalt", "hash": "value", "version": 1}',
+      );
+
+      expect(decoded.version, PinVerifier.legacyVersion);
+      expect(decoded.iterations, 1);
+    });
   });
 
   group('FlutterSecureKeyValueStore', () {
@@ -244,13 +294,10 @@ void main() {
       expect(await store.read('key'), isNull);
     });
 
-    test('enables encrypted shared preferences by default', () {
+    test('keeps a keystore error visible instead of erasing the lock', () {
       const store = FlutterSecureKeyValueStore();
 
-      expect(
-        store.storage.aOptions.toMap()['encryptedSharedPreferences'],
-        'true',
-      );
+      expect(store.storage.aOptions.toMap()['resetOnError'], 'false');
     });
   });
 
@@ -289,6 +336,48 @@ void main() {
       await expectLater(repository.get(), throwsFormatException);
 
       store.values[SecureStorageSecurityRepository.stateKey] = '[]';
+      await expectLater(repository.get(), throwsFormatException);
+    });
+
+    test('writes a versioned payload', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+
+      await repository.update(
+        SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+      );
+
+      final payload = jsonDecode(
+        store.values[SecureStorageSecurityRepository.stateKey]!,
+      ) as Map<String, dynamic>;
+      expect(payload['version'], SecureStorageSecurityRepository.codecVersion);
+      expect(payload['state'], isA<Map<String, dynamic>>());
+    });
+
+    test('rejects a payload with an unsupported version', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+      store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+        'version': SecureStorageSecurityRepository.codecVersion + 1,
+        'state': <String, Object?>{},
+      });
+
+      await expectLater(repository.get(), throwsFormatException);
+    });
+
+    test('rejects a versioned payload without a state', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+      store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+        'version': SecureStorageSecurityRepository.codecVersion,
+      });
+
       await expectLater(repository.get(), throwsFormatException);
     });
   });

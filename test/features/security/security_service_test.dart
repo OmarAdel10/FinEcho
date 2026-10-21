@@ -71,6 +71,18 @@ void main() {
       await expectLater(harness.service.load(), throwsStateError);
     });
 
+    test('fails closed when the stored verifier payload is corrupt', () async {
+      final harness = SecurityTestHarness(
+        initialState: configuredState(),
+        now: () => now,
+      );
+      harness.credentialRepository.hasPinError = const FormatException(
+        'Invalid persisted PIN verifier.',
+      );
+
+      await expectLater(harness.service.load(), throwsFormatException);
+    });
+
     test('fails closed when the stored metadata is incomplete', () async {
       final harness = SecurityTestHarness(
         initialState: disabledState().copyWith(appLockEnabled: true),
