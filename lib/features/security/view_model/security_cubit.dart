@@ -32,6 +32,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
     if (isClosed) {
       return;
     }
+    final wasUnlocked = state.status == SecurityAccessStatus.unlocked;
     emit(
       state.copyWith(
         status: SecurityAccessStatus.loading,
@@ -43,11 +44,15 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       if (isClosed) {
         return;
       }
+      final configured =
+          securityState.appLockEnabled && securityState.pinConfigured;
       emit(
         SecurityAccessState(
           securityState: securityState,
-          status: securityState.appLockEnabled && securityState.pinConfigured
-              ? SecurityAccessStatus.ready
+          status: configured
+              ? wasUnlocked
+                    ? SecurityAccessStatus.unlocked
+                    : SecurityAccessStatus.ready
               : SecurityAccessStatus.unlocked,
         ),
       );
@@ -87,6 +92,9 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   /// Configures the app lock with a six-digit PIN.
   Future<bool> configure(String pin) async {
+    if (state.isSubmitting) {
+      return false;
+    }
     if (pin.length != 6) {
       emit(
         state.copyWith(
@@ -243,6 +251,9 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         return false;
       }
 
+      if (lockEpoch != _lockEpoch) {
+        return false;
+      }
       final securityState = await _service.markUnlocked(state.securityState);
       if (isClosed || lockEpoch != _lockEpoch) {
         return false;

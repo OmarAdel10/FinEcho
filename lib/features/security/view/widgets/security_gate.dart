@@ -41,10 +41,10 @@ class _SecurityGateState extends State<SecurityGate>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Erase app data?'),
+        title: const Text('Erase app lock?'),
         content: const Text(
           'This removes the saved PIN and app-lock settings from this device. '
-          'You will set up the app again.',
+          'You will set the app lock up again.',
         ),
         actions: [
           TextButton(
@@ -53,7 +53,7 @@ class _SecurityGateState extends State<SecurityGate>
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Erase app data'),
+            child: const Text('Erase app lock'),
           ),
         ],
       ),
@@ -74,12 +74,11 @@ class _SecurityGateState extends State<SecurityGate>
   /// reload started on a normal start must never move the user away from the
   /// route they opened.
   Future<void> _loadAndRoute({bool fromRecovery = false}) async {
-    final recovering = fromRecovery || _cubit.state.hasLoadError;
     await _cubit.load();
     if (!mounted) {
       return;
     }
-    if (recovering) {
+    if (fromRecovery) {
       _goToSetupWhenUnconfigured();
     }
   }
@@ -185,7 +184,7 @@ class _SecurityLoadFailure extends StatelessWidget {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: onReset,
-                  child: const Text('Erase app data'),
+                  child: const Text('Erase app lock'),
                 ),
               ],
             ),
