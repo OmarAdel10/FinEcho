@@ -235,6 +235,7 @@ void main() {
       final verifier = PinVerifier.create('123456');
 
       expect(verifier.version, PinVerifier.currentVersion);
+      expect(SecurityPinHasher.defaultIterations, 100000);
       expect(verifier.iterations, SecurityPinHasher.defaultIterations);
       expect(base64Url.decode(verifier.salt), hasLength(16));
       expect(verifier.matches('123456'), isTrue);
@@ -464,7 +465,13 @@ void main() {
 
       await expectLater(
         store.hasUnreadableLegacyData(),
-        throwsA(isA<StateError>()),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Secure storage upgrade check failed'),
+          ),
+        ),
       );
     });
   });

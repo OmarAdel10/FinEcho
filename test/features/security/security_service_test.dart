@@ -123,7 +123,16 @@ void main() {
       final harness = SecurityTestHarness(now: () => now);
       harness.credentialRepository.legacyDataUnreadable = true;
 
-      await expectLater(harness.service.load(), throwsStateError);
+      await expectLater(
+        harness.service.load(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'Stored app lock data cannot be read by this build.',
+          ),
+        ),
+      );
     });
   });
 
