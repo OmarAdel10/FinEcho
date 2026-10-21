@@ -44,6 +44,22 @@ void main() {
       expect(cubit.state.currentStep, OnboardingStep.privacy);
     });
 
+    test('stores the biometric preference', () async {
+      await cubit.load();
+
+      cubit.setBiometricsEnabled(value: true);
+
+      expect(cubit.state.biometricsEnabled, isTrue);
+    });
+
+    test('stores the SMS automation preference', () async {
+      await cubit.load();
+
+      cubit.setSmsAutomationEnabled(value: true);
+
+      expect(cubit.state.smsAutomationEnabled, isTrue);
+    });
+
     test('enters the security setup step and persists it', () async {
       await cubit.load();
       await cubit.enterSecuritySetup();

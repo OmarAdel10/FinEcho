@@ -172,5 +172,207 @@ void main() {
       expect(repository.saved.last.isCompleted, isTrue);
       expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);
     });
+
+    testWidgets('goes back to the previous step', (tester) async {
+      await cubit.load();
+      await cubit.nextStep();
+      await tester.pumpWidget(wrapScreen(const OnboardingScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Back'), findsOneWidget);
+      await tester.tap(find.text('Back'));
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.currentStep, OnboardingStep.privacy);
+    });
+
+    testWidgets('stores the SMS automation preference', (tester) async {
+      await cubit.load();
+      await cubit.nextStep();
+      await cubit.nextStep();
+      await tester.pumpWidget(wrapScreen(const OnboardingScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enable SMS automation'), findsOneWidget);
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.smsAutomationEnabled, isTrue);
+    });
+
+    testWidgets('stores the biometric preference on the setup screen', (
+      tester,
+    ) async {
+      await cubit.load();
+      final securityHarness = SecurityTestHarness();
+      final securityCubit = SecurityCubit(securityHarness.service);
+      final transactionsCubit = TransactionsCubit(
+        TransactionsTestHarness().service,
+      );
+      final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+      final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+      final appRouter = AppRouter(
+        onboardingCubit: cubit,
+        securityCubit: securityCubit,
+        transactionsCubit: transactionsCubit,
+        budgetCubit: budgetCubit,
+        analyticsCubit: analyticsCubit,
+      );
+      addTearDown(appRouter.router.dispose);
+      addTearDown(securityCubit.close);
+      addTearDown(transactionsCubit.close);
+      addTearDown(budgetCubit.close);
+      addTearDown(analyticsCubit.close);
+
+      await tester.pumpWidget(
+        MaterialApp.router(routerConfig: appRouter.router),
+      );
+      await tester.pump();
+      appRouter.router.go('/security-setup');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Use device biometrics'), findsOneWidget);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.pump();
+
+      expect(cubit.state.biometricsEnabled, isTrue);
+    });
+
+    testWidgets('shows the onboarding error on the setup screen', (
+      tester,
+    ) async {
+      await cubit.load();
+      final securityHarness = SecurityTestHarness();
+      final securityCubit = SecurityCubit(securityHarness.service);
+      final transactionsCubit = TransactionsCubit(
+        TransactionsTestHarness().service,
+      );
+      final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+      final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+      final appRouter = AppRouter(
+        onboardingCubit: cubit,
+        securityCubit: securityCubit,
+        transactionsCubit: transactionsCubit,
+        budgetCubit: budgetCubit,
+        analyticsCubit: analyticsCubit,
+      );
+      addTearDown(appRouter.router.dispose);
+      addTearDown(securityCubit.close);
+      addTearDown(transactionsCubit.close);
+      addTearDown(budgetCubit.close);
+      addTearDown(analyticsCubit.close);
+
+      await tester.pumpWidget(
+        MaterialApp.router(routerConfig: appRouter.router),
+      );
+      await tester.pump();
+      appRouter.router.go('/security-setup');
+      await tester.pump();
+      await tester.pump();
+
+      await cubit.complete();
+      await tester.pump();
+
+      expect(find.text('Enter a six-digit PIN.'), findsOneWidget);
+    });
+
+    testWidgets('warns when the setup cannot be completed', (tester) async {
+      repository = FakeOnboardingRepository(
+        initialSnapshot: const OnboardingSnapshot(
+          currentStep: OnboardingStep.securitySetup,
+          isCompleted: false,
+          biometricsEnabled: false,
+          smsAutomationEnabled: false,
+        ),
+      );
+      cubit = OnboardingCubit(OnboardingService(repository));
+      await cubit.load();
+      final securityHarness = SecurityTestHarness();
+      final securityCubit = SecurityCubit(securityHarness.service);
+      final transactionsCubit = TransactionsCubit(
+        TransactionsTestHarness().service,
+      );
+      final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+      final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+      final appRouter = AppRouter(
+        onboardingCubit: cubit,
+        securityCubit: securityCubit,
+        transactionsCubit: transactionsCubit,
+        budgetCubit: budgetCubit,
+        analyticsCubit: analyticsCubit,
+      );
+      addTearDown(appRouter.router.dispose);
+      addTearDown(securityCubit.close);
+      addTearDown(transactionsCubit.close);
+      addTearDown(budgetCubit.close);
+      addTearDown(analyticsCubit.close);
+
+      await tester.pumpWidget(
+        MaterialApp.router(routerConfig: appRouter.router),
+      );
+      await tester.pump();
+      appRouter.router.go('/security-setup');
+      await tester.pump();
+      await tester.pump();
+
+      await tester.enterText(find.byType(Pinput), '123456');
+      await tester.pump();
+      repository.saveError = Exception('save failed');
+      await tester.tap(find.text('Finish setup'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      expect(cubit.state.status, OnboardingStatus.failure);
+      expect(cubit.state.errorMessage, contains('Could not finish setup'));
+      expect(securityHarness.securityRepository.state?.pinConfigured, isTrue);
+    });
+
+    testWidgets('shows the security failure on the setup screen', (
+      tester,
+    ) async {
+      await cubit.load();
+      final securityHarness = SecurityTestHarness();
+      securityHarness.credentialRepository.saveError = Exception('keystore');
+      final securityCubit = SecurityCubit(securityHarness.service);
+      final transactionsCubit = TransactionsCubit(
+        TransactionsTestHarness().service,
+      );
+      final budgetCubit = BudgetCubit(BudgetTestHarness().service);
+      final analyticsCubit = AnalyticsCubit(AnalyticsTestHarness().service);
+      final appRouter = AppRouter(
+        onboardingCubit: cubit,
+        securityCubit: securityCubit,
+        transactionsCubit: transactionsCubit,
+        budgetCubit: budgetCubit,
+        analyticsCubit: analyticsCubit,
+      );
+      addTearDown(appRouter.router.dispose);
+      addTearDown(securityCubit.close);
+      addTearDown(transactionsCubit.close);
+      addTearDown(budgetCubit.close);
+      addTearDown(analyticsCubit.close);
+
+      await tester.pumpWidget(
+        MaterialApp.router(routerConfig: appRouter.router),
+      );
+      await tester.pump();
+      appRouter.router.go('/security-setup');
+      await tester.pump();
+      await tester.pump();
+
+      await tester.enterText(find.byType(Pinput), '123456');
+      await tester.pump();
+      await tester.tap(find.text('Finish setup'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text('Could not save app lock. Please try again.'),
+        findsOneWidget,
+      );
+    });
   });
 }
