@@ -14,7 +14,10 @@ class PinVerifier {
 
   /// Decodes a persisted verifier payload.
   ///
-  /// Throws a [FormatException] when the payload is not a verifier.
+  /// Throws a [FormatException] when the payload is not a verifier. A corrupt
+  /// payload must fail loudly so the recovery screen can offer a reset
+  /// instead of leaving the user locked out of a verifier that never
+  /// matches.
   factory decode(String encoded) {
     final decoded = jsonDecode(encoded);
     if (decoded is! Map<String, dynamic>) {
@@ -25,13 +28,30 @@ class PinVerifier {
     if (salt is! String || hash is! String) {
       throw const FormatException('Invalid persisted PIN verifier.');
     }
+    if (salt.isEmpty || hash.isEmpty) {
+      throw const FormatException('Invalid persisted PIN verifier.');
+    }
     final version = decoded['version'];
+    if (version != null && version is! int) {
+      throw const FormatException('Invalid persisted PIN verifier.');
+    }
     final iterations = decoded['iterations'];
+    if (iterations != null && iterations is! int) {
+      throw const FormatException('Invalid persisted PIN verifier.');
+    }
+    final resolvedVersion = version is int ? version : legacyVersion;
+    final resolvedIterations = iterations is int ? iterations : 1;
+    if (resolvedVersion < 1 || resolvedVersion > currentVersion) {
+      throw const FormatException('Unsupported persisted PIN verifier.');
+    }
+    if (resolvedIterations < 1) {
+      throw const FormatException('Invalid persisted PIN verifier.');
+    }
     return PinVerifier(
       salt: salt,
       hash: hash,
-      version: version is int ? version : 1,
-      iterations: iterations is int ? iterations : 1,
+      version: resolvedVersion,
+      iterations: resolvedIterations,
     );
   }
 
@@ -48,6 +68,9 @@ class PinVerifier {
 
   /// The payload format version written by the current build.
   static const int currentVersion = 2;
+
+  /// The payload format version written before the derivation was hardened.
+  static const int legacyVersion = 1;
 
   /// The random salt mixed into the derivation.
   final String salt;
