@@ -346,6 +346,34 @@ void main() {
           ),
         ),
       );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "version": 2, '
+          '"iterations": ${PinVerifier.minIterations - 1}}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier iterations.',
+          ),
+        ),
+      );
+    });
+
+    test('rejects a payload written before the first version', () {
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "version": 0}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier version.',
+          ),
+        ),
+      );
     });
 
     test('rejects a current-format payload without an iteration count', () {
@@ -417,6 +445,12 @@ void main() {
 
         storage.upgradeStatus = const SecureStorageUpgradeStatus(
           state: SecureStorageUpgradeState.legacyDataUnreadable,
+        );
+
+        expect(await store.hasUnreadableLegacyData(), isTrue);
+
+        storage.upgradeStatus = const SecureStorageUpgradeStatus(
+          state: SecureStorageUpgradeState.legacyDataDiscarded,
         );
 
         expect(await store.hasUnreadableLegacyData(), isTrue);
