@@ -28,25 +28,42 @@ class PinVerifier {
     if (salt is! String || hash is! String) {
       throw const FormatException('Invalid persisted PIN verifier.');
     }
-    if (salt.isEmpty || hash.isEmpty) {
-      throw const FormatException('Invalid persisted PIN verifier.');
+    if (!SecurityPinHasher.hasByteLength(salt, SecurityPinHasher.saltLength) ||
+        !SecurityPinHasher.hasByteLength(hash, SecurityPinHasher.hashLength)) {
+      throw const FormatException('Malformed persisted PIN verifier.');
     }
     final version = decoded['version'];
     if (version != null && version is! int) {
-      throw const FormatException('Invalid persisted PIN verifier.');
+      throw const FormatException(
+        'Unsupported persisted PIN verifier version.',
+      );
     }
     final iterations = decoded['iterations'];
     if (iterations != null && iterations is! int) {
-      throw const FormatException('Invalid persisted PIN verifier.');
+      throw const FormatException(
+        'Unsupported persisted PIN verifier iterations.',
+      );
     }
     final resolvedVersion = version is int ? version : legacyVersion;
+    if (resolvedVersion < legacyVersion || resolvedVersion > currentVersion) {
+      throw const FormatException(
+        'Unsupported persisted PIN verifier version.',
+      );
+    }
+    if (resolvedVersion >= currentVersion) {
+      if (iterations is! int ||
+          iterations < minIterations ||
+          iterations > maxIterations) {
+        throw const FormatException(
+          'Unsupported persisted PIN verifier iterations.',
+        );
+      }
+    } else if (iterations is int && iterations < 1) {
+      throw const FormatException(
+        'Unsupported persisted PIN verifier iterations.',
+      );
+    }
     final resolvedIterations = iterations is int ? iterations : 1;
-    if (resolvedVersion < 1 || resolvedVersion > currentVersion) {
-      throw const FormatException('Unsupported persisted PIN verifier.');
-    }
-    if (resolvedIterations < 1) {
-      throw const FormatException('Invalid persisted PIN verifier.');
-    }
     return PinVerifier(
       salt: salt,
       hash: hash,
@@ -71,6 +88,18 @@ class PinVerifier {
 
   /// The payload format version written before the derivation was hardened.
   static const int legacyVersion = 1;
+
+  /// The smallest derivation cost accepted for a current-format verifier.
+  ///
+  /// A verifier that was derived with fewer rounds would be cheap to brute
+  /// force, so it is treated as corrupt.
+  static const int minIterations = 10000;
+
+  /// The largest derivation cost accepted for a current-format verifier.
+  ///
+  /// The bound keeps a tampered payload from blocking the interface while the
+  /// verifier is derived.
+  static const int maxIterations = 1000000;
 
   /// The random salt mixed into the derivation.
   final String salt;

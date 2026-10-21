@@ -7,7 +7,8 @@ import 'package:finecho/features/security/data/storage/secure_key_value_store.da
 /// Persists non-secret app-lock metadata in platform secure storage.
 ///
 /// The payload is versioned so a future format change is detected instead of
-/// being silently misread.
+/// being silently misread. A payload written before the codec was versioned
+/// is still read as the state map it carries.
 class SecureStorageSecurityRepository implements SecurityRepository {
   /// Creates a repository over [store].
   const new({required this.store});
@@ -31,6 +32,9 @@ class SecureStorageSecurityRepository implements SecurityRepository {
     final decoded = jsonDecode(encoded);
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('Invalid persisted security state.');
+    }
+    if (!decoded.containsKey('version')) {
+      return SecurityState.fromMap(Map<String, Object?>.from(decoded));
     }
     if (decoded['version'] != codecVersion) {
       throw const FormatException('Unsupported persisted security state.');

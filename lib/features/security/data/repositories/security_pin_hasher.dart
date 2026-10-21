@@ -13,10 +13,30 @@ abstract final class SecurityPinHasher {
   /// that is persisted in secure storage.
   static const int defaultIterations = 100000;
 
+  /// The number of bytes in a stored salt.
+  static const int saltLength = 16;
+
+  /// The number of bytes in a stored verifier.
+  static const int hashLength = 32;
+
   /// Creates a random 16-byte base64Url salt.
   static String createSalt() {
     final random = Random.secure();
-    return base64UrlEncode(List<int>.generate(16, (_) => random.nextInt(256)));
+    return base64UrlEncode(
+      List<int>.generate(saltLength, (_) => random.nextInt(256)),
+    );
+  }
+
+  /// Whether [encoded] is base64Url data of exactly [length] bytes.
+  ///
+  /// A persisted verifier that does not have the expected shape can never
+  /// match, so it is rejected instead of locking the user out of the app.
+  static bool hasByteLength(String encoded, int length) {
+    try {
+      return base64Url.decode(encoded).length == length;
+    } on FormatException {
+      return false;
+    }
   }
 
   /// Derives the base64Url PBKDF2-HMAC-SHA256 verifier of [pin].

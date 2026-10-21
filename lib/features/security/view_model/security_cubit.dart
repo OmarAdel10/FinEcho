@@ -271,7 +271,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       }
       emit(
         state.copyWith(
-          status: SecurityAccessStatus.failure,
+          status: SecurityAccessStatus.error,
           errorMessage: 'Could not verify PIN. Please try again.',
         ),
       );
