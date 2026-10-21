@@ -220,11 +220,19 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 
 - App-lock metadata and the PIN verifier use platform secure storage (Android
   Keystore-backed storage; Android is the only configured platform). The
+  storage backend is `flutter_secure_storage`, pinned to an exact version: the
+  payload is encrypted with AES-GCM and the key is wrapped by the Android
+  keystore. The legacy encrypted shared preferences path is not used, and the
+  plugin is configured not to erase stored values on a keystore error, so a
+  failure surfaces on the recovery screen instead of silently removing the
+  lock. The
   verifier is a random-salted PBKDF2-HMAC-SHA256 derivation (100,000 iterations,
   32-byte output) compared in constant time; the raw PIN is never stored.
   Verifiers persisted by earlier versions (single HMAC-SHA256 round, no version
   marker) are still verified against the legacy derivation; a newly configured
-  PIN is always written in the current format. Tests and explicitly
+  PIN is always written in the current format. A corrupt verifier payload or an
+  unsupported payload version is rejected while decoding, so it reaches the
+  recovery screen instead of locking the user out. Tests and explicitly
   configured in-memory graphs may substitute fakes; the secure graph is the
   default and in-memory storage is the explicit opt-out.
 - The startup flow loads the persisted onboarding and security state before
