@@ -97,13 +97,17 @@ Deferred; tracked in Plane:
 - FINECHO-27 guard PIN setup against a relock race.
 - FINECHO-28 move the lifecycle observer to app scope.
 - FINECHO-29 version the secure-storage security JSON codec.
-- FINECHO-30 harden PIN lockout and verifier derivation.
+- FINECHO-30 harden the PIN lockout window; the verifier derivation part is
+  done (PBKDF2-HMAC-SHA256 with a format version).
 - FINECHO-31 verify `FLAG_SECURE` on a device.
 - FINECHO-32 erase persisted financial data or require a device credential for
   recovery reset once the SQLCipher database is wired.
 - FINECHO-33 tighten the remaining security test clarity gaps: derive the
-  lockout window from a fixed clock, assert the secure-storage payload guards
-  separately from the JSON parse errors, and cover `main()` directly.
+  lockout window from a fixed clock and assert the secure-storage payload
+  guards separately from the JSON parse errors.
+- FINECHO-34 either implement biometric unlock or remove the promise from the
+  security setup screen, `specs/PRD.md`, and `specs/USER_FLOW.md`; the switch is
+  live in the UI but no biometric package is wired.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
@@ -114,7 +118,7 @@ Fixed:
   lock screen, and onboarding/security setup redirect to the protected area.
   This closes the cold-start gap in FINECHO-25.
 - Secure-storage read and decode failures show a recovery screen with retry and
-  an explicitly destructive `Erase app data` action instead of an infinite
+  an explicitly destructive `Erase app lock` action instead of an infinite
   spinner. Reset attempts clearing the verifier and metadata independently; if
   both fail, the screen directs the user to clear app data in system settings.
   A successful erase returns the app to onboarding so the lock can be set up
@@ -144,8 +148,28 @@ Fixed:
 - The shared PIN hasher uses a constant-time verifier comparison.
 - Secure repositories, hasher, lifecycle relock, recovery flow, startup
   routing, bootstrap, and DI paths are covered by tests.
+- The PIN verifier is derived with PBKDF2-HMAC-SHA256 (100,000 iterations) and
+  stored with an explicit format version. Verifiers written by the earlier
+  single-round format are still verified against the legacy derivation, so
+  existing installations keep working. This closes the derivation half of
+  FINECHO-30.
+- The onboarding snapshot is loaded at startup next to the security state, and
+  the onboarding flow advances to the security-setup step before opening the
+  security screen, so the PIN can actually be set up and onboarding can be
+  completed after it.
+- The dependency graph uses platform secure storage by default; the in-memory
+  graph is an explicit opt-in for tests, so a new entry point cannot silently
+  fall back to a non-persistent lock.
+- The entrypoint composes through `buildApp()` and is covered by a startup test
+  that mounts the application against a mocked secure-storage channel, so the
+  real startup order is executed rather than only described.
+- `SecurityService` has a dedicated unit test file covering every load branch,
+  both one-sided reset failures, and the lockout bookkeeping.
+- A second PIN setup is ignored while one is already in flight, a reload keeps
+  an unlocked app unlocked, and a pause during PIN verification no longer
+  clears the failed-attempt streak.
 
-The recovery `Erase app data` action is intentionally unauthenticated because
+The recovery `Erase app lock` action is intentionally unauthenticated because
 the stored verifier may be unreadable; it exists only to clear local data and
 restore access. When persisted financial data lands, the action must also erase
 that data or require a device credential (FINECHO-32).
