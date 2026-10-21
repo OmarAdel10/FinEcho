@@ -27,6 +27,12 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   int _lockEpoch = 0;
 
+  /// Whether the app is inside a temporary lockout window.
+  ///
+  /// The lockout rules and this check share one clock, so the window never
+  /// depends on the wall clock the app happens to run on.
+  bool get isLockedOut => state.isLockedOutAt(_service.now);
+
   /// Loads the persisted security snapshot.
   Future<void> load() async {
     if (isClosed) {
@@ -72,16 +78,18 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   /// Relocks the app without changing the persisted security state.
   ///
-  /// Does nothing when the app lock is disabled or no PIN is configured.
+  /// Does nothing when the app lock is disabled or no PIN is configured. The
+  /// lock epoch always moves, so an unlock or a setup that is still running
+  /// cannot complete after the app was backgrounded.
   void lock() {
     if (isClosed) {
       return;
     }
+    _lockEpoch++;
     final securityState = state.securityState;
     if (!securityState.appLockEnabled || !securityState.pinConfigured) {
       return;
     }
-    _lockEpoch++;
     emit(
       SecurityAccessState(
         securityState: securityState,
@@ -91,10 +99,15 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
   }
 
   /// Configures the app lock with a six-digit PIN.
+  ///
+  /// When the app is backgrounded while the setup is running, the PIN is
+  /// still stored but the app stays locked, so a setup can never leave the
+  /// app unlocked in the background.
   Future<bool> configure(String pin) async {
     if (state.isSubmitting) {
       return false;
     }
+    final lockEpoch = _lockEpoch;
     if (pin.length != 6) {
       emit(
         state.copyWith(
@@ -134,10 +147,13 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       if (isClosed) {
         return true;
       }
+      final relocked = lockEpoch != _lockEpoch;
       emit(
         SecurityAccessState(
           securityState: securityState,
-          status: SecurityAccessStatus.unlocked,
+          status: relocked
+              ? SecurityAccessStatus.ready
+              : SecurityAccessStatus.unlocked,
         ),
       );
       return true;
@@ -219,7 +235,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
     }
 
     emit(state.copyWith(status: SecurityAccessStatus.submitting));
-    if (state.isLockedOut) {
+    if (isLockedOut) {
       emit(
         state.copyWith(
           status: SecurityAccessStatus.failure,

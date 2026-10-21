@@ -58,10 +58,13 @@ class SecurityAccessState {
   /// Whether persisted security state could not be loaded.
   bool get hasLoadError => status == SecurityAccessStatus.error;
 
-  /// Whether the app is currently inside a temporary lockout window.
-  bool get isLockedOut {
+  /// Whether the app is inside a temporary lockout window at [now].
+  ///
+  /// The caller supplies the clock so the window can be evaluated against the
+  /// same time source the lockout rules use.
+  bool isLockedOutAt(DateTime now) {
     final lockedUntil = securityState.lockedUntil;
-    return lockedUntil != null && DateTime.now().toUtc().isBefore(lockedUntil);
+    return lockedUntil != null && now.toUtc().isBefore(lockedUntil);
   }
 
   /// Returns a copy with the supplied non-null fields replaced.

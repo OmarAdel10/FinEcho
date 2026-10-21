@@ -20,8 +20,28 @@ class SecurityService {
   /// The number of consecutive failures before a temporary lockout.
   static const int maxFailedAttemptsBeforeLockout = 5;
 
-  /// The duration of the temporary lockout.
-  static const Duration lockoutDuration = Duration(minutes: 1);
+  /// The longest temporary lockout.
+  static const Duration maxLockoutDuration = Duration(minutes: 30);
+
+  /// The temporary lockout that follows [failedAttempts] failures.
+  ///
+  /// The window grows with every failure so a brute force cannot simply wait
+  /// out a fixed cooldown. The streak is cleared by a successful unlock.
+  static Duration lockoutDurationFor(int failedAttempts) {
+    if (failedAttempts < maxFailedAttemptsBeforeLockout) {
+      return Duration.zero;
+    }
+    final steps = failedAttempts - maxFailedAttemptsBeforeLockout;
+    final minutes = 1 << steps;
+    return Duration(
+      minutes: minutes > maxLockoutDuration.inMinutes
+          ? maxLockoutDuration.inMinutes
+          : minutes,
+    );
+  }
+
+  /// The current time used by the lockout rules.
+  DateTime get now => _now().toUtc();
 
   /// Loads persisted security state and reconciles it with the verifier.
   ///
@@ -107,7 +127,9 @@ class SecurityService {
     return _save(
       state.copyWith(
         failedUnlockAttempts: attempts,
-        lockedUntil: shouldLockOut ? _now().toUtc().add(lockoutDuration) : null,
+        lockedUntil: shouldLockOut
+            ? _now().toUtc().add(lockoutDurationFor(attempts))
+            : null,
         updatedAt: _now().toUtc(),
       ),
     );
