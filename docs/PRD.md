@@ -20,7 +20,8 @@ FinEcho is an offline-first personal-finance tracker for Flutter. It helps an in
 1. Native animated splash screen.
 2. Welcome and onboarding entry.
 3. Three onboarding pages covering privacy, voice entry, and Android SMS automation.
-4. Local profile creation, biometric lock, and PIN fallback.
+4. Local profile creation and a six-digit app-lock PIN. Device biometrics are
+   planned and are not implemented yet (FINECHO-34).
 5. Home dashboard with net worth, period totals, quick actions, voice entry, and recent transactions.
 6. Add/review transaction sheet.
 7. Accounts screen for cash, wallet, bank, savings, debit-card, credit-card, and prepaid/Mezza accounts, including Android SMS sender/card mapping.
@@ -80,14 +81,17 @@ The current visual reference is the generated Stitch bundle under `deliverables/
 
 - Financial records and parsing rules remain on-device.
 - The database is encrypted and its key is held in OS secure storage.
-- App unlock uses device biometrics when available, with a six-digit PIN fallback.
+- App unlock uses a six-digit PIN. Device biometrics are planned and are not
+  implemented yet (FINECHO-34).
+- The app lock is enforced at cold start and whenever the app is paused. The PIN
+  is stored only as a derived verifier in platform secure storage.
 - Exports are initiated by the user and saved or shared through platform-controlled flows.
 - Raw SMS content and sensitive financial values are never logged in release builds.
 
 ### UI, motion, and reusable components
 
 - Use `flutter_screenutil` for responsive sizing across phone layouts.
-- Use `pinput` for the six-digit PIN fallback.
+- Use `pinput` for the six-digit PIN.
 - Use `another_flutter_splash_screen` for the native animated splash sequence.
 - Use `lottie` for lightweight, repeated motion states.
 - Include simple animations for:
