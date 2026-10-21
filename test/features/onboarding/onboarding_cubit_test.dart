@@ -44,15 +44,65 @@ void main() {
       expect(cubit.state.currentStep, OnboardingStep.privacy);
     });
 
+    test('stores the biometric preference', () async {
+      await cubit.load();
+
+      cubit.setBiometricsEnabled(value: true);
+
+      expect(cubit.state.biometricsEnabled, isTrue);
+    });
+
+    test('stores the SMS automation preference', () async {
+      await cubit.load();
+
+      cubit.setSmsAutomationEnabled(value: true);
+
+      expect(cubit.state.smsAutomationEnabled, isTrue);
+    });
+
+    test('enters the security setup step and persists it', () async {
+      await cubit.load();
+      await cubit.enterSecuritySetup();
+
+      expect(cubit.state.currentStep, OnboardingStep.securitySetup);
+      expect(repository.saved.single.currentStep, OnboardingStep.securitySetup);
+      expect(repository.saved.single.isCompleted, isFalse);
+    });
+
+    test(
+      'completes onboarding after entering the security setup step',
+      () async {
+        await cubit.load();
+        await cubit.enterSecuritySetup();
+        cubit.setPin('123456');
+
+        final failure = await cubit.complete();
+
+        expect(failure, isNull);
+        expect(cubit.state.status, OnboardingStatus.completed);
+        expect(repository.saved.last.isCompleted, isTrue);
+      },
+    );
+
+    test(
+      'ignores the security setup step before the snapshot is loaded',
+      () async {
+        await cubit.enterSecuritySetup();
+
+        expect(cubit.state.currentStep, OnboardingStep.privacy);
+        expect(repository.saved, isEmpty);
+      },
+    );
+
     test('completes onboarding with a six-digit PIN', () async {
       await cubit.load();
       await cubit.nextStep();
       await cubit.nextStep();
       await cubit.nextStep();
       cubit.setPin('123456');
-      final completed = await cubit.complete();
+      final failure = await cubit.complete();
 
-      expect(completed, isTrue);
+      expect(failure, isNull);
       expect(cubit.state.status, OnboardingStatus.completed);
       expect(repository.saved.last.isCompleted, isTrue);
       expect(repository.saved.last.currentStep, OnboardingStep.securitySetup);
@@ -64,9 +114,9 @@ void main() {
       await cubit.nextStep();
       await cubit.nextStep();
       cubit.setPin('12345');
-      final completed = await cubit.complete();
+      final failure = await cubit.complete();
 
-      expect(completed, isFalse);
+      expect(failure, 'Enter a six-digit PIN.');
       expect(cubit.state.status, OnboardingStatus.failure);
       expect(cubit.state.errorMessage, 'Enter a six-digit PIN.');
       expect(
@@ -83,11 +133,14 @@ void main() {
       await cubit.nextStep();
       cubit.setPin('123456');
       repository.saveError = Exception('save failed');
-      final completed = await cubit.complete();
+      final failure = await cubit.complete();
 
-      expect(completed, isFalse);
+      expect(failure, 'Could not save the onboarding preferences.');
       expect(cubit.state.status, OnboardingStatus.failure);
-      expect(cubit.state.errorMessage, contains('Could not finish setup'));
+      expect(
+        cubit.state.errorMessage,
+        contains('Could not save the onboarding preferences'),
+      );
     });
   });
 }

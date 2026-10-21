@@ -1,9 +1,13 @@
+import 'package:finecho/app/bootstrap/app_bootstrap.dart';
+import 'package:finecho/app/bootstrap/app_startup.dart';
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/core/models/category.dart';
+import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
+import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
@@ -13,6 +17,17 @@ import 'package:finecho/features/analytics/view_model/services/analytics_service
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
+import 'package:finecho/features/onboarding/view_model/models/onboarding_state.dart';
+import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
+import 'package:finecho/features/security/data/repositories/in_memory_security_credential_repository.dart';
+import 'package:finecho/features/security/data/repositories/in_memory_security_repository.dart';
+import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
+import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
+import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
+import 'package:finecho/features/security/view/screens/lock_screen.dart';
+import 'package:finecho/features/security/view_model/models/security_access_state.dart';
+import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 
@@ -21,16 +36,16 @@ void main() {
   tearDown(() => GetIt.instance.reset());
 
   test('registers the budget dependency graph', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
 
     expect(sl<BudgetRepository>(), isA<BudgetRepository>());
-    expect(sl<BudgetService>().listBudgets(), completion(isEmpty));
+    await expectLater(sl<BudgetService>().listBudgets(), completion(isEmpty));
     expect(sl<BudgetCubit>().state.status, BudgetStatus.loading);
     await sl<BudgetCubit>().close();
   });
 
   test('shares one budget repository across the graph', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     final repository = sl<BudgetRepository>();
 
     expect(identical(repository, sl<BudgetRepository>()), isTrue);
@@ -53,8 +68,88 @@ void main() {
     await sl<BudgetCubit>().close();
   });
 
-  test('registers the analytics dependency graph', () async {
+  test('registers in-memory security repositories when requested', () async {
+    await configureDependencies(useInMemoryStorage: true);
+
+    expect(sl<SecurityRepository>(), isA<InMemorySecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<InMemorySecurityCredentialRepository>(),
+    );
+  });
+
+  test('registers secure platform security repositories by default', () async {
     await configureDependencies();
+
+    expect(sl<SecurityRepository>(), isA<SecureStorageSecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<SecureStorageSecurityCredentialRepository>(),
+    );
+    final stateRepository =
+        sl<SecurityRepository>() as SecureStorageSecurityRepository;
+    final credentialRepository =
+        sl<SecurityCredentialRepository>()
+            as SecureStorageSecurityCredentialRepository;
+    expect(
+      identical(stateRepository.store, credentialRepository.store),
+      isTrue,
+    );
+  });
+
+  test('forwards the in-memory configuration from bootstrap', () async {
+    await AppBootstrap.ensureInitialized(useInMemoryStorage: true);
+
+    expect(sl<SecurityRepository>(), isA<InMemorySecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<InMemorySecurityCredentialRepository>(),
+    );
+  });
+
+  test('registers secure platform storage from bootstrap by default', () async {
+    await AppBootstrap.ensureInitialized();
+
+    expect(sl<SecurityRepository>(), isA<SecureStorageSecurityRepository>());
+    expect(
+      sl<SecurityCredentialRepository>(),
+      isA<SecureStorageSecurityCredentialRepository>(),
+    );
+  });
+
+  testWidgets('loads security before creating the production router', (
+    tester,
+  ) async {
+    await configureDependencies(useInMemoryStorage: true);
+    await sl<SecurityRepository>().update(
+      SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+    );
+    await sl<SecurityCredentialRepository>().savePin('123456');
+
+    final appRouter = await startAppRouter();
+
+    expect(sl<SecurityCubit>().state.status, SecurityAccessStatus.ready);
+    expect(sl<SecurityCubit>().state.isLocked, isTrue);
+    expect(sl<OnboardingCubit>().state.status, OnboardingStatus.ready);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: appRouter.router));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(find.text('Welcome to FinEcho'), findsNothing);
+
+    addTearDown(appRouter.router.dispose);
+  });
+
+  test('registers the analytics dependency graph', () async {
+    await configureDependencies(useInMemoryStorage: true);
 
     expect(sl<AnalyticsRepository>(), isA<InMemoryAnalyticsRepository>());
     expect(sl<AnalyticsCubit>().state.status, AnalyticsStatus.loading);
@@ -69,7 +164,7 @@ void main() {
   });
 
   test('shares one analytics repository across the graph', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     final repository = sl<AnalyticsRepository>();
 
     expect(identical(repository, sl<AnalyticsRepository>()), isTrue);
@@ -77,7 +172,7 @@ void main() {
   });
 
   test('reads transactions seeded through the shared repositories', () async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     final now = DateTime.now().toUtc();
     await sl<CategoryRepository>().create(
       const Category(

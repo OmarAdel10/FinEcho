@@ -67,17 +67,32 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     emit(state.copyWith(pin: value, clearErrorMessage: value.length == 6));
   }
 
+  /// Marks the security setup step as reached so setup can be completed.
+  ///
+  /// The security setup screen is the last onboarding step, so reaching it
+  /// moves the onboarding progress to [OnboardingStep.securitySetup] and
+  /// persists that progress.
+  Future<void> enterSecuritySetup() async {
+    if (state.status != OnboardingStatus.ready ||
+        state.currentStep == OnboardingStep.securitySetup) {
+      return;
+    }
+    emit(state.copyWith(currentStep: OnboardingStep.securitySetup));
+    await _persistProgress();
+  }
+
   /// Validates and persists onboarding completion.
-  Future<bool> complete() async {
+  ///
+  /// Returns null when onboarding is completed and the failure message when it
+  /// cannot be completed.
+  Future<String?> complete() async {
     if (state.currentStep != OnboardingStep.securitySetup ||
         state.pin.length != 6) {
+      const message = 'Enter a six-digit PIN.';
       emit(
-        state.copyWith(
-          status: OnboardingStatus.failure,
-          errorMessage: 'Enter a six-digit PIN.',
-        ),
+        state.copyWith(status: OnboardingStatus.failure, errorMessage: message),
       );
-      return false;
+      return message;
     }
 
     emit(state.copyWith(status: OnboardingStatus.submitting));
@@ -91,21 +106,19 @@ class OnboardingCubit extends Cubit<OnboardingState> {
         ),
       );
       if (isClosed) {
-        return true;
+        return null;
       }
       emit(state.copyWith(status: OnboardingStatus.completed));
-      return true;
-    } on Exception {
+      return null;
+    } on Object {
+      const message = 'Could not save the onboarding preferences.';
       if (isClosed) {
-        return false;
+        return message;
       }
       emit(
-        state.copyWith(
-          status: OnboardingStatus.failure,
-          errorMessage: 'Could not finish setup. Please try again.',
-        ),
+        state.copyWith(status: OnboardingStatus.failure, errorMessage: message),
       );
-      return false;
+      return message;
     }
   }
 
@@ -119,7 +132,7 @@ class OnboardingCubit extends Cubit<OnboardingState> {
           smsAutomationEnabled: state.smsAutomationEnabled,
         ),
       );
-    } on Exception {
+    } on Object {
       // Progress persistence is best effort while setup remains in progress.
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
@@ -13,13 +15,36 @@ class FakeSecurityRepository implements SecurityRepository {
   /// Every state passed to [update], in persistence order.
   final List<SecurityState> updates = <SecurityState>[];
 
+  /// Error thrown by the next [get] call.
+  Exception? getError;
+
+  /// Error thrown by the next [update] call.
+  Exception? updateError;
+
+  /// Blocks [get] until completed, when provided.
+  Completer<void>? getGate;
+
   SecurityState? get state => _state;
 
   @override
-  Future<SecurityState?> get() async => _state;
+  Future<SecurityState?> get() async {
+    final error = getError;
+    if (error != null) {
+      throw error;
+    }
+    final gate = getGate;
+    if (gate != null) {
+      await gate.future;
+    }
+    return _state;
+  }
 
   @override
   Future<void> update(SecurityState newState) async {
+    final error = updateError;
+    if (error != null) {
+      throw error;
+    }
     updates.add(newState);
     _state = newState;
   }
@@ -35,11 +60,35 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Errors to throw from the next [verifyPin] call.
   Exception? verifyError;
 
+  /// Error thrown by the next [hasPin] call.
+  Exception? hasPinError;
+
+  /// Error thrown by the next [clear] call.
+  Exception? clearError;
+
+  /// Blocks [clear] until completed, when provided.
+  Completer<void>? clearGate;
+
+  /// Blocks [savePin] until completed, when provided.
+  Completer<void>? saveGate;
+
   /// Every PIN supplied to [verifyPin].
   final List<String> verifiedPins = <String>[];
 
+  /// Every PIN supplied to [savePin].
+  final List<String> savedPins = <String>[];
+
+  /// Blocks [verifyPin] until completed, when provided.
+  Completer<void>? verifyGate;
+
   @override
-  Future<bool> hasPin() async => _pin != null;
+  Future<bool> hasPin() async {
+    final error = hasPinError;
+    if (error != null) {
+      throw error;
+    }
+    return _pin != null;
+  }
 
   @override
   Future<void> savePin(String pin) async {
@@ -47,7 +96,12 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     if (error != null) {
       throw error;
     }
+    final gate = saveGate;
+    if (gate != null) {
+      await gate.future;
+    }
     _pin = pin;
+    savedPins.add(pin);
   }
 
   @override
@@ -56,12 +110,24 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     if (error != null) {
       throw error;
     }
+    final gate = verifyGate;
+    if (gate != null) {
+      await gate.future;
+    }
     verifiedPins.add(pin);
     return pin == _pin;
   }
 
   @override
   Future<void> clear() async {
+    final error = clearError;
+    if (error != null) {
+      throw error;
+    }
+    final gate = clearGate;
+    if (gate != null) {
+      await gate.future;
+    }
     _pin = null;
   }
 }

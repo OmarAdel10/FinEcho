@@ -35,7 +35,8 @@ Deferred during the round-two review; tracked in Plane:
 - Support multiple currencies in analytics aggregation (FINECHO-8).
 - Make budget warning thresholds configurable (FINECHO-9).
 - Add period totals to the home dashboard (FINECHO-10).
-- Protect financial screens with FLAG_SECURE and lock on pause (FINECHO-11).
+- Protect financial screens with FLAG_SECURE and lock on pause (FINECHO-11);
+  resolved in the security hardening branch.
 - Add a navigation shell entry for statistics (FINECHO-12).
 - Identify recurring charges by payee instead of an amount bucket (FINECHO-13).
 - Push analytics aggregation into repository queries (FINECHO-14).
@@ -93,6 +94,104 @@ changed units. A final approved batch fixed:
 
 Deferred; tracked in Plane:
 
-- Persist app lock and credentials across restarts; the DI graph still uses
-  in-memory security repositories (FINECHO-25, high, pre-existing).
-- FINECHO-11 (FLAG_SECURE and lock on pause) remains a release blocker.
+- FINECHO-27 guard PIN setup against a relock race.
+- FINECHO-28 move the lifecycle observer to app scope.
+- FINECHO-29 version the secure-storage security JSON codec.
+- FINECHO-30 harden the PIN lockout window; the verifier derivation part is
+  done (PBKDF2-HMAC-SHA256 with a format version).
+- FINECHO-31 verify `FLAG_SECURE` on a device.
+- FINECHO-32 erase persisted financial data or require a device credential for
+  recovery reset once the SQLCipher database is wired.
+- FINECHO-33 tighten the remaining security test clarity gaps: derive the
+  lockout window from a fixed clock and assert the secure-storage payload
+  guards separately from the JSON parse errors.
+- FINECHO-34 either implement biometric unlock or remove the promise from the
+  security setup screen, `docs/PRD.md`, and `docs/USER_FLOW.md`; the switch is
+  live in the UI but no biometric package is wired.
+- FINECHO-35 reject corrupt current-format PIN verifier payloads while
+  decoding, so a bad payload reaches the recovery screen instead of locking the
+  user out with no way back.
+- FINECHO-36 render a continue action when onboarding resumes at the security
+  setup step; the page is currently blank with a no-op primary button.
+- FINECHO-37 drop the encrypted shared preferences option on Android: the
+  plugin silently falls back to plain preferences when the encrypted manager
+  fails, which reads as no lock at all.
+- FINECHO-38 derive the PIN verifier off the platform isolate; the current
+  derivation blocks the UI thread for roughly 300 ms per attempt.
+- FINECHO-39 render a splash while the startup security state loads; the
+  native launch screen is shown for up to the load timeout.
+- FINECHO-40 pin the `flutter_secure_storage` version used by the app lock.
+- FINECHO-41 persist the onboarding snapshot: the production graph still uses
+  the in-memory onboarding repository, so the onboarding progress and the
+  security-setup step are lost when the app restarts.
+- FINECHO-42 tighten the security test realism gaps: the credential fake still
+  compares plaintext, a few assertions compare a value with itself, and the
+  lockout test depends on the wall clock.
+- FINECHO-43 clean up the security setup screen seams: the setup warning
+  duplicates the security error snackbar and the public PIN controller has no
+  consumer.
+- FINECHO-15 clear cached analytics state on lock.
+
+## Security hardening
+
+Fixed:
+
+- Persisted lock state is loaded before routing: configured users start at the
+  lock screen, and onboarding/security setup redirect to the protected area.
+  This closes the cold-start gap in FINECHO-25.
+- Secure-storage read and decode failures show a recovery screen with retry and
+  an explicitly destructive `Erase app lock` action instead of an infinite
+  spinner. Reset attempts clearing the verifier and metadata independently; if
+  both fail, the screen directs the user to clear app data in system settings.
+  A successful erase returns the app to onboarding so the lock can be set up
+  again, and a failed reload asks the user to try again instead of wiping the
+  app. Every recovery path that ends without a configured lock, including a
+  retry that succeeds against an empty store, routes back to onboarding, so the
+  protected area is never left reachable without a way to set the lock up.
+- The erase runs in a dedicated `resetting` state, so the progress indicator
+  depends on the operation in flight instead of the persisted lock metadata.
+- A stored verifier without lock metadata fails closed and repairs the metadata.
+  Configured metadata without a readable verifier enters the recovery screen.
+  A metadata repair that cannot be persisted still leaves the app locked.
+  PIN setup refuses to overwrite an existing verifier and reports when a setup
+  rollback also fails.
+- Startup security loading is bounded by a timeout, the load-before-router
+  composition is covered by a production-graph test, and the bound is
+  regression-tested.
+- Android secure storage uses encrypted shared preferences; cloud backup and
+  Android 12+ device-to-device transfer exclude app data through
+  `dataExtractionRules`, with `allowBackup=false` and
+  `fullBackupContent=false` for older versions.
+- The security gate relocks on `AppLifecycleState.paused`; an in-flight PIN
+  verification cannot complete an unlock after the app is paused, and the PIN
+  field clears on relock.
+- Android applies `FLAG_SECURE` app-wide so screens are excluded from
+  screenshots and recent-app previews.
+- The shared PIN hasher uses a constant-time verifier comparison.
+- Secure repositories, hasher, lifecycle relock, recovery flow, startup
+  routing, bootstrap, and DI paths are covered by tests.
+- The PIN verifier is derived with PBKDF2-HMAC-SHA256 (100,000 iterations) and
+  stored with an explicit format version. Verifiers written by the earlier
+  single-round format are still verified against the legacy derivation, so
+  existing installations keep working. This closes the derivation half of
+  FINECHO-30.
+- The onboarding snapshot is loaded at startup next to the security state, and
+  the onboarding flow advances to the security-setup step before opening the
+  security screen, so the PIN can actually be set up and onboarding can be
+  completed after it.
+- The dependency graph uses platform secure storage by default; the in-memory
+  graph is an explicit opt-in for tests, so a new entry point cannot silently
+  fall back to a non-persistent lock.
+- The entrypoint composes through `buildApp()` and is covered by a startup test
+  that mounts the application against a mocked secure-storage channel, so the
+  real startup order is executed rather than only described.
+- `SecurityService` has a dedicated unit test file covering every load branch,
+  both one-sided reset failures, and the lockout bookkeeping.
+- A second PIN setup is ignored while one is already in flight, a reload keeps
+  an unlocked app unlocked, and a pause during PIN verification no longer
+  clears the failed-attempt streak.
+
+The recovery `Erase app lock` action is intentionally unauthenticated because
+the stored verifier may be unreadable; it exists only to clear local data and
+restore access. When persisted financial data lands, the action must also erase
+that data or require a device credential (FINECHO-32).

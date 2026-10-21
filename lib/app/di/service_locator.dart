@@ -21,7 +21,10 @@ import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
 import 'package:finecho/features/security/data/repositories/in_memory_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/in_memory_security_repository.dart';
+import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
+import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
+import 'package:finecho/features/security/data/storage/secure_key_value_store.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 import 'package:finecho/features/transactions/view_model/services/transaction_service.dart';
@@ -32,8 +35,13 @@ import 'package:get_it/get_it.dart';
 final GetIt sl = GetIt.instance;
 
 /// Registers the initial application-wide dependencies.
+///
+/// Secure storage is the default so a new entry point cannot silently fall
+/// back to a non-persistent app lock. Tests opt into the in-memory graph
+/// explicitly.
 Future<void> configureDependencies({
   Environment environment = Environment.development,
+  bool useInMemoryStorage = false,
 }) async {
   sl
     ..registerSingleton<EnvironmentConfig>(EnvironmentConfig(environment))
@@ -45,11 +53,28 @@ Future<void> configureDependencies({
     )
     ..registerLazySingleton<OnboardingCubit>(
       () => OnboardingCubit(sl<OnboardingService>()),
-    )
-    ..registerLazySingleton<SecurityRepository>(InMemorySecurityRepository.new)
-    ..registerLazySingleton<SecurityCredentialRepository>(
-      InMemorySecurityCredentialRepository.new,
-    )
+    );
+
+  if (useInMemoryStorage) {
+    sl
+      ..registerLazySingleton<SecurityRepository>(
+        InMemorySecurityRepository.new,
+      )
+      ..registerLazySingleton<SecurityCredentialRepository>(
+        InMemorySecurityCredentialRepository.new,
+      );
+  } else {
+    const store = FlutterSecureKeyValueStore();
+    sl
+      ..registerLazySingleton<SecurityRepository>(
+        () => const SecureStorageSecurityRepository(store: store),
+      )
+      ..registerLazySingleton<SecurityCredentialRepository>(
+        () => const SecureStorageSecurityCredentialRepository(store: store),
+      );
+  }
+
+  sl
     ..registerLazySingleton<SecurityService>(
       () => SecurityService(
         repository: sl<SecurityRepository>(),

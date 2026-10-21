@@ -6,8 +6,9 @@ import 'package:finecho/features/security/view_model/services/security_service.d
 /// The app-lock ViewModel.
 class SecurityCubit extends Cubit<SecurityAccessState> {
   /// Creates an app-lock ViewModel.
-  new(this._service)
-    : super(
+  new(SecurityService service, {this.loadTimeout = const Duration(seconds: 5)})
+    : _service = service,
+      super(
         SecurityAccessState(
           securityState: SecurityState(
             appLockEnabled: false,
@@ -21,30 +22,104 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   final SecurityService _service;
 
+  /// The maximum time a security read may take before the app fails closed.
+  final Duration loadTimeout;
+
+  int _lockEpoch = 0;
+
   /// Loads the persisted security snapshot.
   Future<void> load() async {
-    emit(state.copyWith(status: SecurityAccessStatus.loading));
-    final securityState = await _service.load();
     if (isClosed) {
       return;
     }
+    final wasUnlocked = state.status == SecurityAccessStatus.unlocked;
+    emit(
+      state.copyWith(
+        status: SecurityAccessStatus.loading,
+        clearErrorMessage: true,
+      ),
+    );
+    try {
+      final securityState = await _service.load().timeout(loadTimeout);
+      if (isClosed) {
+        return;
+      }
+      final configured =
+          securityState.appLockEnabled && securityState.pinConfigured;
+      emit(
+        SecurityAccessState(
+          securityState: securityState,
+          status: configured
+              ? wasUnlocked
+                    ? SecurityAccessStatus.unlocked
+                    : SecurityAccessStatus.ready
+              : SecurityAccessStatus.unlocked,
+        ),
+      );
+    } on Object {
+      if (isClosed) {
+        return;
+      }
+      emit(
+        SecurityAccessState(
+          securityState: state.securityState,
+          status: SecurityAccessStatus.error,
+          errorMessage: 'Could not load security settings. Please try again.',
+        ),
+      );
+    }
+  }
+
+  /// Relocks the app without changing the persisted security state.
+  ///
+  /// Does nothing when the app lock is disabled or no PIN is configured.
+  void lock() {
+    if (isClosed) {
+      return;
+    }
+    final securityState = state.securityState;
+    if (!securityState.appLockEnabled || !securityState.pinConfigured) {
+      return;
+    }
+    _lockEpoch++;
     emit(
       SecurityAccessState(
         securityState: securityState,
-        status: securityState.appLockEnabled && securityState.pinConfigured
-            ? SecurityAccessStatus.ready
-            : SecurityAccessStatus.unlocked,
+        status: SecurityAccessStatus.ready,
       ),
     );
   }
 
   /// Configures the app lock with a six-digit PIN.
   Future<bool> configure(String pin) async {
+    if (state.isSubmitting) {
+      return false;
+    }
     if (pin.length != 6) {
       emit(
         state.copyWith(
           status: SecurityAccessStatus.failure,
           errorMessage: 'Enter a six-digit PIN.',
+        ),
+      );
+      return false;
+    }
+
+    try {
+      if (state.securityState.pinConfigured || await _service.hasPin()) {
+        emit(
+          state.copyWith(
+            status: SecurityAccessStatus.failure,
+            errorMessage: 'App lock is already configured.',
+          ),
+        );
+        return false;
+      }
+    } on Object {
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Could not check app lock. Please try again.',
         ),
       );
       return false;
@@ -66,23 +141,71 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         ),
       );
       return true;
-    } on Exception {
+    } on Object {
+      final cleared = await _clearPinAfterFailedSetup();
       if (isClosed) {
         return false;
       }
       emit(
         state.copyWith(
           status: SecurityAccessStatus.failure,
-          errorMessage: 'Could not save app lock. Please try again.',
+          errorMessage: cleared
+              ? 'Could not save app lock. Please try again.'
+              : 'Could not finish setting up app lock. Clear FinEcho app data '
+                    'from system settings and relaunch.',
         ),
       );
       return false;
     }
   }
 
+  /// Clears app-lock metadata and the verifier after an unrecoverable load.
+  Future<bool> resetLock() async {
+    if (isClosed) {
+      return false;
+    }
+    emit(
+      state.copyWith(
+        status: SecurityAccessStatus.resetting,
+        clearErrorMessage: true,
+      ),
+    );
+    final reset = await _service.reset();
+    if (isClosed) {
+      return false;
+    }
+    if (!reset) {
+      emit(
+        SecurityAccessState(
+          securityState: state.securityState,
+          status: SecurityAccessStatus.error,
+          errorMessage:
+              'Could not reset app lock. Clear FinEcho app data '
+              'from system settings and relaunch.',
+        ),
+      );
+      return false;
+    }
+    await load();
+    if (isClosed) {
+      return false;
+    }
+    if (state.status == SecurityAccessStatus.error) {
+      emit(
+        SecurityAccessState(
+          securityState: state.securityState,
+          status: SecurityAccessStatus.error,
+          errorMessage: 'Could not reload app lock settings. Tap Try again.',
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
   /// Verifies the six-digit PIN and unlocks the app on success.
   Future<bool> unlockWithPin(String pin) async {
-    if (state.status == SecurityAccessStatus.submitting) {
+    if (state.isSubmitting) {
       return false;
     }
     if (pin.length != 6) {
@@ -106,6 +229,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       return false;
     }
 
+    final lockEpoch = _lockEpoch;
     try {
       final matches = await _service.verifyPin(pin);
       if (!matches) {
@@ -127,9 +251,12 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         return false;
       }
 
+      if (lockEpoch != _lockEpoch) {
+        return false;
+      }
       final securityState = await _service.markUnlocked(state.securityState);
-      if (isClosed) {
-        return true;
+      if (isClosed || lockEpoch != _lockEpoch) {
+        return false;
       }
       emit(
         SecurityAccessState(
@@ -138,7 +265,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         ),
       );
       return true;
-    } on Exception {
+    } on Object {
       if (isClosed) {
         return false;
       }
@@ -148,6 +275,15 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
           errorMessage: 'Could not verify PIN. Please try again.',
         ),
       );
+      return false;
+    }
+  }
+
+  Future<bool> _clearPinAfterFailedSetup() async {
+    try {
+      await _service.clearPin();
+      return true;
+    } on Object {
       return false;
     }
   }

@@ -218,9 +218,33 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 
 ## Security model
 
-- During the current development phase, app-lock metadata and the PIN verifier
-  use in-memory repositories. The verifier is a random-salted HMAC-SHA256 hash;
-  the raw PIN is never stored.
+- App-lock metadata and the PIN verifier use platform secure storage (Android
+  Keystore-backed storage; Android is the only configured platform). The
+  verifier is a random-salted PBKDF2-HMAC-SHA256 derivation (100,000 iterations,
+  32-byte output) compared in constant time; the raw PIN is never stored.
+  Verifiers persisted by earlier versions (single HMAC-SHA256 round, no version
+  marker) are still verified against the legacy derivation; a newly configured
+  PIN is always written in the current format. Tests and explicitly
+  configured in-memory graphs may substitute fakes; the secure graph is the
+  default and in-memory storage is the explicit opt-out.
+- The startup flow loads the persisted onboarding and security state before
+  showing any route. Configured users are routed to the protected area, where
+  the gate shows the lock screen until the PIN is verified; unreadable secure
+  storage shows a recovery screen instead of content. Retry re-reads secure
+  storage. `Erase app lock` is intentionally destructive and unauthenticated
+  because the PIN verifier is unreadable in this state; it removes the saved
+  PIN and app-lock settings. Whenever a recovery reload finishes without a
+  configured lock, the gate routes the app back to onboarding so the lock can
+  be set up again. A normal start never moves the user away from the route they
+  opened.
+- Onboarding advances to the security-setup step explicitly before the security
+  screen is opened, so the setup screen can complete onboarding after the PIN
+  is stored.
+- The security gate relocks the app when it is paused, and Android applies
+  `FLAG_SECURE` app-wide so screens are excluded from screenshots and recents
+  previews. Android cloud backup and device-to-device transfer exclude app data
+  through `dataExtractionRules`; older Android versions also disable backup.
+  Relocking on `inactive`/`hidden` and from app scope is deferred (FINECHO-28).
 - Generate the database key using a cryptographically secure source.
 - Store that key only in Android Keystore/iOS Keychain through secure storage.
 - Open the local SQLCipher database only after the startup security flow succeeds.

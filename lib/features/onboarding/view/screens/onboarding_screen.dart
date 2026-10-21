@@ -78,11 +78,15 @@ class OnboardingScreen extends StatelessWidget {
     BuildContext context,
     OnboardingState state,
   ) async {
+    final cubit = context.read<OnboardingCubit>();
     if (state.currentStep == OnboardingStep.automation) {
-      context.go('/security-setup');
+      await cubit.enterSecuritySetup();
+      if (context.mounted) {
+        context.go('/security-setup');
+      }
       return;
     }
-    await context.read<OnboardingCubit>().nextStep();
+    await cubit.nextStep();
   }
 }
 

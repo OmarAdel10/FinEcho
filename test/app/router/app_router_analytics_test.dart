@@ -24,7 +24,7 @@ void main() {
   testWidgets('resolves the statistics route from the production graph', (
     tester,
   ) async {
-    await configureDependencies();
+    await configureDependencies(useInMemoryStorage: true);
     final appRouter = AppRouter();
     final router = appRouter.router;
     addTearDown(router.dispose);

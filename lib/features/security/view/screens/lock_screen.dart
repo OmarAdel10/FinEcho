@@ -43,7 +43,8 @@ class _LockScreenState extends State<LockScreen> {
       body: SafeArea(
         child: BlocConsumer<SecurityCubit, SecurityAccessState>(
           listener: (context, state) {
-            if (state.status == SecurityAccessStatus.failure) {
+            if (state.status == SecurityAccessStatus.failure ||
+                state.status == SecurityAccessStatus.ready) {
               _pinController.clear();
             }
           },

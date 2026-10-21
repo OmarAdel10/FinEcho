@@ -1,11 +1,10 @@
-import 'package:finecho/app/bootstrap/app_bootstrap.dart';
-import 'package:finecho/app/bootstrap/fin_echo_app.dart';
-import 'package:finecho/app/di/service_locator.dart';
-import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/app/bootstrap/app_startup.dart';
 import 'package:flutter/widgets.dart';
 
-Future<void> main() async {
-  await AppBootstrap.ensureInitialized();
-  final router = sl<AppRouter>().router;
-  runApp(FinEchoApp(router: router));
+/// Mounts the FinEcho application.
+///
+/// The [runner] parameter keeps the entrypoint executable in tests without
+/// mounting a second root widget.
+Future<void> main({void Function(Widget app) runner = runApp}) async {
+  runner(await buildApp());
 }
