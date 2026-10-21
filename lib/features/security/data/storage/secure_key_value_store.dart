@@ -13,11 +13,20 @@ abstract interface class SecureKeyValueStore {
 }
 
 /// [SecureKeyValueStore] backed by the platform keystore.
+///
+/// The store uses the current secure-storage backend, which encrypts the
+/// payload with AES-GCM and wraps the key with the Android keystore. The
+/// legacy encrypted-shared-preferences backend is not used.
+///
+/// `resetOnError` is disabled on purpose. The plugin would otherwise erase
+/// every stored value when the keystore reports an error, which would
+/// silently remove the app lock. Failing instead lets the recovery screen
+/// offer a deliberate reset.
 class FlutterSecureKeyValueStore implements SecureKeyValueStore {
   /// Creates a store using the platform secure-storage implementation.
   const new({
     this.storage = const FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      aOptions: AndroidOptions(resetOnError: false),
     ),
   });
 
