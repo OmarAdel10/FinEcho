@@ -15,8 +15,8 @@ Notification -> Lock (if needed) -> Accounts Card Link or Budget Detail
 
 1. User opens FinEcho.
 2. The native animated splash initializes local services without blocking the animation unnecessarily and uses `assets/icon/splash_mark_1024.png` as its native mark.
-3. First-time users see the welcome screen, then three onboarding pages, then create a local profile and choose biometric/PIN protection.
-4. Returning users unlock with biometrics or the fallback PIN.
+3. First-time users see the welcome screen, then three onboarding pages, then create a local profile and set a six-digit app-lock PIN. Device biometrics are planned and are not implemented yet (FINECHO-34).
+4. Returning users unlock with the app-lock PIN.
 5. On failure, the user receives a clear retry path; no financial data is displayed before unlock.
 
 ## Environment indicator flow
