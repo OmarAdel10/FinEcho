@@ -124,6 +124,12 @@ Deferred; tracked in Plane:
 - FINECHO-41 persist the onboarding snapshot: the production graph still uses
   the in-memory onboarding repository, so the onboarding progress and the
   security-setup step are lost when the app restarts.
+- FINECHO-42 tighten the security test realism gaps: the credential fake still
+  compares plaintext, a few assertions compare a value with itself, and the
+  lockout test depends on the wall clock.
+- FINECHO-43 clean up the security setup screen seams: the setup warning
+  duplicates the security error snackbar and the public PIN controller has no
+  consumer.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
