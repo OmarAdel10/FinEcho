@@ -1,39 +1,30 @@
+import 'package:finecho/features/security/data/models/pin_verifier.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
-import 'package:finecho/features/security/data/repositories/security_pin_hasher.dart';
 
 /// An in-memory salted-hash store used by tests and explicit in-memory graphs.
 class InMemorySecurityCredentialRepository
     implements SecurityCredentialRepository {
-  String? _salt;
-  String? _pinHash;
+  PinVerifier? _verifier;
 
   @override
-  Future<bool> hasPin() async => _pinHash != null;
+  Future<bool> hasPin() async => _verifier != null;
 
   @override
   Future<void> savePin(String pin) async {
-    final salt = SecurityPinHasher.createSalt();
-    _salt = salt;
-    _pinHash = SecurityPinHasher.hash(pin, salt);
+    _verifier = PinVerifier.create(pin);
   }
 
   @override
   Future<bool> verifyPin(String pin) async {
-    final salt = _salt;
-    final pinHash = _pinHash;
-    if (salt == null || pinHash == null) {
+    final verifier = _verifier;
+    if (verifier == null) {
       return false;
     }
-    return SecurityPinHasher.matches(
-      pin: pin,
-      salt: salt,
-      expectedHash: pinHash,
-    );
+    return verifier.matches(pin);
   }
 
   @override
   Future<void> clear() async {
-    _salt = null;
-    _pinHash = null;
+    _verifier = null;
   }
 }
