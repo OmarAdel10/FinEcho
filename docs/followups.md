@@ -108,6 +108,19 @@ Deferred; tracked in Plane:
 - FINECHO-34 either implement biometric unlock or remove the promise from the
   security setup screen, `specs/PRD.md`, and `specs/USER_FLOW.md`; the switch is
   live in the UI but no biometric package is wired.
+- FINECHO-35 reject corrupt current-format PIN verifier payloads while
+  decoding, so a bad payload reaches the recovery screen instead of locking the
+  user out with no way back.
+- FINECHO-36 render a continue action when onboarding resumes at the security
+  setup step; the page is currently blank with a no-op primary button.
+- FINECHO-37 drop the encrypted shared preferences option on Android: the
+  plugin silently falls back to plain preferences when the encrypted manager
+  fails, which reads as no lock at all.
+- FINECHO-38 derive the PIN verifier off the platform isolate; the current
+  derivation blocks the UI thread for roughly 300 ms per attempt.
+- FINECHO-39 render a splash while the startup security state loads; the
+  native launch screen is shown for up to the load timeout.
+- FINECHO-40 pin the `flutter_secure_storage` version used by the app lock.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
