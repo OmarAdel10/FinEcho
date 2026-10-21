@@ -67,6 +67,20 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     emit(state.copyWith(pin: value, clearErrorMessage: value.length == 6));
   }
 
+  /// Marks the security setup step as reached so setup can be completed.
+  ///
+  /// The security setup screen is the last onboarding step, so reaching it
+  /// moves the onboarding progress to [OnboardingStep.securitySetup] and
+  /// persists that progress.
+  Future<void> enterSecuritySetup() async {
+    if (state.status != OnboardingStatus.ready ||
+        state.currentStep == OnboardingStep.securitySetup) {
+      return;
+    }
+    emit(state.copyWith(currentStep: OnboardingStep.securitySetup));
+    await _persistProgress();
+  }
+
   /// Validates and persists onboarding completion.
   Future<bool> complete() async {
     if (state.currentStep != OnboardingStep.securitySetup ||

@@ -17,6 +17,7 @@ class SecuritySetupScreen extends StatelessWidget {
   final TextEditingController? pinController;
 
   Future<void> _finishSetup({
+    required BuildContext context,
     required String pin,
     required OnboardingCubit onboardingCubit,
     required SecurityCubit securityCubit,
@@ -25,7 +26,15 @@ class SecuritySetupScreen extends StatelessWidget {
     if (!configured) {
       return;
     }
-    await onboardingCubit.complete();
+    await onboardingCubit.enterSecuritySetup();
+    final completed = await onboardingCubit.complete();
+    if (!context.mounted) {
+      return;
+    }
+    if (!completed) {
+      _showSetupWarning(context, onboardingCubit.state.errorMessage);
+    }
+    context.go('/home');
   }
 
   @override
@@ -40,12 +49,7 @@ class SecuritySetupScreen extends StatelessWidget {
             }
           },
           builder: (context, securityState) {
-            return BlocConsumer<OnboardingCubit, OnboardingState>(
-              listener: (context, state) {
-                if (state.status == OnboardingStatus.completed) {
-                  context.go('/home');
-                }
-              },
+            return BlocBuilder<OnboardingCubit, OnboardingState>(
               builder: (context, state) {
                 return ListView(
                   padding: const EdgeInsets.all(24),
@@ -105,6 +109,7 @@ class SecuritySetupScreen extends StatelessWidget {
                           state.isSubmitting || securityState.isSubmitting
                           ? null
                           : () => _finishSetup(
+                              context: context,
                               pin: state.pin,
                               onboardingCubit: context.read<OnboardingCubit>(),
                               securityCubit: context.read<SecurityCubit>(),
@@ -132,5 +137,17 @@ class SecuritySetupScreen extends StatelessWidget {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(errorMessage)));
+  }
+
+  void _showSetupWarning(BuildContext context, String? errorMessage) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            errorMessage ?? 'App lock set. Setup progress was not saved.',
+          ),
+        ),
+      );
   }
 }
