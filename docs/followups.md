@@ -118,6 +118,9 @@ Deferred; tracked in Plane:
 - FINECHO-43 clean up the security setup screen seams: the setup warning
   duplicates the security error snackbar and the public PIN controller has no
   consumer.
+- FINECHO-44 scope the unauthenticated `Erase app lock` action to the state
+  where the verifier is genuinely unreadable; a storage fault during PIN
+  verification currently offers the same unauthenticated erase.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
@@ -207,9 +210,10 @@ Moving to the current secure-storage backend changes the store that holds the
 verifier, so a device that ran a pre-release build with the encrypted shared
 preferences backend cannot read the stored verifier any more. The current
 backend does not migrate the old entries, and a missing entry reads as an
-empty value rather than an error, so the app checks the store for unreadable
-legacy data before the first read. When such data is present the app fails
-closed into the recovery screen instead of treating the missing values as a
-fresh install, and the deliberate `Erase app lock` action clears the lock so it
-can be set up again. The state codec still reads a payload written before the
-codec was versioned. No released version is affected.
+empty value rather than an error, so the app asks the store whether it still
+holds entries this build cannot read before it reads anything, and treats a
+check that cannot run as unreadable as well. When such data is present the app
+fails closed into the recovery screen instead of treating the missing values as
+a fresh install, and the deliberate `Erase app lock` action clears the lock so
+it can be set up again. The state codec still reads a payload written before
+the codec was versioned. No released version is affected.

@@ -25,10 +25,12 @@ class SecureStorageSecurityCredentialRepository
 
   @override
   Future<bool> hasUnreadableLegacyData() async {
-    if (await store.read(legacyAcknowledgedKey) != null) {
+    // The upgrade check runs before the first read so the store is never
+    // touched before the app knows whether its entries are readable.
+    if (!await store.hasUnreadableLegacyData()) {
       return false;
     }
-    return await store.hasUnreadableLegacyData();
+    return await store.read(legacyAcknowledgedKey) == null;
   }
 
   @override
