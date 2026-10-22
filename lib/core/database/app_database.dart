@@ -4,6 +4,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 /// Opens and owns FinEcho's encrypted SQLite database connection.
 class AppDatabase {
   /// Creates a lazy connection holder for the database opened by [opener].
+  // ignore: unnecessary_type_name_in_constructor
   AppDatabase({required this.opener});
 
   /// The opener that opens the encrypted database.
