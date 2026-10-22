@@ -4,6 +4,7 @@ import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_security_repositories.dart';
@@ -346,6 +347,39 @@ void main() {
         cubit.state.errorMessage,
         'Could not verify PIN. Please try again.',
       );
+      await cubit.close();
+    });
+
+    test(
+      'offers the erase when the store cannot prove the data readable',
+      () async {
+        final harness = SecurityTestHarness(
+          now: () => DateTime.utc(2026, 10, 15, 12),
+        );
+        harness.credentialRepository.unreadableDataError = StateError(
+          'Secure storage upgrade check failed: keystore unavailable',
+        );
+        final cubit = SecurityCubit(harness.service);
+
+        await cubit.load();
+
+        expect(cubit.state.status, SecurityAccessStatus.error);
+        expect(cubit.state.canEraseAppLock, isTrue);
+        await cubit.close();
+      },
+    );
+
+    test('keeps the erase hidden when the storage read fails', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      harness.securityRepository.getError = PlatformException(code: 'keystore');
+      final cubit = SecurityCubit(harness.service);
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(cubit.state.canEraseAppLock, isFalse);
       await cubit.close();
     });
 
