@@ -100,6 +100,11 @@ class FakeBudgetRepository implements BudgetRepository {
     deletedIds.add(id);
     _budgets.remove(id);
   }
+
+  @override
+  Future<void> eraseAll() async {
+    _budgets.clear();
+  }
 }
 
 /// An in-memory [CategoryRepository] fake for budget tests.
@@ -141,6 +146,11 @@ class FakeBudgetCategoryRepository implements CategoryRepository {
   @override
   Future<void> delete(String id) async {
     _categories.remove(id);
+  }
+
+  @override
+  Future<void> eraseAll() async {
+    _categories.clear();
   }
 }
 
