@@ -105,12 +105,25 @@ Future<void> configureDependencies({
       );
   }
 
+  // Register financial repositories (needed by the security reset)
+  sl
+    ..registerLazySingleton<TransactionRepository>(
+      InMemoryTransactionRepository.new,
+    )
+    ..registerLazySingleton<AccountRepository>(InMemoryAccountRepository.new)
+    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new)
+    ..registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
+
   // Register security service and cubit
   sl
     ..registerLazySingleton<SecurityService>(
       () => SecurityService(
         repository: sl<SecurityRepository>(),
         credentials: sl<SecurityCredentialRepository>(),
+        transactionRepository: sl<TransactionRepository>(),
+        accountRepository: sl<AccountRepository>(),
+        categoryRepository: sl<CategoryRepository>(),
+        budgetRepository: sl<BudgetRepository>(),
       ),
     )
     ..registerLazySingleton<SecurityCubit>(
@@ -118,12 +131,6 @@ Future<void> configureDependencies({
     );
 
   // Register transaction components
-  sl
-    ..registerLazySingleton<TransactionRepository>(
-      InMemoryTransactionRepository.new,
-    )
-    ..registerLazySingleton<AccountRepository>(InMemoryAccountRepository.new)
-    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new);
   sl.registerLazySingleton<TransactionService>(
     () => TransactionService(
       transactions: sl<TransactionRepository>(),
@@ -136,7 +143,6 @@ Future<void> configureDependencies({
   );
 
   // Register budget components
-  sl.registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
   sl.registerLazySingleton<BudgetService>(
     () => BudgetService(
       budgets: sl<BudgetRepository>(),

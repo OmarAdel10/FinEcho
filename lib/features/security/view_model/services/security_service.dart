@@ -1,5 +1,9 @@
 import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/core/repositories/contracts/account_repository.dart';
+import 'package:finecho/core/repositories/contracts/budget_repository.dart';
+import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
+import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
 import 'package:finecho/features/security/view_model/models/security_reset_result.dart';
 
@@ -9,13 +13,37 @@ class SecurityService {
   new({
     required SecurityRepository repository,
     required SecurityCredentialRepository credentials,
+    required TransactionRepository transactionRepository,
+    required AccountRepository accountRepository,
+    required CategoryRepository categoryRepository,
+    required BudgetRepository budgetRepository,
     DateTime Function()? now,
-  }) : this._(repository, credentials, now ?? DateTime.now);
+  }) : this._(
+         repository,
+         credentials,
+         transactionRepository,
+         accountRepository,
+         categoryRepository,
+         budgetRepository,
+         now ?? DateTime.now,
+       );
 
-  new _(this._repository, this._credentials, this._now);
+  new _(
+    this._repository,
+    this._credentials,
+    this._transactionRepository,
+    this._accountRepository,
+    this._categoryRepository,
+    this._budgetRepository,
+    this._now,
+  );
 
   final SecurityRepository _repository;
   final SecurityCredentialRepository _credentials;
+  final TransactionRepository _transactionRepository;
+  final AccountRepository _accountRepository;
+  final CategoryRepository _categoryRepository;
+  final BudgetRepository _budgetRepository;
   final DateTime Function() _now;
 
   /// The number of consecutive failures before a temporary lockout.
@@ -94,7 +122,8 @@ class SecurityService {
   /// Returns whether the supplied PIN matches the configured verifier.
   Future<bool> verifyPin(String pin) => _credentials.verifyPin(pin);
 
-  /// Clears app-lock metadata and the PIN verifier after a load failure.
+  /// Clears app-lock metadata, PIN verifier, and all financial data after a
+  /// load failure or user-initiated reset.
   ///
   /// Each step is attempted independently so a partially broken secure store
   /// still has the best chance of recovery. The result reports the erase and
@@ -105,6 +134,7 @@ class SecurityService {
   Future<SecurityResetResult> reset() async {
     var verifierCleared = false;
     var metadataCleared = false;
+    var financialDataCleared = false;
     try {
       await _credentials.clear();
       verifierCleared = true;
@@ -116,6 +146,15 @@ class SecurityService {
       metadataCleared = true;
     } on Object {
       // The metadata stays, so the app keeps failing closed.
+    }
+    try {
+      await _transactionRepository.eraseAll();
+      await _accountRepository.eraseAll();
+      await _categoryRepository.eraseAll();
+      await _budgetRepository.eraseAll();
+      financialDataCleared = true;
+    } on Object {
+      // The financial data stays, so the app keeps failing closed.
     }
     var acknowledged = true;
     if (verifierCleared) {
@@ -130,7 +169,7 @@ class SecurityService {
       acknowledged = false;
     }
     return SecurityResetResult(
-      erased: verifierCleared && metadataCleared,
+      erased: verifierCleared && metadataCleared && financialDataCleared,
       acknowledged: acknowledged,
     );
   }
