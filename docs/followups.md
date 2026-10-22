@@ -177,7 +177,7 @@ Fixed:
 - Cloud backup and Android 12+ device-to-device transfer exclude app data
   through `dataExtractionRules`, with `allowBackup=false` and
   `fullBackupContent=false` for older versions.
-- The security gate relocks on `AppLifecycleState.paused`; an in-flight PIN
+- The app relocks on `AppLifecycleState.paused`; an in-flight PIN
   verification cannot complete an unlock after the app is paused, and the PIN
   field clears on relock.
 - Android applies `FLAG_SECURE` app-wide so screens are excluded from
