@@ -24,6 +24,14 @@ class OnboardingSnapshot {
   /// Whether the user wants optional Android SMS automation.
   final bool smsAutomationEnabled;
 
+  /// The snapshot used before onboarding has been stored.
+  static const OnboardingSnapshot initial = OnboardingSnapshot(
+    currentStep: OnboardingStep.privacy,
+    isCompleted: false,
+    biometricsEnabled: false,
+    smsAutomationEnabled: false,
+  );
+
   /// Returns a copy with the supplied non-null fields replaced.
   OnboardingSnapshot copyWith({
     OnboardingStep? currentStep,

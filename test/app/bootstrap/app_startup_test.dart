@@ -14,6 +14,9 @@ import 'package:get_it/get_it.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() => GetIt.instance.reset());
+  tearDown(() => GetIt.instance.reset());
+
   const secureStorage = MethodChannel(
     'plugins.it_nomads.com/flutter_secure_storage',
   );
@@ -31,7 +34,7 @@ void main() {
   });
 
   test('builds the application after loading the persisted state', () async {
-    final widget = await buildApp();
+    final widget = await buildApp(useInMemoryStorage: true);
 
     expect(widget, isA<FinEchoApp>());
     expect(sl<SecurityCubit>().state.status, SecurityAccessStatus.unlocked);
@@ -40,7 +43,7 @@ void main() {
   });
 
   test('wires the app lock into the application scope', () async {
-    final widget = await buildApp();
+    final widget = await buildApp(useInMemoryStorage: true);
 
     expect(widget.securityCubit, isNotNull);
     expect(widget.securityCubit, same(sl<SecurityCubit>()));
@@ -49,7 +52,10 @@ void main() {
   test('mounts the application through the entrypoint', () async {
     Widget? mounted;
 
-    await app.main(runner: (widget) => mounted = widget);
+    await app.main(
+      runner: (widget) => mounted = widget,
+      useInMemoryStorage: true,
+    );
 
     expect(mounted, isA<FinEchoApp>());
   });
