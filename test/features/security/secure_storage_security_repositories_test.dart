@@ -235,6 +235,10 @@ void main() {
       final verifier = PinVerifier.create('123456');
 
       expect(verifier.version, PinVerifier.currentVersion);
+      expect(PinVerifier.currentVersion, 2);
+      expect(PinVerifier.legacyVersion, 1);
+      expect(PinVerifier.minIterations, 10000);
+      expect(PinVerifier.maxIterations, 1000000);
       expect(SecurityPinHasher.defaultIterations, 100000);
       expect(verifier.iterations, SecurityPinHasher.defaultIterations);
       expect(base64Url.decode(verifier.salt), hasLength(16));

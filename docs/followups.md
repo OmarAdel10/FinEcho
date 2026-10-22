@@ -121,6 +121,12 @@ Deferred; tracked in Plane:
 - FINECHO-44 scope the unauthenticated `Erase app lock` action to the state
   where the verifier is genuinely unreadable; a storage fault during PIN
   verification currently offers the same unauthenticated erase.
+- FINECHO-45 lower the persisted verifier derivation ceiling; a stored payload
+  may declare up to 1000000 rounds, which blocks the UI thread for seconds.
+- FINECHO-46 validate the legacy security state payload; the pre-versioning
+  payload is read without the shape checks the versioned payload gets.
+- FINECHO-47 separate the erase result from the legacy acknowledgement; a
+  failing acknowledgement write currently reports the whole reset as failed.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
