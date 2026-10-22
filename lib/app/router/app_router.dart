@@ -18,7 +18,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-
 /// Configures the initial application navigation graph.
 class AppRouter {
   /// Creates the application router.
