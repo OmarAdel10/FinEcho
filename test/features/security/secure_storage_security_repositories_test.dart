@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:finecho/core/models/security_state.dart';
@@ -228,26 +229,92 @@ void main() {
         isFalse,
       );
     });
+
+    test('derives the verifier on a background isolate', () async {
+      var ticks = 0;
+      final timer = Timer.periodic(
+        const Duration(milliseconds: 10),
+        (_) => ticks++,
+      );
+      addTearDown(timer.cancel);
+
+      final derived = await SecurityPinHasher.hashInBackground(
+        '123456',
+        'testsalt',
+      );
+
+      expect(derived, SecurityPinHasher.hash('123456', 'testsalt'));
+      // The calling isolate kept running while the derivation ran, so the
+      // expensive work did not block the platform isolate.
+      expect(ticks, greaterThan(0));
+    });
+
+    test('verifies a PIN on a background isolate', () async {
+      final salt = SecurityPinHasher.createSalt();
+      final hash = SecurityPinHasher.hash('123456', salt);
+
+      expect(
+        await SecurityPinHasher.matchesInBackground(
+          pin: '123456',
+          salt: salt,
+          expectedHash: hash,
+        ),
+        isTrue,
+      );
+      expect(
+        await SecurityPinHasher.matchesInBackground(
+          pin: '654321',
+          salt: salt,
+          expectedHash: hash,
+        ),
+        isFalse,
+      );
+    });
+
+    test('verifies a legacy PIN with the legacy derivation', () {
+      const salt = 'testsalt';
+      final hash = SecurityPinHasher.legacyHash('123456', salt);
+
+      expect(
+        SecurityPinHasher.matchesLegacy(
+          pin: '123456',
+          salt: salt,
+          expectedHash: hash,
+        ),
+        isTrue,
+      );
+      expect(
+        SecurityPinHasher.matchesLegacy(
+          pin: '654321',
+          salt: salt,
+          expectedHash: hash,
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('PinVerifier', () {
-    test('creates a verifier with the current format and derivation cost', () {
-      final verifier = PinVerifier.create('123456');
+    test(
+      'creates a verifier with the current format and derivation cost',
+      () async {
+        final verifier = await PinVerifier.create('123456');
 
-      expect(verifier.version, PinVerifier.currentVersion);
-      expect(PinVerifier.currentVersion, 2);
-      expect(PinVerifier.legacyVersion, 1);
-      expect(PinVerifier.minIterations, 10000);
-      expect(PinVerifier.maxIterations, 1000000);
-      expect(SecurityPinHasher.defaultIterations, 100000);
-      expect(verifier.iterations, SecurityPinHasher.defaultIterations);
-      expect(base64Url.decode(verifier.salt), hasLength(16));
-      expect(verifier.matches('123456'), isTrue);
-      expect(verifier.matches('654321'), isFalse);
-    });
+        expect(verifier.version, PinVerifier.currentVersion);
+        expect(PinVerifier.currentVersion, 2);
+        expect(PinVerifier.legacyVersion, 1);
+        expect(PinVerifier.minIterations, 10000);
+        expect(PinVerifier.maxIterations, 1000000);
+        expect(SecurityPinHasher.defaultIterations, 100000);
+        expect(verifier.iterations, SecurityPinHasher.defaultIterations);
+        expect(base64Url.decode(verifier.salt), hasLength(16));
+        expect(await verifier.matches('123456'), isTrue);
+        expect(await verifier.matches('654321'), isFalse);
+      },
+    );
 
-    test('round-trips a verifier through its encoded payload', () {
-      final verifier = PinVerifier.create('123456');
+    test('round-trips a verifier through its encoded payload', () async {
+      final verifier = await PinVerifier.create('123456');
 
       final decoded = PinVerifier.decode(verifier.encode());
 
@@ -255,18 +322,19 @@ void main() {
       expect(decoded.hash, verifier.hash);
       expect(decoded.iterations, verifier.iterations);
       expect(decoded.version, verifier.version);
-      expect(decoded.matches('123456'), isTrue);
+      expect(await decoded.matches('123456'), isTrue);
     });
 
-    test('verifies a legacy verifier with the legacy derivation', () {
+    test('verifies a legacy verifier with the legacy derivation', () async {
       final legacy = PinVerifier(
         salt: 'testsalt',
         hash: SecurityPinHasher.legacyHash('123456', 'testsalt'),
       );
 
-      expect(legacy.matches('123456'), isTrue);
-      expect(legacy.matches('654321'), isFalse);
-      expect(PinVerifier.create('123456').matches('123456'), isTrue);
+      expect(await legacy.matches('123456'), isTrue);
+      expect(await legacy.matches('654321'), isFalse);
+      final created = await PinVerifier.create('123456');
+      expect(await created.matches('123456'), isTrue);
     });
 
     test('rejects payloads that are not verifiers', () {
