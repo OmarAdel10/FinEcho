@@ -433,6 +433,29 @@ void main() {
       await cubit.close();
     });
 
+    test('keeps the app locked when it pauses during a reload', () async {
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      expect(await cubit.unlockWithPin('123456'), isTrue);
+      final gate = Completer<void>();
+      harness.securityRepository.getGate = gate;
+
+      final reload = cubit.load();
+      await Future<void>.delayed(Duration.zero);
+      cubit.lock();
+      gate.complete();
+
+      await reload;
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(cubit.state.isLocked, isTrue);
+      await cubit.close();
+    });
+
     test('refuses a second setup while one is in flight', () async {
       final harness = SecurityTestHarness(
         now: () => DateTime.utc(2026, 10, 15, 12),
