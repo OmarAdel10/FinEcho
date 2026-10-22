@@ -16,4 +16,7 @@ abstract interface class AccountRepository {
 
   /// Deletes the account with [id].
   Future<void> delete(String id);
+
+  /// Erases all accounts.
+  Future<void> eraseAll();
 }

@@ -30,4 +30,9 @@ class InMemoryAccountRepository implements AccountRepository {
   Future<void> delete(String id) async {
     _accounts.remove(id);
   }
+
+  @override
+  Future<void> eraseAll() async {
+    _accounts.clear();
+  }
 }

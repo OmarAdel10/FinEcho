@@ -52,4 +52,9 @@ class SqfliteAccountRepository implements AccountRepository {
       whereArgs: <Object?>[id],
     );
   }
+
+  @override
+  Future<void> eraseAll() async {
+    await _database.delete('accounts');
+  }
 }

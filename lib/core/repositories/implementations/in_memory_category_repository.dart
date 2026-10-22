@@ -30,4 +30,9 @@ class InMemoryCategoryRepository implements CategoryRepository {
   Future<void> delete(String id) async {
     _categories.remove(id);
   }
+
+  @override
+  Future<void> eraseAll() async {
+    _categories.clear();
+  }
 }

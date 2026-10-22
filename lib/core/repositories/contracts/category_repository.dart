@@ -16,4 +16,7 @@ abstract interface class CategoryRepository {
 
   /// Deletes the category with [id].
   Future<void> delete(String id);
+
+  /// Erases all categories.
+  Future<void> eraseAll();
 }

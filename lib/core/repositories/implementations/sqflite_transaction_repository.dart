@@ -55,4 +55,9 @@ class SqfliteTransactionRepository implements TransactionRepository {
       whereArgs: <Object?>[id],
     );
   }
+
+  @override
+  Future<void> eraseAll() async {
+    await _database.delete('transactions');
+  }
 }
