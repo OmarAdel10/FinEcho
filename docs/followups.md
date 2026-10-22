@@ -94,10 +94,6 @@ changed units. A final approved batch fixed:
 
 Deferred; tracked in Plane:
 
-- FINECHO-27 guard PIN setup against a relock race.
-- FINECHO-28 move the lifecycle observer to app scope.
-- FINECHO-30 harden the PIN lockout window; the verifier derivation part is
-  done (PBKDF2-HMAC-SHA256 with a format version).
 - FINECHO-31 verify `FLAG_SECURE` on a device.
 - FINECHO-32 erase persisted financial data or require a device credential for
   recovery reset once the SQLCipher database is wired.
@@ -202,6 +198,14 @@ Fixed:
 - A second PIN setup is ignored while one is already in flight, a reload keeps
   an unlocked app unlocked, and a pause during PIN verification no longer
   clears the failed-attempt streak.
+- The lifecycle observer moved to app scope, so the app relocks when it is
+  backgrounded even when no protected screen is mounted, and a single observer
+  serves the whole app (FINECHO-28).
+- A PIN setup that finishes after the app was backgrounded stores the PIN but
+  leaves the app locked instead of unlocking it in the background (FINECHO-27).
+- The temporary lockout window grows with every further failed attempt
+  (1, 2, 4, 8, 16 minutes, capped at 30) and the lockout rules and the
+  unlock check now share one clock (FINECHO-30).
 
 The recovery `Erase app lock` action is intentionally unauthenticated because
 the stored verifier may be unreadable; it exists only to clear local data and

@@ -699,7 +699,7 @@ void main() {
     );
 
     test('locks out after five failures and stops further attempts', () async {
-      final now = DateTime.now().toUtc().add(const Duration(hours: 1));
+      final now = DateTime.utc(2026, 10, 15, 12);
       final harness = SecurityTestHarness(
         initialState: _configuredState(),
         now: () => now,
@@ -719,16 +719,62 @@ void main() {
       );
       expect(
         cubit.state.securityState.lockedUntil,
-        now.add(SecurityService.lockoutDuration),
+        now.add(const Duration(minutes: 1)),
       );
       expect(cubit.state.errorMessage, 'Too many attempts. Try again later.');
-      expect(cubit.state.isLockedOut, isTrue);
+      expect(cubit.isLockedOut, isTrue);
 
       final lockedOutAttempt = await cubit.unlockWithPin('000000');
 
       expect(lockedOutAttempt, isFalse);
       expect(harness.securityRepository.updates, hasLength(5));
       expect(harness.credentialRepository.verifiedPins, hasLength(5));
+      await cubit.close();
+    });
+
+    test('grows the lockout window with every failed attempt', () async {
+      final now = DateTime.utc(2026, 10, 15, 12);
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(),
+        now: () => now,
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+
+      for (var attempt = 0; attempt < 5; attempt++) {
+        await cubit.unlockWithPin('000000');
+      }
+      final firstWindow = cubit.state.securityState.lockedUntil;
+
+      expect(firstWindow, now.add(const Duration(minutes: 1)));
+      expect(SecurityService.lockoutDurationFor(6), const Duration(minutes: 2));
+      expect(SecurityService.lockoutDurationFor(7), const Duration(minutes: 4));
+      expect(
+        SecurityService.lockoutDurationFor(12),
+        SecurityService.maxLockoutDuration,
+      );
+      await cubit.close();
+    });
+
+    test('keeps the app locked when it pauses during setup', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      final gate = Completer<void>();
+      harness.credentialRepository.saveGate = gate;
+
+      final configured = cubit.configure('123456');
+      cubit.lock();
+      gate.complete();
+
+      expect(await configured, isTrue);
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      expect(cubit.state.isLocked, isTrue);
+      expect(harness.securityRepository.state?.pinConfigured, isTrue);
+      expect(await harness.credentialRepository.hasPin(), isTrue);
       await cubit.close();
     });
 

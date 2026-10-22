@@ -13,7 +13,10 @@ import 'package:finecho/features/security/view_model/security_cubit.dart';
 Future<FinEchoApp> buildApp() async {
   await AppBootstrap.ensureInitialized();
   final appRouter = await startAppRouter();
-  return FinEchoApp(router: appRouter.router);
+  return FinEchoApp(
+    router: appRouter.router,
+    securityCubit: sl<SecurityCubit>(),
+  );
 }
 
 /// Loads the persisted onboarding and app-lock state before the router

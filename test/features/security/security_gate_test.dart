@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view/widgets/security_gate.dart';
+import 'package:finecho/features/security/view/widgets/security_lifecycle_observer.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:flutter/material.dart';
@@ -45,10 +46,13 @@ void main() {
     await cubit.load();
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: BlocProvider<SecurityCubit>.value(
-          value: cubit,
-          child: const SecurityGate(child: Text('Protected content')),
+      SecurityLifecycleObserver(
+        cubit: cubit,
+        child: MaterialApp(
+          home: BlocProvider<SecurityCubit>.value(
+            value: cubit,
+            child: const SecurityGate(child: Text('Protected content')),
+          ),
         ),
       ),
     );
@@ -489,7 +493,9 @@ void main() {
     expect(find.text('Protected content'), findsNothing);
   });
 
-  testWidgets('removes its lifecycle observer when disposed', (tester) async {
+  testWidgets('does not relock on pause without the app observer', (
+    tester,
+  ) async {
     final harness = SecurityTestHarness(
       initialState: SecurityState(
         appLockEnabled: true,
@@ -517,7 +523,6 @@ void main() {
     await tester.pump();
     expect(cubit.state.status, SecurityAccessStatus.unlocked);
 
-    await tester.pumpWidget(const SizedBox());
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);

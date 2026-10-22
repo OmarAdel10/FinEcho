@@ -19,15 +19,13 @@ class SecurityGate extends StatefulWidget {
   State<SecurityGate> createState() => _SecurityGateState();
 }
 
-class _SecurityGateState extends State<SecurityGate>
-    with WidgetsBindingObserver {
+class _SecurityGateState extends State<SecurityGate> {
   late final SecurityCubit _cubit;
 
   @override
   void initState() {
     super.initState();
     _cubit = context.read<SecurityCubit>();
-    WidgetsBinding.instance.addObserver(this);
     if (_cubit.state.status == SecurityAccessStatus.loading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -93,19 +91,6 @@ class _SecurityGateState extends State<SecurityGate>
       return;
     }
     GoRouter.maybeOf(context)?.go('/welcome');
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _cubit.lock();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
   }
 
   @override

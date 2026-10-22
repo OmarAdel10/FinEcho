@@ -39,6 +39,13 @@ void main() {
     expect(sl<OnboardingCubit>().state.status, OnboardingStatus.ready);
   });
 
+  test('wires the app lock into the application scope', () async {
+    final widget = await buildApp();
+
+    expect(widget.securityCubit, isNotNull);
+    expect(widget.securityCubit, same(sl<SecurityCubit>()));
+  });
+
   test('mounts the application through the entrypoint', () async {
     Widget? mounted;
 

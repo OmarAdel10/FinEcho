@@ -23,22 +23,24 @@ steps so users can resume where they left off.
 The app lock protects every protected screen. During onboarding, the user
 configures a six-digit PIN. FinEcho stores only a salted PIN verifier, never the
 raw PIN, and applies a temporary lockout after five consecutive failed
-attempts. The verifier is derived with PBKDF2-HMAC-SHA256 (100,000 iterations)
+attempts. The lockout window grows with every further failure, so a brute
+force cannot simply wait out a fixed cooldown. The verifier is derived with
+PBKDF2-HMAC-SHA256 (100,000 iterations)
 and compared in constant time; verifiers written by earlier versions are still
 accepted. Lock metadata and the verifier live in platform secure storage, on a
 pinned `flutter_secure_storage` release that encrypts the payload with AES-GCM
 and wraps the key with the Android keystore; a corrupt payload is rejected
 instead of locking the user out. Configured users are challenged at cold start,
-the app relocks when it is paused while a protected screen is open, and Android
-sets `FLAG_SECURE` app-wide to block screenshots and recent-app previews. If
-secure storage cannot be read, the app shows a recovery screen instead of
-protected content. The app also fails closed when the store still holds data
-that an earlier build wrote and the current backend can no longer read, so an
-upgrade never silently disables the lock. That screen offers retry and an
-explicitly destructive `Erase app lock` action; because the verifier is
-unreadable in this state, the action is unauthenticated by design. It removes
-the saved PIN and app-lock settings, and every recovery path that ends without a
-configured lock returns the app to onboarding so the lock can be set up again.
+the app relocks whenever it is paused, and Android sets `FLAG_SECURE`
+app-wide to block screenshots and recents previews. If secure storage cannot
+be read, the app shows a recovery screen instead of protected content. The app
+also fails closed when the store still holds data that an earlier build wrote
+and the current backend can no longer read, so an upgrade never silently
+disables the lock. That screen offers retry and an explicitly destructive
+`Erase app lock` action; because the verifier is unreadable in this state, the
+action is unauthenticated by design. It removes the saved PIN and app-lock
+settings, and every recovery path that ends without a configured lock returns
+the app to onboarding so the lock can be set up again.
 
 ### Screenshots
 

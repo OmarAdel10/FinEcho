@@ -253,11 +253,20 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 - Onboarding advances to the security-setup step explicitly before the security
   screen is opened, so the setup screen can complete onboarding after the PIN
   is stored.
-- The security gate relocks the app when it is paused, and Android applies
+- An app-scoped lifecycle observer relocks the app when it is paused, and
+  Android applies
   `FLAG_SECURE` app-wide so screens are excluded from screenshots and recents
-  previews. Android cloud backup and device-to-device transfer exclude app data
+  previews. The relock observer lives at app scope, so the app locks again
+  even when no protected screen is mounted, and one observer serves the whole
+  app. A PIN setup that finishes after the app was backgrounded stores the PIN
+  but leaves the app locked, so a setup can never leave the app unlocked in
+  the background. Android cloud backup and device-to-device transfer exclude app data
   through `dataExtractionRules`; older Android versions also disable backup.
-  Relocking on `inactive`/`hidden` and from app scope is deferred (FINECHO-28).
+  Relocking on `inactive`/`hidden` is still deferred.
+- The temporary lockout after five failed attempts grows with every further
+  failure (1, 2, 4, 8, 16 minutes, capped at 30) and is cleared by a
+  successful unlock. The lockout rules and the unlock check share one clock,
+  so the window never depends on the wall clock the app happens to run on.
 - Generate the database key using a cryptographically secure source.
 - Store that key only in Android Keystore/iOS Keychain through secure storage.
 - Open the local SQLCipher database only after the startup security flow succeeds.
