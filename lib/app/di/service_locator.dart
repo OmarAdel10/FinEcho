@@ -15,8 +15,8 @@ import 'package:finecho/features/analytics/view_model/services/analytics_service
 import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
-import 'package:finecho/features/onboarding/data/repositories/in_memory_onboarding_repository.dart';
 import 'package:finecho/features/onboarding/data/repositories/onboarding_repository.dart';
+import 'package:finecho/features/onboarding/data/repositories/sql_cipher_onboarding_repository.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
 import 'package:finecho/features/security/data/repositories/in_memory_security_credential_repository.dart';
@@ -25,6 +25,9 @@ import 'package:finecho/features/security/data/repositories/secure_storage_secur
 import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
 import 'package:finecho/features/security/data/storage/secure_key_value_store.dart';
+import 'package:finecho/features/security/data/storage/database_key_store.dart';
+import 'package:finecho/core/database/app_database.dart';
+import 'package:finecho/core/database/database_opener.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 import 'package:finecho/features/transactions/view_model/services/transaction_service.dart';
@@ -45,8 +48,22 @@ Future<void> configureDependencies({
 }) async {
   sl
     ..registerSingleton<EnvironmentConfig>(EnvironmentConfig(environment))
+    ..registerLazySingleton<DatabaseKeyStore>(
+      () => DatabaseKeyStore(store: const FlutterSecureKeyValueStore()),
+    )
+    ..registerLazySingleton<DatabaseOpener>(
+      () => DatabaseOpener(
+        passwordProvider: () async {
+          final keyStore = sl<DatabaseKeyStore>();
+          return await keyStore.readOrCreateKey();
+        },
+      ),
+    )
+    ..registerLazySingleton<AppDatabase>(
+      () => AppDatabase(opener: sl<DatabaseOpener>()),
+    )
     ..registerLazySingleton<OnboardingRepository>(
-      InMemoryOnboardingRepository.new,
+      () => SqlCipherOnboardingRepository(opener: sl<DatabaseOpener>().open),
     )
     ..registerLazySingleton<OnboardingService>(
       () => OnboardingService(sl<OnboardingRepository>()),
