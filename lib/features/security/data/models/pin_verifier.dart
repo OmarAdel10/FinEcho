@@ -78,7 +78,11 @@ class PinVerifier {
   /// responsive while the expensive key derivation is computed.
   static Future<PinVerifier> create(String pin) async {
     final salt = SecurityPinHasher.createSalt();
-    final hash = await SecurityPinHasher.hashInBackground(pin, salt);
+    final hash = await SecurityPinHasher.hashInBackground(
+      pin,
+      salt,
+      iterations: SecurityPinHasher.defaultIterations,
+    );
     return PinVerifier(
       salt: salt,
       hash: hash,
