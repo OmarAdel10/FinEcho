@@ -182,6 +182,42 @@ void main() {
     expect(find.text('Protected content'), findsNothing);
   });
 
+  testWidgets('hides the erase after a verification fault', (tester) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+    await cubit.load();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    harness.credentialRepository.verifyError = Exception('keystore');
+    await cubit.unlockWithPin('123456');
+    await tester.pump();
+
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Erase app lock'), findsNothing);
+    expect(find.text('Protected content'), findsNothing);
+  });
+
   testWidgets('resets the app lock after confirmation', (tester) async {
     final harness = SecurityTestHarness(
       now: () => DateTime.utc(2026, 10, 15, 12),

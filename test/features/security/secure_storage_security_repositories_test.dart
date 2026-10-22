@@ -304,7 +304,7 @@ void main() {
         expect(PinVerifier.currentVersion, 2);
         expect(PinVerifier.legacyVersion, 1);
         expect(PinVerifier.minIterations, 10000);
-        expect(PinVerifier.maxIterations, 1000000);
+        expect(PinVerifier.maxIterations, 200000);
         expect(SecurityPinHasher.defaultIterations, 100000);
         expect(verifier.iterations, SecurityPinHasher.defaultIterations);
         expect(base64Url.decode(verifier.salt), hasLength(16));
@@ -335,6 +335,32 @@ void main() {
       expect(await legacy.matches('654321'), isFalse);
       final created = await PinVerifier.create('123456');
       expect(await created.matches('123456'), isTrue);
+    });
+
+    test('verifies a PIN with the persisted iteration count', () async {
+      const iterations = 10000;
+      final verifier = PinVerifier(
+        salt: _testSalt,
+        hash: SecurityPinHasher.hash(
+          '123456',
+          _testSalt,
+          iterations: iterations,
+        ),
+        iterations: iterations,
+        version: PinVerifier.currentVersion,
+      );
+
+      expect(await verifier.matches('123456'), isTrue);
+      expect(await verifier.matches('654321'), isFalse);
+    });
+
+    test('accepts a payload at the derivation ceiling', () {
+      final decoded = PinVerifier.decode(
+        '{"salt": "$_testSalt", "hash": "$_testHash", "version": 2, '
+        '"iterations": ${PinVerifier.maxIterations}}',
+      );
+
+      expect(decoded.iterations, PinVerifier.maxIterations);
     });
 
     test('rejects payloads that are not verifiers', () {
@@ -644,6 +670,24 @@ void main() {
 
       expect(await repository.get(), state);
     });
+
+    test(
+      'rejects a malformed payload written before the codec was versioned',
+      () async {
+        final store = _InMemorySecureKeyValueStore();
+        final repository = SecureStorageSecurityRepository(store: store);
+        store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+          'id': 'not-a-number',
+          'app_lock_enabled': 1,
+          'pin_configured': 1,
+          'failed_unlock_attempts': 0,
+          'secure_key_ready': 1,
+          'updated_at': 0,
+        });
+
+        await expectLater(repository.get(), throwsFormatException);
+      },
+    );
   });
 
   group('SecureStorageSecurityCredentialRepository', () {

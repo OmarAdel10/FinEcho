@@ -295,6 +295,84 @@ void main() {
       expect(await cubit.resetLock(), isFalse);
     });
 
+    test('offers the erase when the stored data cannot be read', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      harness.securityRepository.getError = const FormatException('corrupt');
+      final cubit = SecurityCubit(harness.service);
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(cubit.state.canEraseAppLock, isTrue);
+      await cubit.close();
+    });
+
+    test('keeps the erase hidden when the read only timed out', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      harness.securityRepository.getGate = Completer<void>();
+      final cubit = SecurityCubit(
+        harness.service,
+        loadTimeout: const Duration(milliseconds: 50),
+      );
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(cubit.state.canEraseAppLock, isFalse);
+      await cubit.close();
+    });
+
+    test('keeps the erase hidden after a verification fault', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      harness.credentialRepository.verifyError = Exception('keystore');
+
+      final unlocked = await cubit.unlockWithPin('123456');
+
+      expect(unlocked, isFalse);
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(cubit.state.canEraseAppLock, isFalse);
+      expect(
+        cubit.state.errorMessage,
+        'Could not verify PIN. Please try again.',
+      );
+      await cubit.close();
+    });
+
+    test('reports the erased lock when the acknowledgement fails', () async {
+      final harness = SecurityTestHarness(
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      harness.securityRepository.getError = const FormatException('corrupt');
+      final cubit = SecurityCubit(harness.service);
+      await cubit.load();
+      harness.securityRepository.getError = null;
+      harness.credentialRepository.legacyDataUnreadable = true;
+      harness.credentialRepository.acknowledgeError = Exception('keystore');
+
+      final reset = await cubit.resetLock();
+
+      expect(reset, isFalse);
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(
+        cubit.state.errorMessage,
+        'The app lock was erased, but this app still cannot read its storage. '
+        'Clear FinEcho app data from system settings and relaunch.',
+      );
+      expect(cubit.state.canEraseAppLock, isTrue);
+      expect(await harness.credentialRepository.hasPin(), isFalse);
+      await cubit.close();
+    });
+
     test('reports a resetting state while erasing app data', () async {
       final harness = SecurityTestHarness(
         now: () => DateTime.utc(2026, 10, 15, 12),

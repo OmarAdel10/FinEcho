@@ -145,9 +145,10 @@ void main() {
       );
       await harness.credentialRepository.savePin('123456');
 
-      final cleared = await harness.service.reset();
+      final result = await harness.service.reset();
 
-      expect(cleared, isTrue);
+      expect(result.erased, isTrue);
+      expect(result.acknowledged, isTrue);
       expect(await harness.credentialRepository.hasPin(), isFalse);
       expect(harness.securityRepository.state?.appLockEnabled, isFalse);
       expect(harness.securityRepository.state?.pinConfigured, isFalse);
@@ -161,9 +162,9 @@ void main() {
       await harness.credentialRepository.savePin('123456');
       harness.credentialRepository.clearError = Exception('keystore delete');
 
-      final cleared = await harness.service.reset();
+      final result = await harness.service.reset();
 
-      expect(cleared, isFalse);
+      expect(result.erased, isFalse);
       expect(harness.securityRepository.state?.appLockEnabled, isFalse);
       expect(harness.securityRepository.state?.pinConfigured, isFalse);
     });
@@ -176,9 +177,9 @@ void main() {
       await harness.credentialRepository.savePin('123456');
       harness.securityRepository.updateError = Exception('keystore write');
 
-      final cleared = await harness.service.reset();
+      final result = await harness.service.reset();
 
-      expect(cleared, isFalse);
+      expect(result.erased, isFalse);
       expect(await harness.credentialRepository.hasPin(), isFalse);
     });
 
@@ -190,9 +191,10 @@ void main() {
       await harness.credentialRepository.savePin('123456');
       harness.credentialRepository.legacyDataUnreadable = true;
 
-      final cleared = await harness.service.reset();
+      final result = await harness.service.reset();
 
-      expect(cleared, isTrue);
+      expect(result.erased, isTrue);
+      expect(result.acknowledged, isTrue);
       expect(harness.credentialRepository.legacyDataAcknowledged, isTrue);
       expect(harness.credentialRepository.legacyDataUnreadable, isFalse);
     });
@@ -206,12 +208,33 @@ void main() {
       harness.credentialRepository.legacyDataUnreadable = true;
       harness.credentialRepository.clearError = Exception('keystore delete');
 
-      final cleared = await harness.service.reset();
+      final result = await harness.service.reset();
 
-      expect(cleared, isFalse);
+      expect(result.erased, isFalse);
+      expect(result.acknowledged, isFalse);
       expect(harness.credentialRepository.legacyDataAcknowledged, isFalse);
       expect(harness.credentialRepository.legacyDataUnreadable, isTrue);
     });
+
+    test(
+      'reports the erase when the acknowledgement cannot be written',
+      () async {
+        final harness = SecurityTestHarness(
+          initialState: configuredState(),
+          now: () => now,
+        );
+        await harness.credentialRepository.savePin('123456');
+        harness.credentialRepository.legacyDataUnreadable = true;
+        harness.credentialRepository.acknowledgeError = Exception('keystore');
+
+        final result = await harness.service.reset();
+
+        expect(result.erased, isTrue);
+        expect(result.acknowledged, isFalse);
+        expect(harness.credentialRepository.legacyDataAcknowledged, isFalse);
+        expect(harness.credentialRepository.legacyDataUnreadable, isTrue);
+      },
+    );
   });
 
   group('SecurityService lockout', () {
