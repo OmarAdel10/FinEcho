@@ -719,7 +719,7 @@ void main() {
       );
       expect(
         cubit.state.securityState.lockedUntil,
-        now.add(SecurityService.lockoutDurationFor(5)),
+        now.add(const Duration(minutes: 1)),
       );
       expect(cubit.state.errorMessage, 'Too many attempts. Try again later.');
       expect(cubit.isLockedOut, isTrue);
@@ -747,7 +747,7 @@ void main() {
       }
       final firstWindow = cubit.state.securityState.lockedUntil;
 
-      expect(firstWindow, now.add(SecurityService.lockoutDurationFor(5)));
+      expect(firstWindow, now.add(const Duration(minutes: 1)));
       expect(SecurityService.lockoutDurationFor(6), const Duration(minutes: 2));
       expect(SecurityService.lockoutDurationFor(7), const Duration(minutes: 4));
       expect(
