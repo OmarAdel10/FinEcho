@@ -27,7 +27,8 @@ attempts. The lockout window grows with every further failure, so a brute
 force cannot simply wait out a fixed cooldown. The verifier is derived with
 PBKDF2-HMAC-SHA256 (100,000 iterations)
 and compared in constant time; verifiers written by earlier versions are still
-accepted. Lock metadata and the verifier live in platform secure storage, on a
+accepted. The derivation runs on a background isolate, so setting up or
+unlocking the app never freezes the interface. Lock metadata and the verifier live in platform secure storage, on a
 pinned `flutter_secure_storage` release that encrypts the payload with AES-GCM
 and wraps the key with the Android keystore; a corrupt payload is rejected
 instead of locking the user out. Configured users are challenged at cold start,
