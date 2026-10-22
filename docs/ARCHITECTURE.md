@@ -239,7 +239,10 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
   marker) are still verified against the legacy derivation; a newly configured
   PIN is always written in the current format. A corrupt verifier payload or an
   unsupported payload version is rejected while decoding, so it reaches the
-  recovery screen instead of locking the user out. Tests and explicitly
+  recovery screen instead of locking the user out. The persisted derivation
+  count is bounded, so a stored payload cannot demand far more work than the
+  app itself would spend, and a corrupt security-state payload is rejected with
+  a format error instead of a raw type error. Tests and explicitly
   configured in-memory graphs may substitute fakes; the secure graph is the
   default and in-memory storage is the explicit opt-out.
 - The startup flow loads the persisted onboarding and security state before
@@ -248,10 +251,14 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
   storage shows a recovery screen instead of content. Retry re-reads secure
   storage. `Erase app lock` is intentionally destructive and unauthenticated
   because the PIN verifier is unreadable in this state; it removes the saved
-  PIN and app-lock settings. Whenever a recovery reload finishes without a
-  configured lock, the gate routes the app back to onboarding so the lock can
-  be set up again. A normal start never moves the user away from the route they
-  opened.
+  PIN and app-lock settings. The action is only offered when the stored
+  app-lock data cannot be read at all, so a transient fault, such as a failed
+  PIN verification, never offers an unauthenticated erase. The erase and the
+  acknowledgement of unreadable stored data are reported separately, so a
+  failed acknowledgement does not claim the lock was still there. Whenever a
+  recovery reload finishes without a configured lock, the gate routes the app
+  back to onboarding so the lock can be set up again. A normal start never
+  moves the user away from the route they opened.
 - Onboarding advances to the security-setup step explicitly before the security
   screen is opened, so the setup screen can complete onboarding after the PIN
   is stored.
