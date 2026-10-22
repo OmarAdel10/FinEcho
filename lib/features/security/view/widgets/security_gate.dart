@@ -109,6 +109,7 @@ class _SecurityGateState extends State<SecurityGate> {
             message:
                 state.errorMessage ??
                 'Could not load security settings. Please try again.',
+            canErase: state.canEraseAppLock,
             onRetry: () => unawaited(_loadAndRoute(fromRecovery: true)),
             onReset: _confirmReset,
           );
@@ -125,11 +126,19 @@ class _SecurityGateState extends State<SecurityGate> {
 class _SecurityLoadFailure extends StatelessWidget {
   const new({
     required this.message,
+    required this.canErase,
     required this.onRetry,
     required this.onReset,
   });
 
   final String message;
+
+  /// Whether the destructive erase may be offered.
+  ///
+  /// The erase removes the PIN verifier without checking it, so it is only
+  /// offered when the stored app-lock data cannot be read at all.
+  final bool canErase;
+
   final VoidCallback onRetry;
   final VoidCallback onReset;
 
@@ -166,11 +175,13 @@ class _SecurityLoadFailure extends StatelessWidget {
                   onPressed: onRetry,
                   child: const Text('Try again'),
                 ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: onReset,
-                  child: const Text('Erase app lock'),
-                ),
+                if (canErase) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: onReset,
+                    child: const Text('Erase app lock'),
+                  ),
+                ],
               ],
             ),
           ),

@@ -33,6 +33,7 @@ class SecurityAccessState {
     required this.securityState,
     this.status = SecurityAccessStatus.loading,
     this.errorMessage,
+    this.canEraseAppLock = false,
   });
 
   /// The persisted, non-secret security metadata.
@@ -43,6 +44,12 @@ class SecurityAccessState {
 
   /// A user-facing error, when present.
   final String? errorMessage;
+
+  /// Whether the destructive erase may be offered to the user.
+  ///
+  /// The erase removes the PIN verifier without checking it, so it is only
+  /// offered when the stored app-lock data cannot be read at all.
+  final bool canEraseAppLock;
 
   /// Whether the app should show the lock UI instead of protected content.
   bool get isLocked =>
@@ -73,6 +80,7 @@ class SecurityAccessState {
     SecurityAccessStatus? status,
     String? errorMessage,
     bool clearErrorMessage = false,
+    bool? canEraseAppLock,
   }) {
     return SecurityAccessState(
       securityState: securityState ?? this.securityState,
@@ -80,6 +88,7 @@ class SecurityAccessState {
       errorMessage: clearErrorMessage
           ? null
           : (errorMessage ?? this.errorMessage),
+      canEraseAppLock: canEraseAppLock ?? this.canEraseAppLock,
     );
   }
 }

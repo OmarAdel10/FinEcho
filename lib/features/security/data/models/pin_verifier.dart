@@ -101,9 +101,10 @@ class PinVerifier {
 
   /// The largest derivation cost accepted for a current-format verifier.
   ///
-  /// The bound keeps a tampered payload from blocking the interface while the
-  /// verifier is derived.
-  static const int maxIterations = 1000000;
+  /// The app writes a verifier with [SecurityPinHasher.defaultIterations]
+  /// rounds, so the bound only rejects a payload that demands far more work
+  /// than the app itself would ever spend.
+  static const int maxIterations = 200000;
 
   /// The random salt mixed into the derivation.
   final String salt;
