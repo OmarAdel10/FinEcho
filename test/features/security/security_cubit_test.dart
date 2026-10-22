@@ -261,6 +261,7 @@ void main() {
       expect(harness.securityRepository.state, isNotNull);
       expect(harness.securityRepository.state?.appLockEnabled, isFalse);
       expect(harness.securityRepository.state?.pinConfigured, isFalse);
+      expect(cubit.state.canEraseAppLock, isTrue);
       await cubit.close();
     });
 
@@ -281,6 +282,7 @@ void main() {
         cubit.state.errorMessage,
         'Could not reload app lock settings. Tap Try again.',
       );
+      expect(cubit.state.canEraseAppLock, isTrue);
       expect(await harness.credentialRepository.hasPin(), isFalse);
       await cubit.close();
     });

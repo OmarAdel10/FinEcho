@@ -261,10 +261,7 @@ void main() {
       final updated = await harness.service.recordFailedAttempt(state);
 
       expect(updated.failedUnlockAttempts, 5);
-      expect(
-        updated.lockedUntil,
-        now.add(SecurityService.lockoutDurationFor(5)),
-      );
+      expect(updated.lockedUntil, now.add(const Duration(minutes: 1)));
     });
 
     test('persists the grown lockout window after a sixth failure', () async {
@@ -289,11 +286,11 @@ void main() {
       );
       expect(
         SecurityService.lockoutDurationFor(10),
-        SecurityService.maxLockoutDuration,
+        const Duration(minutes: 30),
       );
       expect(
         SecurityService.lockoutDurationFor(40),
-        SecurityService.maxLockoutDuration,
+        const Duration(minutes: 30),
       );
     });
 

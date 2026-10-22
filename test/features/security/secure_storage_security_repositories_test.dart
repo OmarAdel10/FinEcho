@@ -241,6 +241,7 @@ void main() {
       final derived = await SecurityPinHasher.hashInBackground(
         '123456',
         'testsalt',
+        iterations: SecurityPinHasher.defaultIterations,
       );
 
       expect(derived, SecurityPinHasher.hash('123456', 'testsalt'));
@@ -258,6 +259,7 @@ void main() {
           pin: '123456',
           salt: salt,
           expectedHash: hash,
+          iterations: SecurityPinHasher.defaultIterations,
         ),
         isTrue,
       );
@@ -266,28 +268,7 @@ void main() {
           pin: '654321',
           salt: salt,
           expectedHash: hash,
-        ),
-        isFalse,
-      );
-    });
-
-    test('verifies a legacy PIN with the legacy derivation', () {
-      const salt = 'testsalt';
-      final hash = SecurityPinHasher.legacyHash('123456', salt);
-
-      expect(
-        SecurityPinHasher.matchesLegacy(
-          pin: '123456',
-          salt: salt,
-          expectedHash: hash,
-        ),
-        isTrue,
-      );
-      expect(
-        SecurityPinHasher.matchesLegacy(
-          pin: '654321',
-          salt: salt,
-          expectedHash: hash,
+          iterations: SecurityPinHasher.defaultIterations,
         ),
         isFalse,
       );
@@ -688,6 +669,64 @@ void main() {
         await expectLater(repository.get(), throwsFormatException);
       },
     );
+
+    test(
+      'rejects a malformed payload written with the current codec',
+      () async {
+        final store = _InMemorySecureKeyValueStore();
+        final repository = SecureStorageSecurityRepository(store: store);
+        store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+          'version': SecureStorageSecurityRepository.codecVersion,
+          'state': {
+            'id': 'not-a-number',
+            'app_lock_enabled': 1,
+            'pin_configured': 1,
+            'failed_unlock_attempts': 0,
+            'secure_key_ready': 1,
+            'updated_at': 0,
+          },
+        });
+
+        await expectLater(repository.get(), throwsFormatException);
+      },
+    );
+
+    test('rejects a payload whose state row is not the singleton', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+      store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+        'version': SecureStorageSecurityRepository.codecVersion,
+        'state': {
+          'id': 7,
+          'app_lock_enabled': 1,
+          'pin_configured': 1,
+          'failed_unlock_attempts': 0,
+          'secure_key_ready': 1,
+          'updated_at': 0,
+        },
+      });
+
+      await expectLater(repository.get(), throwsFormatException);
+    });
+
+    test('rejects a payload with a malformed lock time', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+      store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+        'version': SecureStorageSecurityRepository.codecVersion,
+        'state': {
+          'id': 0,
+          'app_lock_enabled': 1,
+          'pin_configured': 1,
+          'failed_unlock_attempts': 0,
+          'locked_until': 'not-a-number',
+          'secure_key_ready': 1,
+          'updated_at': 0,
+        },
+      });
+
+      await expectLater(repository.get(), throwsFormatException);
+    });
   });
 
   group('SecureStorageSecurityCredentialRepository', () {
