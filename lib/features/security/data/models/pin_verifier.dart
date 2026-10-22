@@ -73,11 +73,15 @@ class PinVerifier {
   }
 
   /// Derives a verifier for [pin] with a fresh random salt.
-  factory create(String pin) {
+  ///
+  /// The derivation runs on a background isolate so the interface stays
+  /// responsive while the expensive key derivation is computed.
+  static Future<PinVerifier> create(String pin) async {
     final salt = SecurityPinHasher.createSalt();
+    final hash = await SecurityPinHasher.hashInBackground(pin, salt);
     return PinVerifier(
       salt: salt,
-      hash: SecurityPinHasher.hash(pin, salt),
+      hash: hash,
       iterations: SecurityPinHasher.defaultIterations,
       version: currentVersion,
     );
@@ -126,10 +130,12 @@ class PinVerifier {
   /// Whether [pin] matches this verifier.
   ///
   /// Verifiers written before the derivation was hardened are verified with
-  /// the legacy single-round derivation.
-  bool matches(String pin) {
+  /// the legacy single-round derivation, which is cheap enough to run
+  /// directly. The current derivation runs on a background isolate so the
+  /// interface stays responsive.
+  Future<bool> matches(String pin) async {
     if (version >= currentVersion) {
-      return SecurityPinHasher.matches(
+      return await SecurityPinHasher.matchesInBackground(
         pin: pin,
         salt: salt,
         expectedHash: hash,
