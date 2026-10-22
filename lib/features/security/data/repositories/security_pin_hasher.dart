@@ -96,10 +96,13 @@ abstract final class SecurityPinHasher {
   /// The derivation is deliberately expensive, so it must not run on the
   /// platform isolate where it would freeze the interface while the user
   /// waits for the app lock to be set up or unlocked.
+  ///
+  /// [iterations] is required so a caller cannot silently fall back to a
+  /// weaker derivation than the stored verifier was created with.
   static Future<String> hashInBackground(
     String pin,
     String salt, {
-    int iterations = defaultIterations,
+    required int iterations,
   }) {
     return compute(_deriveVerifier, (
       pin: pin,
@@ -110,11 +113,13 @@ abstract final class SecurityPinHasher {
 
   /// Whether [pin] produces [expectedHash] for [salt] on a background
   /// isolate.
+  ///
+  /// [iterations] must be the count the stored verifier was derived with.
   static Future<bool> matchesInBackground({
     required String pin,
     required String salt,
     required String expectedHash,
-    int iterations = defaultIterations,
+    required int iterations,
   }) {
     return compute(_verifyVerifier, (
       pin: pin,

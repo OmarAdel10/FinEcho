@@ -34,10 +34,15 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
   bool get isLockedOut => state.isLockedOutAt(_service.now);
 
   /// Loads the persisted security snapshot.
+  ///
+  /// The lock epoch is captured before the first await, so a load that
+  /// finishes after the app was backgrounded cannot resurrect the unlocked
+  /// state.
   Future<void> load() async {
     if (isClosed) {
       return;
     }
+    final lockEpoch = _lockEpoch;
     final wasUnlocked = state.status == SecurityAccessStatus.unlocked;
     emit(
       state.copyWith(
@@ -52,17 +57,18 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       }
       final configured =
           securityState.appLockEnabled && securityState.pinConfigured;
+      final relocked = lockEpoch != _lockEpoch;
       emit(
         SecurityAccessState(
           securityState: securityState,
           status: configured
-              ? wasUnlocked
+              ? wasUnlocked && !relocked
                     ? SecurityAccessStatus.unlocked
                     : SecurityAccessStatus.ready
               : SecurityAccessStatus.unlocked,
         ),
       );
-    } on Object {
+    } on Object catch (error) {
       if (isClosed) {
         return;
       }
@@ -71,6 +77,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
           securityState: state.securityState,
           status: SecurityAccessStatus.error,
           errorMessage: 'Could not load security settings. Please try again.',
+          canEraseAppLock: _isUnreadableData(error),
         ),
       );
     }
@@ -175,6 +182,15 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
     }
   }
 
+  /// Whether a load failure means the stored app-lock data cannot be read.
+  ///
+  /// Only corrupt or unreadable data justifies the destructive erase. A
+  /// timeout or a transient platform error can be retried instead, so the
+  /// erase stays hidden in that case.
+  static bool _isUnreadableData(Object error) {
+    return error is StateError || error is FormatException;
+  }
+
   /// Clears app-lock metadata and the verifier after an unrecoverable load.
   Future<bool> resetLock() async {
     if (isClosed) {
@@ -186,11 +202,11 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         clearErrorMessage: true,
       ),
     );
-    final reset = await _service.reset();
+    final result = await _service.reset();
     if (isClosed) {
       return false;
     }
-    if (!reset) {
+    if (!result.erased) {
       emit(
         SecurityAccessState(
           securityState: state.securityState,
@@ -198,6 +214,21 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
           errorMessage:
               'Could not reset app lock. Clear FinEcho app data '
               'from system settings and relaunch.',
+          canEraseAppLock: true,
+        ),
+      );
+      return false;
+    }
+    if (!result.acknowledged) {
+      emit(
+        SecurityAccessState(
+          securityState: state.securityState,
+          status: SecurityAccessStatus.error,
+          errorMessage:
+              'The app lock was erased, but this app still cannot read its '
+              'storage. Clear FinEcho app data from system settings and '
+              'relaunch.',
+          canEraseAppLock: true,
         ),
       );
       return false;
@@ -212,6 +243,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
           securityState: state.securityState,
           status: SecurityAccessStatus.error,
           errorMessage: 'Could not reload app lock settings. Tap Try again.',
+          canEraseAppLock: state.canEraseAppLock,
         ),
       );
       return false;
@@ -289,6 +321,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
         state.copyWith(
           status: SecurityAccessStatus.error,
           errorMessage: 'Could not verify PIN. Please try again.',
+          canEraseAppLock: false,
         ),
       );
       return false;

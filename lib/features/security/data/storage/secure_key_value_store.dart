@@ -34,7 +34,8 @@ abstract interface class SecureKeyValueStore {
 /// The store also reports data written by an earlier build that the current
 /// backend can no longer read. The app fails closed on that report instead of
 /// treating the missing values as a fresh install. When the check itself
-/// cannot run, the store reports the entries as unreadable as well.
+/// cannot run, the store raises an error instead of a report, so the app
+/// fails closed on that too.
 class FlutterSecureKeyValueStore implements SecureKeyValueStore {
   /// Creates a store using the platform secure-storage implementation.
   const new({
@@ -65,8 +66,8 @@ class FlutterSecureKeyValueStore implements SecureKeyValueStore {
           status.state == SecureStorageUpgradeState.legacyDataDiscarded;
     } on Object catch (error) {
       // The check could not run, so the readability of the stored entries is
-      // unknown. Report the store as unreadable instead of trusting a read
-      // that may silently return an empty value.
+      // unknown. Raise an error instead of reporting the store as readable,
+      // because a read may silently return an empty value.
       throw StateError('Secure storage upgrade check failed: $error');
     }
   }

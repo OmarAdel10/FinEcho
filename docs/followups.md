@@ -116,15 +116,6 @@ Deferred; tracked in Plane:
 - FINECHO-43 clean up the security setup screen seams: the setup warning
   duplicates the security error snackbar and the public PIN controller has no
   consumer.
-- FINECHO-44 scope the unauthenticated `Erase app lock` action to the state
-  where the verifier is genuinely unreadable; a storage fault during PIN
-  verification currently offers the same unauthenticated erase.
-- FINECHO-45 lower the persisted verifier derivation ceiling; a stored payload
-  may declare up to 1000000 rounds, which blocks the UI thread for seconds.
-- FINECHO-46 validate the legacy security state payload; the pre-versioning
-  payload is read without the shape checks the versioned payload gets.
-- FINECHO-47 separate the erase result from the legacy acknowledgement; a
-  failing acknowledgement write currently reports the whole reset as failed.
 - FINECHO-48 ignore the Kotlin build cache in the Android project; the build
   writes an untracked `android/.kotlin` directory that is not covered by
   `android/.gitignore`.
@@ -171,10 +162,22 @@ Fixed:
 - The PIN verifier is derived on a background isolate, so setting up or
   unlocking the app no longer blocks the platform isolate for the duration of
   the derivation (FINECHO-38).
+- The unauthenticated `Erase app lock` action is only offered when the stored
+  app-lock data cannot be read at all. A transient fault, such as a failed PIN
+  verification, shows the recovery screen with retry only (FINECHO-44).
+- The persisted verifier derivation count is capped at 200000 rounds, so a
+  stored payload cannot demand far more work than the app itself would spend
+  (FINECHO-45).
+- Every persisted security-state payload is validated before it is decoded, so
+  a corrupt payload, including one written before the codec was versioned,
+  fails with a format error and reaches the recovery screen (FINECHO-46).
+- The erase and the acknowledgement of unreadable stored data are reported
+  separately, so a failing acknowledgement no longer claims the lock was
+  never erased (FINECHO-47).
 - Cloud backup and Android 12+ device-to-device transfer exclude app data
   through `dataExtractionRules`, with `allowBackup=false` and
   `fullBackupContent=false` for older versions.
-- The security gate relocks on `AppLifecycleState.paused`; an in-flight PIN
+- The app relocks on `AppLifecycleState.paused`; an in-flight PIN
   verification cannot complete an unlock after the app is paused, and the PIN
   field clears on relock.
 - Android applies `FLAG_SECURE` app-wide so screens are excluded from

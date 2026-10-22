@@ -66,6 +66,9 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Error thrown by the next [clear] call.
   Exception? clearError;
 
+  /// Error thrown by the next [acknowledgeUnreadableLegacyData] call.
+  Exception? acknowledgeError;
+
   /// Blocks [clear] until completed, when provided.
   Completer<void>? clearGate;
 
@@ -92,6 +95,10 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
 
   @override
   Future<void> acknowledgeUnreadableLegacyData() async {
+    final error = acknowledgeError;
+    if (error != null) {
+      throw error;
+    }
     legacyDataAcknowledged = true;
     legacyDataUnreadable = false;
   }

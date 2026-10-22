@@ -54,6 +54,18 @@ void main() {
     expect(unlocked.isLocked, isFalse);
   });
 
+  test('keeps the erase permission when the copy omits it', () {
+    final state = SecurityAccessState(
+      securityState: securityState,
+      status: SecurityAccessStatus.error,
+      canEraseAppLock: true,
+    );
+
+    final copy = state.copyWith(status: SecurityAccessStatus.error);
+
+    expect(copy.canEraseAppLock, isTrue);
+  });
+
   test('reports the lockout window against the given clock', () {
     final lockedUntil = DateTime.utc(2026, 10, 15, 12, 1);
     final state = SecurityAccessState(

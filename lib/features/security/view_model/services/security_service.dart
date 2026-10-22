@@ -1,6 +1,7 @@
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
+import 'package:finecho/features/security/view_model/models/security_reset_result.dart';
 
 /// Coordinates FinEcho's app-lock rules and persistence.
 class SecurityService {
@@ -96,30 +97,42 @@ class SecurityService {
   /// Clears app-lock metadata and the PIN verifier after a load failure.
   ///
   /// Each step is attempted independently so a partially broken secure store
-  /// still has the best chance of recovery. Returns whether both steps
-  /// succeeded.
-  Future<bool> reset() async {
-    var cleared = true;
+  /// still has the best chance of recovery. The result reports the erase and
+  /// the acknowledgement of unreadable stored data separately: a store that
+  /// can be erased but cannot record the acknowledgement leaves the app
+  /// failing closed, and the caller has to tell the user that the app data
+  /// has to be cleared from the system settings.
+  Future<SecurityResetResult> reset() async {
     var verifierCleared = false;
+    var metadataCleared = false;
     try {
       await _credentials.clear();
       verifierCleared = true;
     } on Object {
-      cleared = false;
-    }
-    try {
-      if (verifierCleared && await _credentials.hasUnreadableLegacyData()) {
-        await _credentials.acknowledgeUnreadableLegacyData();
-      }
-    } on Object {
-      cleared = false;
+      // The verifier stays, so the app keeps failing closed.
     }
     try {
       await _repository.update(_defaultState());
+      metadataCleared = true;
     } on Object {
-      cleared = false;
+      // The metadata stays, so the app keeps failing closed.
     }
-    return cleared;
+    var acknowledged = true;
+    if (verifierCleared) {
+      try {
+        if (await _credentials.hasUnreadableLegacyData()) {
+          await _credentials.acknowledgeUnreadableLegacyData();
+        }
+      } on Object {
+        acknowledged = false;
+      }
+    } else {
+      acknowledged = false;
+    }
+    return SecurityResetResult(
+      erased: verifierCleared && metadataCleared,
+      acknowledged: acknowledged,
+    );
   }
 
   /// Clears a failed-attempt streak and temporary lockout after success.
