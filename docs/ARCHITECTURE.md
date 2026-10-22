@@ -252,8 +252,9 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
   storage. `Erase app lock` is intentionally destructive and unauthenticated
   because the PIN verifier is unreadable in this state; it removes the saved
   PIN and app-lock settings. The action is only offered when the stored
-  app-lock data cannot be read at all, so a transient fault, such as a failed
-  PIN verification, never offers an unauthenticated erase. The erase and the
+  app-lock data cannot be read, or cannot be shown to be readable, so a
+  transient fault, such as a failed PIN verification, never offers an
+  unauthenticated erase. The erase and the
   acknowledgement of unreadable stored data are reported separately, so a
   failed acknowledgement does not claim the lock was still there. Whenever a
   recovery reload finishes without a configured lock, the gate routes the app
