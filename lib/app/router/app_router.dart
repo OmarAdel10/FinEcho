@@ -4,9 +4,11 @@ import 'package:finecho/features/analytics/view/screens/analytics_screen.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/budget/view/screens/budget_screen.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
+import 'package:finecho/features/onboarding/data/models/onboarding_step.dart';
 import 'package:finecho/features/onboarding/view/screens/onboarding_screen.dart';
 import 'package:finecho/features/onboarding/view/screens/security_setup_screen.dart';
 import 'package:finecho/features/onboarding/view/screens/welcome_screen.dart';
+import 'package:finecho/features/onboarding/view_model/models/onboarding_state.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/security/view/widgets/security_gate.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
@@ -15,6 +17,7 @@ import 'package:finecho/features/transactions/view_model/transactions_cubit.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 
 /// Configures the initial application navigation graph.
 class AppRouter {
@@ -35,13 +38,22 @@ class AppRouter {
     _transactionsCubit = transactions;
     _budgetsCubit = budgets;
     _analyticsCubit = analytics;
+
     final securityAccess = security.state;
     final startProtected =
         securityAccess.hasLoadError ||
         (securityAccess.securityState.appLockEnabled &&
             securityAccess.securityState.pinConfigured);
+
+    // Determine the correct initial location based on onboarding state
+    final onboardingState = cubit.state;
+    final initialLocation = _resolveInitialLocation(
+      onboardingState,
+      startProtected,
+    );
+
     router = GoRouter(
-      initialLocation: startProtected ? '/home' : '/welcome',
+      initialLocation: initialLocation,
       redirect: (context, state) {
         final access = _securityCubit.state;
         final configured =
@@ -130,6 +142,38 @@ class AppRouter {
         ),
       ],
     );
+  }
+
+  /// Resolves the initial route based on onboarding and security state.
+  static String _resolveInitialLocation(
+    OnboardingState onboardingState,
+    bool startProtected,
+  ) {
+    // If app is locked, go to home (security gate will handle unlock)
+    if (startProtected) {
+      return '/home';
+    }
+
+    // If onboarding is completed, go to home
+    if (onboardingState.status == OnboardingStatus.completed) {
+      return '/home';
+    }
+
+    // If onboarding is in progress, resume at the appropriate step
+    if (onboardingState.status == OnboardingStatus.ready) {
+      // Resume at security setup if that's where the user left off
+      if (onboardingState.currentStep == OnboardingStep.securitySetup) {
+        return '/security-setup';
+      }
+      // Resume at onboarding for other incomplete steps
+      if (onboardingState.currentStep.index <
+          OnboardingStep.automation.index + 1) {
+        return '/onboarding';
+      }
+    }
+
+    // Default to welcome for new users
+    return '/welcome';
   }
 
   /// The application navigation state.
