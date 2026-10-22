@@ -153,6 +153,31 @@ void main() {
     expect(find.text('Protected content'), findsOneWidget);
   });
 
+  testWidgets('shows the recovery screen for unreadable stored data', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    harness.credentialRepository.legacyDataUnreadable = true;
+    final cubit = SecurityCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BlocProvider<SecurityCubit>.value(
+          value: cubit,
+          child: const SecurityGate(child: Text('Protected content')),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Security settings unavailable'), findsOneWidget);
+    expect(find.text('Erase app lock'), findsOneWidget);
+    expect(find.text('Protected content'), findsNothing);
+  });
+
   testWidgets('resets the app lock after confirmation', (tester) async {
     final harness = SecurityTestHarness(
       now: () => DateTime.utc(2026, 10, 15, 12),

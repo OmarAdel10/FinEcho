@@ -13,11 +13,30 @@ class SecureStorageSecurityCredentialRepository
   /// The key is historical; the payload carries its own format version.
   static const String credentialKey = 'finecho.security.pin.v1';
 
+  /// The secure-storage key recording that the unreadable legacy data was
+  /// deliberately discarded by the user.
+  static const String legacyAcknowledgedKey = 'finecho.security.legacy.ack';
+
   /// The backing secure-storage contract.
   final SecureKeyValueStore store;
 
   @override
   Future<bool> hasPin() async => await _readVerifier() != null;
+
+  @override
+  Future<bool> hasUnreadableLegacyData() async {
+    // The upgrade check runs before the first read so the store is never
+    // touched before the app knows whether its entries are readable.
+    if (!await store.hasUnreadableLegacyData()) {
+      return false;
+    }
+    return await store.read(legacyAcknowledgedKey) == null;
+  }
+
+  @override
+  Future<void> acknowledgeUnreadableLegacyData() {
+    return store.write(legacyAcknowledgedKey, 'true');
+  }
 
   @override
   Future<void> savePin(String pin) {

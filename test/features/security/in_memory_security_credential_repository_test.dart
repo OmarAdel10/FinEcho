@@ -39,5 +39,15 @@ void main() {
       expect(await repository.hasPin(), isFalse);
       expect(await repository.verifyPin('123456'), isFalse);
     });
+
+    test('never reports unreadable legacy data', () async {
+      final repository = InMemorySecurityCredentialRepository();
+
+      expect(await repository.hasUnreadableLegacyData(), isFalse);
+
+      await repository.acknowledgeUnreadableLegacyData();
+
+      expect(await repository.hasUnreadableLegacyData(), isFalse);
+    });
   });
 }

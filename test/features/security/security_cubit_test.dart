@@ -153,6 +153,31 @@ void main() {
       await cubit.close();
     });
 
+    test('fails closed when the store still holds unreadable data', () async {
+      final harness = SecurityTestHarness(
+        initialState: SecurityState(
+          appLockEnabled: false,
+          pinConfigured: false,
+          failedUnlockAttempts: 0,
+          secureKeyReady: false,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      harness.credentialRepository.legacyDataUnreadable = true;
+      final cubit = SecurityCubit(harness.service);
+
+      await cubit.load();
+
+      expect(cubit.state.status, SecurityAccessStatus.error);
+      expect(cubit.state.hasLoadError, isTrue);
+      expect(
+        cubit.state.errorMessage,
+        'Could not load security settings. Please try again.',
+      );
+      await cubit.close();
+    });
+
     test('fails closed when lock metadata is incomplete', () async {
       final harness = SecurityTestHarness(
         initialState: SecurityState(
@@ -663,7 +688,7 @@ void main() {
         final unlocked = await cubit.unlockWithPin('123456');
 
         expect(unlocked, isFalse);
-        expect(cubit.state.status, SecurityAccessStatus.failure);
+        expect(cubit.state.status, SecurityAccessStatus.error);
         expect(
           cubit.state.errorMessage,
           'Could not verify PIN. Please try again.',

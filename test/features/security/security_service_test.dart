@@ -71,6 +71,18 @@ void main() {
       await expectLater(harness.service.load(), throwsStateError);
     });
 
+    test('fails closed when the stored verifier payload is corrupt', () async {
+      final harness = SecurityTestHarness(
+        initialState: configuredState(),
+        now: () => now,
+      );
+      harness.credentialRepository.hasPinError = const FormatException(
+        'Invalid persisted PIN verifier.',
+      );
+
+      await expectLater(harness.service.load(), throwsFormatException);
+    });
+
     test('fails closed when the stored metadata is incomplete', () async {
       final harness = SecurityTestHarness(
         initialState: disabledState().copyWith(appLockEnabled: true),
@@ -106,6 +118,22 @@ void main() {
         expect(harness.securityRepository.state, isNull);
       },
     );
+
+    test('fails closed when the store still holds unreadable data', () async {
+      final harness = SecurityTestHarness(now: () => now);
+      harness.credentialRepository.legacyDataUnreadable = true;
+
+      await expectLater(
+        harness.service.load(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'Stored app lock data cannot be read by this build.',
+          ),
+        ),
+      );
+    });
   });
 
   group('SecurityService.reset', () {
@@ -151,6 +179,37 @@ void main() {
 
       expect(cleared, isFalse);
       expect(await harness.credentialRepository.hasPin(), isFalse);
+    });
+
+    test('acknowledges unreadable data when the lock is erased', () async {
+      final harness = SecurityTestHarness(
+        initialState: configuredState(),
+        now: () => now,
+      );
+      await harness.credentialRepository.savePin('123456');
+      harness.credentialRepository.legacyDataUnreadable = true;
+
+      final cleared = await harness.service.reset();
+
+      expect(cleared, isTrue);
+      expect(harness.credentialRepository.legacyDataAcknowledged, isTrue);
+      expect(harness.credentialRepository.legacyDataUnreadable, isFalse);
+    });
+
+    test('keeps failing closed when the verifier cannot be erased', () async {
+      final harness = SecurityTestHarness(
+        initialState: configuredState(),
+        now: () => now,
+      );
+      await harness.credentialRepository.savePin('123456');
+      harness.credentialRepository.legacyDataUnreadable = true;
+      harness.credentialRepository.clearError = Exception('keystore delete');
+
+      final cleared = await harness.service.reset();
+
+      expect(cleared, isFalse);
+      expect(harness.credentialRepository.legacyDataAcknowledged, isFalse);
+      expect(harness.credentialRepository.legacyDataUnreadable, isTrue);
     });
   });
 

@@ -9,17 +9,31 @@ import 'package:finecho/features/security/data/storage/secure_key_value_store.da
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// A salt with the persisted shape: sixteen random bytes in base64url.
+final String _testSalt = base64UrlEncode(List<int>.generate(16, (i) => i));
+
+/// A verifier with the persisted shape: thirty-two bytes in base64url.
+final String _testHash = base64UrlEncode(List<int>.generate(32, (i) => i));
+
 class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
   final Map<String, String> values = <String, String>{};
+
+  /// The upgrade status the fake reports to the app.
+  SecureStorageUpgradeStatus upgradeStatus = const SecureStorageUpgradeStatus(
+    state: SecureStorageUpgradeState.ok,
+  );
+
+  /// The error the fake raises when the upgrade check runs.
+  Exception? checkError;
 
   @override
   Future<String?> read({
     required String key,
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
     WebOptions? webOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
     return values[key];
@@ -29,11 +43,11 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
   Future<void> write({
     required String key,
     required String? value,
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
     WebOptions? webOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
     if (value == null) {
@@ -46,22 +60,47 @@ class _RecordingFlutterSecureStorage extends FlutterSecureStorage {
   @override
   Future<void> delete({
     required String key,
-    IOSOptions? iOptions,
+    AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,
     WebOptions? webOptions,
-    MacOsOptions? mOptions,
+    AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
     values.remove(key);
+  }
+
+  @override
+  Future<SecureStorageUpgradeStatus> checkUpgradeStatus({
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    final error = checkError;
+    if (error != null) {
+      throw error;
+    }
+    return upgradeStatus;
   }
 }
 
 class _InMemorySecureKeyValueStore implements SecureKeyValueStore {
   final Map<String, String> values = <String, String>{};
 
+  /// The keys the store was asked to read, in order.
+  final List<String> reads = <String>[];
+
+  /// Whether the store reports data written by an earlier backend.
+  bool legacyDataUnreadable = false;
+
   @override
-  Future<String?> read(String key) async => values[key];
+  Future<String?> read(String key) async {
+    reads.add(key);
+    return values[key];
+  }
 
   @override
   Future<void> write(String key, String value) async {
@@ -72,6 +111,9 @@ class _InMemorySecureKeyValueStore implements SecureKeyValueStore {
   Future<void> delete(String key) async {
     values.remove(key);
   }
+
+  @override
+  Future<bool> hasUnreadableLegacyData() async => legacyDataUnreadable;
 }
 
 void main() {
@@ -193,6 +235,11 @@ void main() {
       final verifier = PinVerifier.create('123456');
 
       expect(verifier.version, PinVerifier.currentVersion);
+      expect(PinVerifier.currentVersion, 2);
+      expect(PinVerifier.legacyVersion, 1);
+      expect(PinVerifier.minIterations, 10000);
+      expect(PinVerifier.maxIterations, 1000000);
+      expect(SecurityPinHasher.defaultIterations, 100000);
       expect(verifier.iterations, SecurityPinHasher.defaultIterations);
       expect(base64Url.decode(verifier.salt), hasLength(16));
       expect(verifier.matches('123456'), isTrue);
@@ -226,9 +273,152 @@ void main() {
       expect(() => PinVerifier.decode('[]'), throwsFormatException);
       expect(() => PinVerifier.decode('{}'), throwsFormatException);
       expect(
-        () => PinVerifier.decode('{"salt": 1, "hash": "value"}'),
+        () => PinVerifier.decode('{"salt": 1, "hash": "$_testHash"}'),
         throwsFormatException,
       );
+    });
+
+    test('rejects a salt or hash that is not the persisted shape', () {
+      expect(
+        () => PinVerifier.decode('{"salt": "c2hvcnQ", "hash": "$_testHash"}'),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Malformed persisted PIN verifier.',
+          ),
+        ),
+      );
+      expect(
+        () => PinVerifier.decode('{"salt": "$_testSalt", "hash": "c2hvcnQ="}'),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Malformed persisted PIN verifier.',
+          ),
+        ),
+      );
+    });
+
+    test('rejects a corrupt version or iteration count', () {
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "version": "2"}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier version.',
+          ),
+        ),
+      );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "iterations": "100"}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier iterations.',
+          ),
+        ),
+      );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "iterations": 0}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier iterations.',
+          ),
+        ),
+      );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "version": 2, '
+          '"iterations": ${PinVerifier.maxIterations + 1}}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier iterations.',
+          ),
+        ),
+      );
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "version": 2, '
+          '"iterations": ${PinVerifier.minIterations - 1}}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier iterations.',
+          ),
+        ),
+      );
+    });
+
+    test('rejects a payload written before the first version', () {
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "version": 0}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier version.',
+          ),
+        ),
+      );
+    });
+
+    test('rejects a current-format payload without an iteration count', () {
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", "version": 2}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier iterations.',
+          ),
+        ),
+      );
+    });
+
+    test('rejects a payload written by a newer format', () {
+      expect(
+        () => PinVerifier.decode(
+          '{"salt": "$_testSalt", "hash": "$_testHash", '
+          '"version": ${PinVerifier.currentVersion + 1}}',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            'Unsupported persisted PIN verifier version.',
+          ),
+        ),
+      );
+    });
+
+    test('accepts a payload that names the legacy version', () {
+      final decoded = PinVerifier.decode(
+        '{"salt": "$_testSalt", "hash": "$_testHash", "version": 1}',
+      );
+
+      expect(decoded.version, PinVerifier.legacyVersion);
+      expect(decoded.iterations, 1);
     });
   });
 
@@ -244,12 +434,48 @@ void main() {
       expect(await store.read('key'), isNull);
     });
 
-    test('enables encrypted shared preferences by default', () {
+    test('keeps a keystore error visible instead of erasing the lock', () {
       const store = FlutterSecureKeyValueStore();
 
-      expect(
-        store.storage.aOptions.toMap()['encryptedSharedPreferences'],
-        'true',
+      expect(store.storage.aOptions.toMap()['resetOnError'], 'false');
+    });
+
+    test(
+      'reports data written by an earlier build that cannot be read',
+      () async {
+        final storage = _RecordingFlutterSecureStorage();
+        final store = FlutterSecureKeyValueStore(storage: storage);
+
+        expect(await store.hasUnreadableLegacyData(), isFalse);
+
+        storage.upgradeStatus = const SecureStorageUpgradeStatus(
+          state: SecureStorageUpgradeState.legacyDataUnreadable,
+        );
+
+        expect(await store.hasUnreadableLegacyData(), isTrue);
+
+        storage.upgradeStatus = const SecureStorageUpgradeStatus(
+          state: SecureStorageUpgradeState.legacyDataDiscarded,
+        );
+
+        expect(await store.hasUnreadableLegacyData(), isTrue);
+      },
+    );
+
+    test('fails closed when the upgrade check cannot run', () async {
+      final storage = _RecordingFlutterSecureStorage();
+      final store = FlutterSecureKeyValueStore(storage: storage);
+      storage.checkError = Exception('keystore unavailable');
+
+      await expectLater(
+        store.hasUnreadableLegacyData(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Secure storage upgrade check failed'),
+          ),
+        ),
       );
     });
   });
@@ -290,6 +516,65 @@ void main() {
 
       store.values[SecureStorageSecurityRepository.stateKey] = '[]';
       await expectLater(repository.get(), throwsFormatException);
+    });
+
+    test('writes a versioned payload', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+
+      await repository.update(
+        SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+      );
+
+      final payload = jsonDecode(
+        store.values[SecureStorageSecurityRepository.stateKey]!,
+      ) as Map<String, dynamic>;
+      expect(payload['version'], SecureStorageSecurityRepository.codecVersion);
+      expect(payload['state'], isA<Map<String, dynamic>>());
+    });
+
+    test('rejects a payload with an unsupported version', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+      store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+        'version': SecureStorageSecurityRepository.codecVersion + 1,
+        'state': <String, Object?>{},
+      });
+
+      await expectLater(repository.get(), throwsFormatException);
+    });
+
+    test('rejects a versioned payload without a state', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+      store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode({
+        'version': SecureStorageSecurityRepository.codecVersion,
+      });
+
+      await expectLater(repository.get(), throwsFormatException);
+    });
+
+    test('reads a payload written before the codec was versioned', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityRepository(store: store);
+      final state = SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      );
+      store.values[SecureStorageSecurityRepository.stateKey] = jsonEncode(
+        state.toMap(),
+      );
+
+      expect(await repository.get(), state);
     });
   });
 
@@ -368,13 +653,49 @@ void main() {
       );
       store.values[SecureStorageSecurityCredentialRepository.credentialKey] =
           jsonEncode({
-            'salt': 'testsalt',
-            'hash': SecurityPinHasher.legacyHash('123456', 'testsalt'),
+            'salt': _testSalt,
+            'hash': SecurityPinHasher.legacyHash('123456', _testSalt),
           });
 
       expect(await repository.hasPin(), isTrue);
       expect(await repository.verifyPin('123456'), isTrue);
       expect(await repository.verifyPin('654321'), isFalse);
+    });
+
+    test('reports unreadable legacy data until it is acknowledged', () async {
+      final store = _InMemorySecureKeyValueStore()..legacyDataUnreadable = true;
+      final repository = SecureStorageSecurityCredentialRepository(
+        store: store,
+      );
+
+      expect(await repository.hasUnreadableLegacyData(), isTrue);
+
+      await repository.acknowledgeUnreadableLegacyData();
+
+      expect(await repository.hasUnreadableLegacyData(), isFalse);
+      expect(
+        store.values,
+        contains(
+          SecureStorageSecurityCredentialRepository.legacyAcknowledgedKey,
+        ),
+      );
+    });
+
+    test('checks the store before it reads the acknowledgement', () async {
+      final store = _InMemorySecureKeyValueStore();
+      final repository = SecureStorageSecurityCredentialRepository(
+        store: store,
+      );
+
+      expect(await repository.hasUnreadableLegacyData(), isFalse);
+      expect(store.reads, isEmpty);
+
+      store.legacyDataUnreadable = true;
+
+      expect(await repository.hasUnreadableLegacyData(), isTrue);
+      expect(store.reads, <String>[
+        SecureStorageSecurityCredentialRepository.legacyAcknowledgedKey,
+      ]);
     });
   });
 }
