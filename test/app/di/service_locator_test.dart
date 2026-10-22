@@ -5,6 +5,7 @@ import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/models/transaction.dart';
+import 'package:finecho/core/repositories/contracts/account_repository.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
@@ -178,7 +179,20 @@ void main() {
 
   test('reads transactions seeded through the shared repositories', () async {
     await configureDependencies(useInMemoryStorage: true);
-    final now = DateTime.now().toUtc();
+    // Pin the analytics clock so the month window is derived from a fixed
+    // date instead of the wall clock at the moment the test runs.
+    final pinnedNow = DateTime.utc(2026, 10, 15, 9);
+    sl.unregister<AnalyticsService>();
+    sl.registerLazySingleton<AnalyticsService>(
+      () => AnalyticsService(
+        analytics: sl<AnalyticsRepository>(),
+        transactions: sl<TransactionRepository>(),
+        accounts: sl<AccountRepository>(),
+        budgets: sl<BudgetRepository>(),
+        categories: sl<CategoryRepository>(),
+        now: () => pinnedNow,
+      ),
+    );
     await sl<CategoryRepository>().create(
       const Category(
         id: 'category-1',
@@ -192,7 +206,7 @@ void main() {
         id: 'tx-1',
         accountId: 'account-1',
         amountMinorUnits: 1234,
-        timestamp: DateTime.utc(now.year, now.month, 1, 12),
+        timestamp: DateTime.utc(2026, 10, 1, 12),
         type: TransactionType.expense,
         source: TransactionSource.manual,
         categoryId: 'category-1',

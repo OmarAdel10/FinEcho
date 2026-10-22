@@ -155,14 +155,11 @@ void main() {
 
       expect(base64Url.decode(first), hasLength(16));
       expect(second, isNot(first));
-      expect(
-        SecurityPinHasher.hash('123456', first),
-        SecurityPinHasher.hash('123456', first),
-      );
-      expect(
-        SecurityPinHasher.hash('123456', first),
-        isNot(SecurityPinHasher.hash('123456', second)),
-      );
+      // Hashing the same PIN with the same salt twice yields the same digest.
+      final firstHash = SecurityPinHasher.hash('123456', first);
+      final firstHashAgain = SecurityPinHasher.hash('123456', first);
+      expect(firstHash, firstHashAgain);
+      expect(firstHash, isNot(SecurityPinHasher.hash('123456', second)));
       expect(
         SecurityPinHasher.matches(
           pin: '123456',

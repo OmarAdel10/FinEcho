@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
+import 'package:finecho/features/security/data/repositories/security_pin_hasher.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 
 /// An in-memory [SecurityRepository] fake for security tests.
@@ -50,9 +51,20 @@ class FakeSecurityRepository implements SecurityRepository {
   }
 }
 
-/// A deterministic, in-memory [SecurityCredentialRepository] fake.
+/// A deterministic [SecurityCredentialRepository] fake that stores only a
+/// salted verifier derived with the production [SecurityPinHasher].
+///
+/// The verifier is derived with the real PBKDF2-HMAC-SHA256 implementation,
+/// so a regression that replaces the production derivation with a plaintext
+/// comparison fails these tests instead of silently passing them. The fake
+/// keeps only the error and gate hooks that model platform storage failures.
+///
+/// The derivation runs in the foreground at a single iteration so widget
+/// tests can exercise the verifier without a background isolate, which
+/// cannot complete inside a fake async test zone.
 class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
-  String? _pin;
+  String? _salt;
+  String? _hash;
 
   /// Errors to throw from the next [savePin] call.
   Exception? saveError;
@@ -121,7 +133,7 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     if (error != null) {
       throw error;
     }
-    return _pin != null;
+    return _hash != null;
   }
 
   @override
@@ -134,7 +146,8 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     if (gate != null) {
       await gate.future;
     }
-    _pin = pin;
+    _salt = SecurityPinHasher.createSalt();
+    _hash = SecurityPinHasher.hash(pin, _salt!, iterations: 1);
     savedPins.add(pin);
   }
 
@@ -149,7 +162,17 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
       await gate.future;
     }
     verifiedPins.add(pin);
-    return pin == _pin;
+    final salt = _salt;
+    final hash = _hash;
+    if (salt == null || hash == null) {
+      return false;
+    }
+    return SecurityPinHasher.matches(
+      pin: pin,
+      salt: salt,
+      expectedHash: hash,
+      iterations: 1,
+    );
   }
 
   @override
@@ -162,7 +185,8 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     if (gate != null) {
       await gate.future;
     }
-    _pin = null;
+    _salt = null;
+    _hash = null;
   }
 }
 
