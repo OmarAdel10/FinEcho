@@ -34,10 +34,15 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
   bool get isLockedOut => state.isLockedOutAt(_service.now);
 
   /// Loads the persisted security snapshot.
+  ///
+  /// The lock epoch is captured before the first await, so a load that
+  /// finishes after the app was backgrounded cannot resurrect the unlocked
+  /// state.
   Future<void> load() async {
     if (isClosed) {
       return;
     }
+    final lockEpoch = _lockEpoch;
     final wasUnlocked = state.status == SecurityAccessStatus.unlocked;
     emit(
       state.copyWith(
@@ -52,11 +57,12 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       }
       final configured =
           securityState.appLockEnabled && securityState.pinConfigured;
+      final relocked = lockEpoch != _lockEpoch;
       emit(
         SecurityAccessState(
           securityState: securityState,
           status: configured
-              ? wasUnlocked
+              ? wasUnlocked && !relocked
                     ? SecurityAccessStatus.unlocked
                     : SecurityAccessStatus.ready
               : SecurityAccessStatus.unlocked,
