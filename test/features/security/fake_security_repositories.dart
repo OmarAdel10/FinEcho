@@ -87,11 +87,23 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
   /// Whether the store still holds data this build cannot read.
   bool legacyDataUnreadable = false;
 
+  /// Error thrown by the next [hasUnreadableLegacyData] call.
+  ///
+  /// The real store raises when it cannot prove that its entries are
+  /// readable, so the fake can model that case.
+  Error? unreadableDataError;
+
   /// Whether the unreadable legacy data was acknowledged.
   bool legacyDataAcknowledged = false;
 
   @override
-  Future<bool> hasUnreadableLegacyData() async => legacyDataUnreadable;
+  Future<bool> hasUnreadableLegacyData() async {
+    final error = unreadableDataError;
+    if (error != null) {
+      throw error;
+    }
+    return legacyDataUnreadable;
+  }
 
   @override
   Future<void> acknowledgeUnreadableLegacyData() async {

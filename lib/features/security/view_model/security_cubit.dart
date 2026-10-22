@@ -184,9 +184,10 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
 
   /// Whether a load failure means the stored app-lock data cannot be read.
   ///
-  /// Only corrupt or unreadable data justifies the destructive erase. A
-  /// timeout or a transient platform error can be retried instead, so the
-  /// erase stays hidden in that case.
+  /// A corrupt payload, and a store that raised because it could not prove
+  /// that its entries are readable, are both treated as unreadable: a read
+  /// may silently return an empty value. A timeout or a transient platform
+  /// error can be retried instead, so the erase stays hidden in that case.
   static bool _isUnreadableData(Object error) {
     return error is StateError || error is FormatException;
   }

@@ -11,10 +11,7 @@ import 'package:pinput/pinput.dart';
 /// The security and app-lock setup step at the end of onboarding.
 class SecuritySetupScreen extends StatelessWidget {
   /// Creates the security setup screen.
-  const new({this.pinController, super.key});
-
-  /// An optional externally owned PIN controller, used by tests and embedders.
-  final TextEditingController? pinController;
+  const new({super.key});
 
   Future<void> _finishSetup({
     required BuildContext context,
@@ -32,7 +29,7 @@ class SecuritySetupScreen extends StatelessWidget {
       return;
     }
     if (failure != null) {
-      _showSetupWarning(context, failure);
+      _showMessage(context, failure);
     }
     context.go('/home');
   }
@@ -45,7 +42,7 @@ class SecuritySetupScreen extends StatelessWidget {
         child: BlocConsumer<SecurityCubit, SecurityAccessState>(
           listener: (context, securityState) {
             if (securityState.status == SecurityAccessStatus.failure) {
-              _showSecurityError(context, securityState.errorMessage);
+              _showMessage(context, securityState.errorMessage);
             }
           },
           builder: (context, securityState) {
@@ -73,7 +70,6 @@ class SecuritySetupScreen extends StatelessWidget {
                       ],
                       child: mui.Material(
                         child: Pinput(
-                          controller: pinController,
                           length: 6,
                           obscureText: true,
                           autofocus: true,
@@ -130,16 +126,10 @@ class SecuritySetupScreen extends StatelessWidget {
     );
   }
 
-  void _showSecurityError(BuildContext context, String? errorMessage) {
-    if (errorMessage == null) {
+  void _showMessage(BuildContext context, String? message) {
+    if (message == null) {
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(errorMessage)));
-  }
-
-  void _showSetupWarning(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));

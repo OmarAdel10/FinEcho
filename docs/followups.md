@@ -113,12 +113,6 @@ Deferred; tracked in Plane:
 - FINECHO-42 tighten the security test realism gaps: the credential fake still
   compares plaintext, a few assertions compare a value with itself, and the
   lockout test depends on the wall clock.
-- FINECHO-43 clean up the security setup screen seams: the setup warning
-  duplicates the security error snackbar and the public PIN controller has no
-  consumer.
-- FINECHO-48 ignore the Kotlin build cache in the Android project; the build
-  writes an untracked `android/.kotlin` directory that is not covered by
-  `android/.gitignore`.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
@@ -163,11 +157,21 @@ Fixed:
   unlocking the app no longer blocks the platform isolate for the duration of
   the derivation (FINECHO-38).
 - The unauthenticated `Erase app lock` action is only offered when the stored
-  app-lock data cannot be read at all. A transient fault, such as a failed PIN
-  verification, shows the recovery screen with retry only (FINECHO-44).
+  app-lock data cannot be read, or cannot be shown to be readable. A transient
+  fault, such as a failed PIN verification, shows the recovery screen with
+  retry only (FINECHO-44, FINECHO-49).
 - The persisted verifier derivation count is capped at 200000 rounds, so a
   stored payload cannot demand far more work than the app itself would spend
   (FINECHO-45).
+- The security setup screen shows every message through one snackbar helper
+  and no longer exposes a PIN controller that nothing consumes
+  (FINECHO-43).
+- The Android build cache is ignored, so a build no longer leaves an
+  untracked `android/.kotlin` directory behind (FINECHO-48).
+- The erase guarantee is stated the way it is implemented: the destructive
+  erase is offered when the stored data cannot be read, and also when the
+  store cannot show that it is readable, because a read may silently return
+  an empty value. Both paths are pinned by their own tests (FINECHO-49).
 - Every persisted security-state payload is validated before it is decoded, so
   a corrupt payload, including one written before the codec was versioned,
   fails with a format error and reaches the recovery screen (FINECHO-46).

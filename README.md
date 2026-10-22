@@ -39,8 +39,8 @@ content. The app also fails closed when the store still holds data that an
 earlier build wrote and the current backend can no longer read, so an upgrade
 never silently disables the lock. That screen offers retry and an explicitly
 destructive `Erase app lock` action; the action is only offered when the
-stored app-lock data cannot be read at all, and it is unauthenticated by
-design for the same reason. It removes the saved PIN and app-lock settings,
+stored app-lock data cannot be read, or cannot be shown to be readable, and
+it is unauthenticated by design for the same reason. It removes the saved PIN and app-lock settings,
 and every recovery path that ends without a configured lock returns the app to
 onboarding so the lock can be set up again.
 
