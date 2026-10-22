@@ -16,6 +16,7 @@ void main() {
         'notification_schedules',
         'app_settings',
         'security_state',
+        'onboarding',
       ];
 
       expect(statements.length, greaterThanOrEqualTo(21));

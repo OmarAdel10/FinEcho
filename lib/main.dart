@@ -5,6 +5,9 @@ import 'package:flutter/widgets.dart';
 ///
 /// The [runner] parameter keeps the entrypoint executable in tests without
 /// mounting a second root widget.
-Future<void> main({void Function(Widget app) runner = runApp}) async {
-  runner(await buildApp());
+Future<void> main({
+  void Function(Widget app) runner = runApp,
+  bool useInMemoryStorage = false,
+}) async {
+  runner(await buildApp(useInMemoryStorage: useInMemoryStorage));
 }

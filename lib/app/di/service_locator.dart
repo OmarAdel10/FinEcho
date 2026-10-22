@@ -17,6 +17,7 @@ import 'package:finecho/features/analytics/view_model/services/analytics_service
 import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
+import 'package:finecho/features/onboarding/data/repositories/in_memory_onboarding_repository.dart';
 import 'package:finecho/features/onboarding/data/repositories/onboarding_repository.dart';
 import 'package:finecho/features/onboarding/data/repositories/sql_cipher_onboarding_repository.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
@@ -67,10 +68,16 @@ Future<void> configureDependencies({
     () => AppDatabase(opener: sl<DatabaseOpener>()),
   );
 
-  // Register onboarding repository using SQLCipher
-  sl.registerLazySingleton<OnboardingRepository>(
-    () => SqlCipherOnboardingRepository(opener: sl<DatabaseOpener>().open),
-  );
+  // Register onboarding repository
+  if (useInMemoryStorage) {
+    sl.registerLazySingleton<OnboardingRepository>(
+      InMemoryOnboardingRepository.new,
+    );
+  } else {
+    sl.registerLazySingleton<OnboardingRepository>(
+      () => SqlCipherOnboardingRepository(opener: sl<DatabaseOpener>().open),
+    );
+  }
   sl.registerLazySingleton<OnboardingService>(
     () => OnboardingService(sl<OnboardingRepository>()),
   );
