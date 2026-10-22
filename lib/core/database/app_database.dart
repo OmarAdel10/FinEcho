@@ -1,5 +1,4 @@
-import 'database_opener.dart';
-
+import 'package:finecho/core/database/database_opener.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 /// Opens and owns FinEcho's encrypted SQLite database connection.

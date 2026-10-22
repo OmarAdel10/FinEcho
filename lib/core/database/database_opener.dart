@@ -176,7 +176,8 @@ class DatabaseOpener {
       )
     ''');
     await database.execute(
-      'CREATE INDEX idx_accounts_linked_account ON accounts (linked_account_id)',
+      'CREATE INDEX idx_accounts_linked_account'
+        ' ON accounts (linked_account_id)',
     );
     await database.execute(
       'CREATE INDEX idx_categories_parent ON categories (parent_id)',
@@ -200,13 +201,16 @@ class DatabaseOpener {
       'CREATE INDEX idx_sms_messages_received ON sms_messages (received_at)',
     );
     await database.execute(
-      'CREATE INDEX idx_sms_parsing_rules_account ON sms_parsing_rules (account_id)',
+      'CREATE INDEX idx_sms_parsing_rules_account'
+        ' ON sms_parsing_rules (account_id)',
     );
     await database.execute(
-      'CREATE INDEX idx_notification_schedules_time ON notification_schedules (cron_expression)',
+      'CREATE INDEX idx_notification_schedules_time'
+        ' ON notification_schedules (cron_expression)',
     );
     await database.execute(
-      'CREATE UNIQUE INDEX idx_sms_messages_fingerprint ON sms_messages (fingerprint)',
+      'CREATE UNIQUE INDEX idx_sms_messages_fingerprint'
+        ' ON sms_messages (fingerprint)',
     );
   }
 

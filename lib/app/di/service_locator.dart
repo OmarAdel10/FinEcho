@@ -1,5 +1,7 @@
 import 'package:finecho/app/environment/environment.dart';
 import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/core/database/app_database.dart';
+import 'package:finecho/core/database/database_opener.dart';
 import 'package:finecho/core/repositories/contracts/account_repository.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
@@ -24,10 +26,8 @@ import 'package:finecho/features/security/data/repositories/in_memory_security_r
 import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
-import 'package:finecho/features/security/data/storage/secure_key_value_store.dart';
 import 'package:finecho/features/security/data/storage/database_key_store.dart';
-import 'package:finecho/core/database/app_database.dart';
-import 'package:finecho/core/database/database_opener.dart';
+import 'package:finecho/features/security/data/storage/secure_key_value_store.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 import 'package:finecho/features/transactions/view_model/services/transaction_service.dart';
@@ -46,32 +46,39 @@ Future<void> configureDependencies({
   Environment environment = Environment.development,
   bool useInMemoryStorage = false,
 }) async {
-  sl
-    ..registerSingleton<EnvironmentConfig>(EnvironmentConfig(environment))
-    ..registerLazySingleton<DatabaseKeyStore>(
-      () => DatabaseKeyStore(store: const FlutterSecureKeyValueStore()),
-    )
-    ..registerLazySingleton<DatabaseOpener>(
-      () => DatabaseOpener(
-        passwordProvider: () async {
-          final keyStore = sl<DatabaseKeyStore>();
-          return await keyStore.readOrCreateKey();
-        },
-      ),
-    )
-    ..registerLazySingleton<AppDatabase>(
-      () => AppDatabase(opener: sl<DatabaseOpener>()),
-    )
-    ..registerLazySingleton<OnboardingRepository>(
-      () => SqlCipherOnboardingRepository(opener: sl<DatabaseOpener>().open),
-    )
-    ..registerLazySingleton<OnboardingService>(
-      () => OnboardingService(sl<OnboardingRepository>()),
-    )
-    ..registerLazySingleton<OnboardingCubit>(
-      () => OnboardingCubit(sl<OnboardingService>()),
-    );
+  // Register environment config
+  sl.registerSingleton<EnvironmentConfig>(EnvironmentConfig(environment));
 
+  // Register database components
+  sl.registerLazySingleton<DatabaseKeyStore>(
+    () => const DatabaseKeyStore(store: FlutterSecureKeyValueStore()),
+  );
+
+  sl.registerLazySingleton<DatabaseOpener>(
+    () => DatabaseOpener(
+      passwordProvider: () async {
+        final keyStore = sl<DatabaseKeyStore>();
+        return await keyStore.readOrCreateKey();
+      },
+    ),
+  );
+
+  sl.registerLazySingleton<AppDatabase>(
+    () => AppDatabase(opener: sl<DatabaseOpener>()),
+  );
+
+  // Register onboarding repository using SQLCipher
+  sl.registerLazySingleton<OnboardingRepository>(
+    () => SqlCipherOnboardingRepository(opener: sl<DatabaseOpener>().open),
+  );
+  sl.registerLazySingleton<OnboardingService>(
+    () => OnboardingService(sl<OnboardingRepository>()),
+  );
+  sl.registerLazySingleton<OnboardingCubit>(
+    () => OnboardingCubit(sl<OnboardingService>()),
+  );
+
+  // Register security repositories
   if (useInMemoryStorage) {
     sl
       ..registerLazySingleton<SecurityRepository>(
@@ -91,6 +98,7 @@ Future<void> configureDependencies({
       );
   }
 
+  // Register security service and cubit
   sl
     ..registerLazySingleton<SecurityService>(
       () => SecurityService(
@@ -100,47 +108,56 @@ Future<void> configureDependencies({
     )
     ..registerLazySingleton<SecurityCubit>(
       () => SecurityCubit(sl<SecurityService>()),
-    )
+    );
+
+  // Register transaction components
+  sl
     ..registerLazySingleton<TransactionRepository>(
       InMemoryTransactionRepository.new,
     )
     ..registerLazySingleton<AccountRepository>(InMemoryAccountRepository.new)
-    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new)
-    ..registerLazySingleton<TransactionService>(
-      () => TransactionService(
-        transactions: sl<TransactionRepository>(),
-        accounts: sl<AccountRepository>(),
-        categories: sl<CategoryRepository>(),
-      ),
-    )
-    ..registerLazySingleton<TransactionsCubit>(
-      () => TransactionsCubit(sl<TransactionService>()),
-    )
-    ..registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new)
-    ..registerLazySingleton<BudgetService>(
-      () => BudgetService(
-        budgets: sl<BudgetRepository>(),
-        categories: sl<CategoryRepository>(),
-      ),
-    )
-    ..registerLazySingleton<BudgetCubit>(() => BudgetCubit(sl<BudgetService>()))
-    ..registerLazySingleton<AnalyticsRepository>(
-      () => InMemoryAnalyticsRepository(
-        transactions: sl<TransactionRepository>(),
-        categories: sl<CategoryRepository>(),
-      ),
-    )
-    ..registerLazySingleton<AnalyticsService>(
-      () => AnalyticsService(
-        analytics: sl<AnalyticsRepository>(),
-        transactions: sl<TransactionRepository>(),
-        accounts: sl<AccountRepository>(),
-        budgets: sl<BudgetRepository>(),
-        categories: sl<CategoryRepository>(),
-      ),
-    )
-    ..registerLazySingleton<AnalyticsCubit>(
-      () => AnalyticsCubit(sl<AnalyticsService>()),
-    )
-    ..registerLazySingleton<AppRouter>(AppRouter.new);
+    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new);
+  sl.registerLazySingleton<TransactionService>(
+    () => TransactionService(
+      transactions: sl<TransactionRepository>(),
+      accounts: sl<AccountRepository>(),
+      categories: sl<CategoryRepository>(),
+    ),
+  );
+  sl.registerLazySingleton<TransactionsCubit>(
+    () => TransactionsCubit(sl<TransactionService>()),
+  );
+
+  // Register budget components
+  sl.registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
+    sl.registerLazySingleton<BudgetService>(
+    () => BudgetService(
+      budgets: sl<BudgetRepository>(),
+      categories: sl<CategoryRepository>(),
+    ),
+  );
+  sl.registerLazySingleton<BudgetCubit>(() => BudgetCubit(sl<BudgetService>()));
+
+  // Register analytics components
+    sl.registerLazySingleton<AnalyticsRepository>(
+    () => InMemoryAnalyticsRepository(
+      transactions: sl<TransactionRepository>(),
+      categories: sl<CategoryRepository>(),
+    ),
+  );
+  sl.registerLazySingleton<AnalyticsService>(
+    () => AnalyticsService(
+      analytics: sl<AnalyticsRepository>(),
+      transactions: sl<TransactionRepository>(),
+      accounts: sl<AccountRepository>(),
+      budgets: sl<BudgetRepository>(),
+      categories: sl<CategoryRepository>(),
+    ),
+  );
+  sl.registerLazySingleton<AnalyticsCubit>(
+    () => AnalyticsCubit(sl<AnalyticsService>()),
+  );
+
+  // Register app router
+  sl.registerLazySingleton<AppRouter>(AppRouter.new);
 }
