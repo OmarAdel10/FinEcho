@@ -130,7 +130,7 @@ Future<void> configureDependencies({
 
   // Register budget components
   sl.registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
-    sl.registerLazySingleton<BudgetService>(
+  sl.registerLazySingleton<BudgetService>(
     () => BudgetService(
       budgets: sl<BudgetRepository>(),
       categories: sl<CategoryRepository>(),
@@ -139,7 +139,7 @@ Future<void> configureDependencies({
   sl.registerLazySingleton<BudgetCubit>(() => BudgetCubit(sl<BudgetService>()));
 
   // Register analytics components
-    sl.registerLazySingleton<AnalyticsRepository>(
+  sl.registerLazySingleton<AnalyticsRepository>(
     () => InMemoryAnalyticsRepository(
       transactions: sl<TransactionRepository>(),
       categories: sl<CategoryRepository>(),

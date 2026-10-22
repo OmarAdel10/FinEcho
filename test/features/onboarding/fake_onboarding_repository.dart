@@ -5,9 +5,7 @@ import 'package:finecho/features/onboarding/data/repositories/onboarding_reposit
 class FakeOnboardingRepository implements OnboardingRepository {
   /// Creates a fake repository with the supplied initial snapshot.
   new({OnboardingSnapshot? initialSnapshot})
-    : _snapshot =
-          initialSnapshot ??
-          OnboardingSnapshot.initial;
+    : _snapshot = initialSnapshot ?? OnboardingSnapshot.initial;
 
   OnboardingSnapshot _snapshot;
 
