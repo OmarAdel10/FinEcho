@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 /// Key derivation for the app-lock PIN verifier.
 abstract final class SecurityPinHasher {
@@ -91,6 +91,39 @@ abstract final class SecurityPinHasher {
     return _constantTimeEquals(legacyHash(pin, salt), expectedHash);
   }
 
+  /// Derives the verifier of [pin] on a background isolate.
+  ///
+  /// The derivation is deliberately expensive, so it must not run on the
+  /// platform isolate where it would freeze the interface while the user
+  /// waits for the app lock to be set up or unlocked.
+  static Future<String> hashInBackground(
+    String pin,
+    String salt, {
+    int iterations = defaultIterations,
+  }) {
+    return compute(_deriveVerifier, (
+      pin: pin,
+      salt: salt,
+      iterations: iterations,
+    ), debugLabel: 'app lock PIN derivation');
+  }
+
+  /// Whether [pin] produces [expectedHash] for [salt] on a background
+  /// isolate.
+  static Future<bool> matchesInBackground({
+    required String pin,
+    required String salt,
+    required String expectedHash,
+    int iterations = defaultIterations,
+  }) {
+    return compute(_verifyVerifier, (
+      pin: pin,
+      salt: salt,
+      expectedHash: expectedHash,
+      iterations: iterations,
+    ), debugLabel: 'app lock PIN verification');
+  }
+
   static bool _constantTimeEquals(String actual, String expected) {
     final actualBytes = utf8.encode(actual);
     final expectedBytes = utf8.encode(expected);
@@ -122,4 +155,40 @@ abstract final class SecurityPinHasher {
     }
     return derived;
   }
+}
+
+/// The work sent to the background isolate that derives a verifier.
+typedef _DerivationInput = ({String pin, String salt, int iterations});
+
+/// The work sent to the background isolate that verifies a PIN.
+typedef _VerificationInput = ({
+  String pin,
+  String salt,
+  String expectedHash,
+  int iterations,
+});
+
+/// Derives a verifier on the background isolate.
+///
+/// The entry point must stay a top-level function so it can be sent to the
+/// isolate.
+String _deriveVerifier(_DerivationInput input) {
+  return SecurityPinHasher.hash(
+    input.pin,
+    input.salt,
+    iterations: input.iterations,
+  );
+}
+
+/// Verifies a PIN on the background isolate.
+///
+/// The entry point must stay a top-level function so it can be sent to the
+/// isolate.
+bool _verifyVerifier(_VerificationInput input) {
+  return SecurityPinHasher.matches(
+    pin: input.pin,
+    salt: input.salt,
+    expectedHash: input.expectedHash,
+    iterations: input.iterations,
+  );
 }

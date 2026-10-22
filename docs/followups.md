@@ -105,8 +105,6 @@ Deferred; tracked in Plane:
   live in the UI but no biometric package is wired.
 - FINECHO-36 render a continue action when onboarding resumes at the security
   setup step; the page is currently blank with a no-op primary button.
-- FINECHO-38 derive the PIN verifier off the platform isolate; the current
-  derivation blocks the UI thread for roughly 300 ms per attempt.
 - FINECHO-39 render a splash while the startup security state loads; the
   native launch screen is shown for up to the load timeout.
 - FINECHO-41 persist the onboarding snapshot: the production graph still uses
@@ -127,6 +125,9 @@ Deferred; tracked in Plane:
   payload is read without the shape checks the versioned payload gets.
 - FINECHO-47 separate the erase result from the legacy acknowledgement; a
   failing acknowledgement write currently reports the whole reset as failed.
+- FINECHO-48 ignore the Kotlin build cache in the Android project; the build
+  writes an untracked `android/.kotlin` directory that is not covered by
+  `android/.gitignore`.
 - FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
@@ -167,6 +168,9 @@ Fixed:
 - A corrupt PIN verifier payload is rejected while decoding, so it reaches the
   recovery screen with a deliberate reset instead of locking the user out of a
   verifier that never matches (FINECHO-35).
+- The PIN verifier is derived on a background isolate, so setting up or
+  unlocking the app no longer blocks the platform isolate for the duration of
+  the derivation (FINECHO-38).
 - Cloud backup and Android 12+ device-to-device transfer exclude app data
   through `dataExtractionRules`, with `allowBackup=false` and
   `fullBackupContent=false` for older versions.

@@ -232,7 +232,9 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
   report, so an upgrade from an older backend reaches the recovery screen
   instead of silently dropping the lock. The verifier is a random-salted
   PBKDF2-HMAC-SHA256 derivation (100,000 iterations, 32-byte output) compared
-  in constant time; the raw PIN is never stored.
+  in constant time; the raw PIN is never stored. The derivation runs on a
+  background isolate, so the platform isolate stays free while the verifier is
+  derived; the legacy single-round derivation is cheap enough to run directly.
   Verifiers persisted by earlier versions (single HMAC-SHA256 round, no version
   marker) are still verified against the legacy derivation; a newly configured
   PIN is always written in the current format. A corrupt verifier payload or an

@@ -1,6 +1,7 @@
 import 'package:finecho/app/bootstrap/app_bootstrap.dart';
 import 'package:finecho/app/bootstrap/app_startup.dart';
 import 'package:finecho/app/di/service_locator.dart';
+import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/models/transaction.dart';
@@ -120,19 +121,23 @@ void main() {
   testWidgets('loads security before creating the production router', (
     tester,
   ) async {
-    await configureDependencies(useInMemoryStorage: true);
-    await sl<SecurityRepository>().update(
-      SecurityState(
-        appLockEnabled: true,
-        pinConfigured: true,
-        failedUnlockAttempts: 0,
-        secureKeyReady: true,
-        updatedAt: DateTime.utc(2026, 10, 15, 12),
-      ),
-    );
-    await sl<SecurityCredentialRepository>().savePin('123456');
-
-    final appRouter = await startAppRouter();
+    late AppRouter appRouter;
+    // The PIN derivation runs on a background isolate, so the real event loop
+    // has to run while it completes.
+    await tester.runAsync(() async {
+      await configureDependencies(useInMemoryStorage: true);
+      await sl<SecurityRepository>().update(
+        SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+      );
+      await sl<SecurityCredentialRepository>().savePin('123456');
+      appRouter = await startAppRouter();
+    });
 
     expect(sl<SecurityCubit>().state.status, SecurityAccessStatus.ready);
     expect(sl<SecurityCubit>().state.isLocked, isTrue);

@@ -39,8 +39,9 @@ class SecureStorageSecurityCredentialRepository
   }
 
   @override
-  Future<void> savePin(String pin) {
-    return store.write(credentialKey, PinVerifier.create(pin).encode());
+  Future<void> savePin(String pin) async {
+    final verifier = await PinVerifier.create(pin);
+    await store.write(credentialKey, verifier.encode());
   }
 
   @override
@@ -49,7 +50,7 @@ class SecureStorageSecurityCredentialRepository
     if (verifier == null) {
       return false;
     }
-    return verifier.matches(pin);
+    return await verifier.matches(pin);
   }
 
   @override

@@ -17,7 +17,7 @@ class InMemorySecurityCredentialRepository
 
   @override
   Future<void> savePin(String pin) async {
-    _verifier = PinVerifier.create(pin);
+    _verifier = await PinVerifier.create(pin);
   }
 
   @override
@@ -26,7 +26,7 @@ class InMemorySecurityCredentialRepository
     if (verifier == null) {
       return false;
     }
-    return verifier.matches(pin);
+    return await verifier.matches(pin);
   }
 
   @override
