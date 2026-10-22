@@ -10,6 +10,16 @@ abstract final class AppMigrations {
     1: <String>[
       'ALTER TABLE accounts ADD COLUMN archived INTEGER NOT NULL DEFAULT 0',
     ],
+    2: <String>[
+      'CREATE TABLE onboarding (\n'
+          '  id INTEGER PRIMARY KEY CHECK (id = 0),\n'
+          '  current_step TEXT NOT NULL,\n'
+          '  is_completed INTEGER NOT NULL,\n'
+          '  biometrics_enabled INTEGER NOT NULL,\n'
+          '  sms_automation_enabled INTEGER NOT NULL,\n'
+          '  updated_at INTEGER NOT NULL\n'
+          ')',
+    ],
   };
 
   /// Moves a database from [fromVersion] through [toVersion].

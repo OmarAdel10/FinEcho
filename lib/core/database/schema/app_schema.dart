@@ -1,7 +1,7 @@
 /// The SQLCipher schema used by FinEcho's local database.
 abstract final class AppSchema {
   /// The current schema version.
-  static const int version = 2;
+  static const int version = 3;
 
   static const String _createAccounts =
       'CREATE TABLE accounts (\n'
@@ -124,6 +124,16 @@ abstract final class AppSchema {
       '  updated_at INTEGER NOT NULL\n'
       ')';
 
+  static const String _createOnboarding =
+      'CREATE TABLE onboarding (\n'
+      '  id INTEGER PRIMARY KEY CHECK (id = 0),\n'
+      '  current_step TEXT NOT NULL,\n'
+      '  is_completed INTEGER NOT NULL,\n'
+      '  biometrics_enabled INTEGER NOT NULL,\n'
+      '  sms_automation_enabled INTEGER NOT NULL,\n'
+      '  updated_at INTEGER NOT NULL\n'
+      ')';
+
   static const String _indexAccountsLinkedAccount =
       'CREATE INDEX idx_accounts_linked_account_id '
       'ON accounts(linked_account_id)';
@@ -177,6 +187,7 @@ abstract final class AppSchema {
     _createNotificationSchedules,
     _createAppSettings,
     _createSecurityState,
+    _createOnboarding,
     _indexAccountsLinkedAccount,
     _indexCategoriesParent,
     _indexTransactionsAccount,
