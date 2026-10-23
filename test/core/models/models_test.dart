@@ -137,5 +137,36 @@ void main() {
       expect(cleared.warningShare, isNull);
       expect(cleared, budget);
     });
+
+    test('round-trips a configured currency', () {
+      final configured = budget.copyWith(currency: 'EGP');
+      final restored = Budget.fromMap(configured.toMap());
+
+      expect(restored.currency, 'EGP');
+      expect(restored, configured);
+    });
+
+    test('round-trips a null currency as null', () {
+      final restored = Budget.fromMap(budget.toMap());
+
+      expect(restored.currency, isNull);
+      expect(budget.toMap()['currency'], isNull);
+    });
+
+    test('treats a different currency as a different budget', () {
+      final configured = budget.copyWith(currency: 'EGP');
+
+      expect(configured, isNot(budget));
+      expect(configured.currency, 'EGP');
+      expect(budget.copyWith(currency: 'EGP').hashCode, configured.hashCode);
+    });
+
+    test('copyWith can clear the currency back to null', () {
+      final configured = budget.copyWith(currency: 'EGP');
+      final cleared = configured.copyWith(currency: null);
+
+      expect(cleared.currency, isNull);
+      expect(cleared, budget);
+    });
   });
 }

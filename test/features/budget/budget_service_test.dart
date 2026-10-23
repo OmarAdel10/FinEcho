@@ -269,5 +269,107 @@ void main() {
       expect(harness.budgetRepository.deletedIds, <String>[budget.id]);
       expect(harness.budgetRepository.budgets, isEmpty);
     });
+
+    test('persists the budget currency on create', () async {
+      final harness = BudgetTestHarness(
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      final created = await harness.service.createBudget(
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 5000,
+        period: 'monthly',
+        startDate: DateTime.utc(2026, 10),
+        currency: 'EGP',
+      );
+
+      expect(created.currency, 'EGP');
+      expect(harness.budgetRepository.budgets.values.single.currency, 'EGP');
+    });
+
+    test('regenerates the id when it collides', () async {
+      final existing = testBudget();
+      var calls = 0;
+      final harness = BudgetTestHarness(
+        initialBudgets: {existing.id: existing},
+        initialCategories: {'category-1': testCategory()},
+        newId: () => calls++ == 0 ? 'budget-1' : 'budget-2',
+      );
+
+      final created = await harness.service.createBudget(
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 5000,
+        period: 'monthly',
+        startDate: DateTime.utc(2026, 10),
+      );
+
+      expect(created.id, 'budget-2-1');
+      expect(harness.budgetRepository.createdIds, <String>['budget-2-1']);
+    });
+
+    test('gives up after repeated id collisions', () async {
+      final harness = BudgetTestHarness(
+        initialBudgets: {
+          'budget-1': testBudget(id: 'budget-1'),
+          'budget-1-1': testBudget(id: 'budget-1-1'),
+          'budget-1-2': testBudget(id: 'budget-1-2'),
+          'budget-1-3': testBudget(id: 'budget-1-3'),
+          'budget-1-4': testBudget(id: 'budget-1-4'),
+          'budget-1-5': testBudget(id: 'budget-1-5'),
+        },
+        initialCategories: {'category-1': testCategory()},
+        newId: () => 'budget-1',
+      );
+
+      await expectLater(
+        harness.service.createBudget(
+          categoryId: 'category-1',
+          allocatedAmountMinorUnits: 5000,
+          period: 'monthly',
+          startDate: DateTime.utc(2026, 10),
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(harness.budgetRepository.createdIds, isEmpty);
+    });
+
+    test('applies the currency passed on update', () async {
+      final original = testBudget(currency: 'EGP');
+      final harness = BudgetTestHarness(
+        initialBudgets: {original.id: original},
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      final updated = await harness.service.updateBudget(
+        budget: original,
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 10000,
+        period: 'monthly',
+        startDate: DateTime.utc(2026, 10),
+        currency: 'USD',
+      );
+
+      expect(updated.currency, 'USD');
+      expect(harness.budgetRepository.budgets[original.id]!.currency, 'USD');
+    });
+
+    test('clears the currency when the update omits it', () async {
+      final original = testBudget(currency: 'EGP');
+      final harness = BudgetTestHarness(
+        initialBudgets: {original.id: original},
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      final updated = await harness.service.updateBudget(
+        budget: original,
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 10000,
+        period: 'monthly',
+        startDate: DateTime.utc(2026, 10),
+      );
+
+      expect(updated.currency, isNull);
+      expect(harness.budgetRepository.budgets[original.id]!.currency, isNull);
+    });
   });
 }
