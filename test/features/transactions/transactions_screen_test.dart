@@ -2,6 +2,7 @@ import 'package:finecho/core/models/account.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/features/transactions/view/screens/transactions_screen.dart';
+import 'package:finecho/features/transactions/view/widgets/period_totals_card.dart';
 import 'package:finecho/features/transactions/view/widgets/transaction_tile.dart';
 import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
@@ -142,7 +143,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Amount'), findsNothing);
-    expect(find.text('-12.50'), findsOneWidget);
+    // The card's net metric renders the same figure, so scope the saved
+    // row assertion to the transaction tile.
+    expect(
+      find.descendant(
+        of: find.byType(TransactionTile),
+        matching: find.text('-12.50'),
+      ),
+      findsOneWidget,
+    );
     expect(harness.transactionRepository.transactions['txn-new'], isNotNull);
   });
 
@@ -196,5 +205,136 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(TransactionTile), findsOneWidget);
     expect(find.text('Food'), findsOneWidget);
+  });
+
+  testWidgets('shows period totals for the current month above the list', (
+    tester,
+  ) async {
+    final account = _account('account-1', 'Main bank');
+    final salary = _category('category-1', 'Salary');
+    final rent = _category('category-2', 'Rent');
+    final income = _transaction(
+      id: 'txn-1',
+      accountId: account.id,
+      categoryId: salary.id,
+      amountMinorUnits: 50000,
+      timestamp: DateTime.utc(2026, 10, 14),
+      type: TransactionType.income,
+    );
+    final expense = _transaction(
+      id: 'txn-2',
+      accountId: account.id,
+      categoryId: rent.id,
+      amountMinorUnits: 1250,
+      timestamp: DateTime.utc(2026, 10, 2),
+      type: TransactionType.expense,
+    );
+    final previousMonth = _transaction(
+      id: 'txn-3',
+      accountId: account.id,
+      categoryId: rent.id,
+      amountMinorUnits: 999,
+      timestamp: DateTime.utc(2026, 9, 30),
+      type: TransactionType.expense,
+    );
+    final harness = TransactionsTestHarness(
+      initialTransactions: {
+        income.id: income,
+        expense.id: expense,
+        previousMonth.id: previousMonth,
+      },
+      initialAccounts: {account.id: account},
+      initialCategories: {salary.id: salary, rent.id: rent},
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    final cubit = await createLoadedCubit(harness);
+
+    await tester.pumpWidget(
+      wrapScreen(
+        cubit,
+        TransactionsScreen(
+          now: () => DateTime.utc(2026, 10, 15, 12),
+          localUtcOffset: Duration.zero,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PeriodTotalsCard), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byType(PeriodTotalsCard)).dy,
+      lessThan(tester.getTopLeft(find.byType(TransactionTile).first).dy),
+    );
+    expect(find.text('Income'), findsOneWidget);
+    expect(find.text('500.00'), findsOneWidget);
+    expect(find.text('12.50'), findsOneWidget);
+    expect(find.text('487.50'), findsOneWidget);
+    expect(find.text('Oct 1, 2026 – Oct 31, 2026'), findsOneWidget);
+  });
+
+  testWidgets('switches period totals when another period is picked', (
+    tester,
+  ) async {
+    final account = _account('account-1', 'Main bank');
+    final salary = _category('category-1', 'Salary');
+    final rent = _category('category-2', 'Rent');
+    final income = _transaction(
+      id: 'txn-1',
+      accountId: account.id,
+      categoryId: salary.id,
+      amountMinorUnits: 50000,
+      timestamp: DateTime.utc(2026, 10, 14),
+      type: TransactionType.income,
+    );
+    final expense = _transaction(
+      id: 'txn-2',
+      accountId: account.id,
+      categoryId: rent.id,
+      amountMinorUnits: 1250,
+      timestamp: DateTime.utc(2026, 10, 2),
+      type: TransactionType.expense,
+    );
+    final previousMonth = _transaction(
+      id: 'txn-3',
+      accountId: account.id,
+      categoryId: rent.id,
+      amountMinorUnits: 999,
+      timestamp: DateTime.utc(2026, 9, 30),
+      type: TransactionType.expense,
+    );
+    final harness = TransactionsTestHarness(
+      initialTransactions: {
+        income.id: income,
+        expense.id: expense,
+        previousMonth.id: previousMonth,
+      },
+      initialAccounts: {account.id: account},
+      initialCategories: {salary.id: salary, rent.id: rent},
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    final cubit = await createLoadedCubit(harness);
+
+    await tester.pumpWidget(
+      wrapScreen(
+        cubit,
+        TransactionsScreen(
+          now: () => DateTime.utc(2026, 10, 15, 12),
+          localUtcOffset: Duration.zero,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Weekly'));
+    await tester.pumpAndSettle();
+    // Only the Oct 14 income falls inside the week of Oct 12.
+    expect(find.text('500.00'), findsNWidgets(2)); // Income and Net.
+    expect(find.text('0.00'), findsOneWidget); // Expenses.
+
+    await tester.tap(find.text('Yearly'));
+    await tester.pumpAndSettle();
+    expect(find.text('500.00'), findsOneWidget); // Income.
+    expect(find.text('22.49'), findsOneWidget); // Expenses: 1250 + 999.
+    expect(find.text('477.51'), findsOneWidget); // Net: 50000 - 2249.
   });
 }

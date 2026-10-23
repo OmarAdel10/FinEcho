@@ -9,6 +9,7 @@ import 'package:finecho/features/onboarding/view_model/services/onboarding_servi
 import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/transactions/view/screens/transactions_screen.dart';
+import 'package:finecho/features/transactions/view/widgets/transaction_tile.dart';
 import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,6 +94,8 @@ void main() {
 
     expect(find.byType(TransactionsScreen), findsOneWidget);
     expect(find.text('FinEcho'), findsOneWidget);
-    expect(find.text('-12.50'), findsOneWidget);
+    // The period totals card renders the same figure as its net metric,
+    // so scope the row assertion to the transaction tile.
+    expect(find.widgetWithText(TransactionTile, '-12.50'), findsOneWidget);
   });
 }
