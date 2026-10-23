@@ -4,20 +4,26 @@ import 'package:sqflite_sqlcipher/sqlite_api.dart' show Database;
 
 /// A SQLCipher-backed budget repository implementation.
 class SqfliteBudgetRepository implements BudgetRepository {
-  /// Creates a repository backed by the supplied SQLite database.
-  const new(this._database);
+  /// Creates a repository that opens the encrypted database on demand.
+  const new({required this.opener});
 
-  final Database _database;
+  /// Opens the encrypted database when a query runs.
+  ///
+  /// The database is opened lazily so nothing touches secure storage or the
+  /// file system before the first query.
+  final Future<Database> Function() opener;
 
   @override
   Future<List<Budget>> list() async {
-    final rows = await _database.query('budgets', orderBy: 'start_date DESC');
+    final database = await opener();
+    final rows = await database.query('budgets', orderBy: 'start_date DESC');
     return rows.map(Budget.fromMap).toList();
   }
 
   @override
   Future<Budget?> get(String id) async {
-    final rows = await _database.query(
+    final database = await opener();
+    final rows = await database.query(
       'budgets',
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -31,12 +37,14 @@ class SqfliteBudgetRepository implements BudgetRepository {
 
   @override
   Future<void> create(Budget budget) async {
-    await _database.insert('budgets', budget.toMap());
+    final database = await opener();
+    await database.insert('budgets', budget.toMap());
   }
 
   @override
   Future<void> update(Budget budget) async {
-    await _database.update(
+    final database = await opener();
+    await database.update(
       'budgets',
       budget.toMap(),
       where: 'id = ?',
@@ -46,15 +54,13 @@ class SqfliteBudgetRepository implements BudgetRepository {
 
   @override
   Future<void> delete(String id) async {
-    await _database.delete(
-      'budgets',
-      where: 'id = ?',
-      whereArgs: <Object?>[id],
-    );
+    final database = await opener();
+    await database.delete('budgets', where: 'id = ?', whereArgs: <Object?>[id]);
   }
 
   @override
   Future<void> eraseAll() async {
-    await _database.delete('budgets');
+    final database = await opener();
+    await database.delete('budgets');
   }
 }

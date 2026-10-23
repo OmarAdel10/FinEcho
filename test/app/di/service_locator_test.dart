@@ -11,11 +11,14 @@ import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_analytics_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_budget_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
+import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:finecho/features/budget/view_model/services/budget_service.dart';
@@ -40,6 +43,7 @@ void main() {
   test('registers the budget dependency graph', () async {
     await configureDependencies(useInMemoryStorage: true);
 
+    expect(sl<BudgetRepository>(), isA<InMemoryBudgetRepository>());
     expect(sl<BudgetRepository>(), isA<BudgetRepository>());
     await expectLater(sl<BudgetService>().listBudgets(), completion(isEmpty));
     expect(sl<BudgetCubit>().state.status, BudgetStatus.loading);
@@ -219,5 +223,22 @@ void main() {
 
     expect(dashboard.totalExpenseMinorUnits, 1234);
     await sl<AnalyticsCubit>().close();
+  });
+
+  test('registers the SQLCipher budget repository by default', () async {
+    await configureDependencies();
+
+    // Resolving the repository only constructs it; the database opens
+    // lazily on the first query, so no platform channel is touched here.
+    expect(sl<BudgetRepository>(), isA<SqfliteBudgetRepository>());
+    await sl<BudgetCubit>().close();
+  });
+
+  test('registers the SQLCipher analytics repository by default', () async {
+    await configureDependencies();
+
+    // Resolving the repository only constructs it; the database opens
+    // lazily on the first query, so no platform channel is touched here.
+    expect(sl<AnalyticsRepository>(), isA<SqfliteAnalyticsRepository>());
   });
 }
