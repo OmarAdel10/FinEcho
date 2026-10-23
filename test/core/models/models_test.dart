@@ -97,6 +97,21 @@ void main() {
       expect(Budget.fromMap(budget.toMap()), budget);
     });
 
+    test('round-trips a configured warning share', () {
+      final configured = budget.copyWith(warningShare: 0.9);
+      final restored = Budget.fromMap(configured.toMap());
+
+      expect(restored.warningShare, 0.9);
+      expect(restored, configured);
+    });
+
+    test('round-trips a null warning share as null', () {
+      final restored = Budget.fromMap(budget.toMap());
+
+      expect(restored.warningShare, isNull);
+      expect(budget.toMap()['warning_share'], isNull);
+    });
+
     test('copies, compares, and hashes predictably', () {
       final copied = budget.copyWith(allocatedAmountMinorUnits: 120000);
       final unchanged = budget.copyWith();
@@ -105,6 +120,22 @@ void main() {
       expect(copied, isNot(budget));
       expect(unchanged, budget);
       expect(unchanged.hashCode, budget.hashCode);
+    });
+
+    test('treats a different warning share as a different budget', () {
+      final configured = budget.copyWith(warningShare: 0.75);
+
+      expect(configured, isNot(budget));
+      expect(configured.warningShare, 0.75);
+      expect(budget.copyWith(warningShare: 0.75).hashCode, configured.hashCode);
+    });
+
+    test('copyWith can clear the warning share back to null', () {
+      final configured = budget.copyWith(warningShare: 0.9);
+      final cleared = configured.copyWith(warningShare: null);
+
+      expect(cleared.warningShare, isNull);
+      expect(cleared, budget);
     });
   });
 }

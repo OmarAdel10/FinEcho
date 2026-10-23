@@ -42,12 +42,15 @@ class BudgetService {
     required int allocatedAmountMinorUnits,
     required String period,
     required DateTime startDate,
+    double? warningShare,
   }) async {
     if (allocatedAmountMinorUnits <= 0) {
       throw const BudgetValidationException(
         'Enter an allocated amount greater than zero.',
       );
     }
+
+    _validateWarningShare(warningShare);
 
     final category = await _categories.get(categoryId);
     if (category == null) {
@@ -60,6 +63,7 @@ class BudgetService {
       allocatedAmountMinorUnits: allocatedAmountMinorUnits,
       period: BudgetPeriod.values.byName(period),
       startDate: startDate,
+      warningShare: warningShare,
     );
     await _budgets.create(budget);
     return budget;
@@ -72,12 +76,15 @@ class BudgetService {
     required int allocatedAmountMinorUnits,
     required String period,
     required DateTime startDate,
+    double? warningShare,
   }) async {
     if (allocatedAmountMinorUnits <= 0) {
       throw const BudgetValidationException(
         'Enter an allocated amount greater than zero.',
       );
     }
+
+    _validateWarningShare(warningShare);
 
     final category = await _categories.get(categoryId);
     if (category == null) {
@@ -89,6 +96,7 @@ class BudgetService {
       allocatedAmountMinorUnits: allocatedAmountMinorUnits,
       period: BudgetPeriod.values.byName(period),
       startDate: startDate,
+      warningShare: warningShare,
     );
     await _budgets.update(updated);
     return updated;
@@ -97,6 +105,17 @@ class BudgetService {
   /// Deletes the budget with [id].
   Future<void> deleteBudget(String id) async {
     await _budgets.delete(id);
+  }
+
+  static void _validateWarningShare(double? warningShare) {
+    if (warningShare == null) {
+      return;
+    }
+    if (warningShare <= 0 || warningShare >= 1) {
+      throw const BudgetValidationException(
+        'The warning threshold must be a share between zero and one.',
+      );
+    }
   }
 
   static String _defaultNewId() {

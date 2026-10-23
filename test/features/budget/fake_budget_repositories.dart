@@ -199,6 +199,7 @@ Budget testBudget({
   int allocatedAmountMinorUnits = 10000,
   BudgetPeriod period = BudgetPeriod.monthly,
   DateTime? startDate,
+  double? warningShare,
 }) {
   return Budget(
     id: id,
@@ -206,5 +207,6 @@ Budget testBudget({
     allocatedAmountMinorUnits: allocatedAmountMinorUnits,
     period: period,
     startDate: startDate ?? DateTime.utc(2026, 10),
+    warningShare: warningShare,
   );
 }

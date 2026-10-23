@@ -30,8 +30,9 @@ const int _spikeBaselineMonths = 3;
 /// Baseline months required before unusual spending can be flagged.
 const int _spikeMinimumBaselineMonths = 2;
 
-/// The spent share of a budget that raises a warning.
-const double _budgetWarningShare = 0.85;
+/// The spent share of a budget that raises a warning when the budget does not
+/// configure its own threshold.
+const double _defaultBudgetWarningShare = 0.85;
 
 const String _uncategorizedLabel = 'Uncategorized';
 const String _unknownAccountLabel = 'Unknown account';
@@ -556,10 +557,11 @@ class AnalyticsService {
 
       final allocated = budget.allocatedAmountMinorUnits;
       final ratio = allocated > 0 ? spent / allocated : 0.0;
+      final warningShare = budget.warningShare ?? _defaultBudgetWarningShare;
       final BudgetProgressLevel level;
       if ((allocated <= 0 && spent > 0) || ratio >= 1) {
         level = BudgetProgressLevel.exceeded;
-      } else if (ratio >= _budgetWarningShare) {
+      } else if (ratio >= warningShare) {
         level = BudgetProgressLevel.warning;
       } else {
         level = BudgetProgressLevel.normal;

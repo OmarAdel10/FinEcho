@@ -10,10 +10,15 @@ const String _amountLabel = 'Allocated amount';
 const String _categoryLabel = 'Category';
 const String _periodLabel = 'Period';
 const String _startDateLabel = 'Start date';
+const String _warningShareLabel = 'Warning threshold';
+const String _defaultWarningShareLabel = 'Default (85%)';
 const String _saveLabel = 'Save';
 const String _closeLabel = 'Close';
 const String _savingFailedMessage =
     'Could not save the budget. Please try again.';
+
+/// The warning threshold percentages offered in the budget form.
+const List<int> _warningPercentChoices = <int>[50, 60, 70, 75, 80, 85, 90, 95];
 
 /// The create or edit budget form shown as a modal sheet.
 class AddBudgetSheet extends StatefulWidget {
@@ -33,6 +38,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   late String _period;
   late DateTime _startDate;
   String? _categoryId;
+  int? _warningPercent;
 
   @override
   void initState() {
@@ -46,6 +52,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     _period = initial?.period.name ?? 'monthly';
     _startDate = _normalizeUtcDate(initial?.startDate ?? DateTime.now());
     _categoryId = initial?.categoryId;
+    _warningPercent = _initialWarningPercent(initial?.warningShare);
   }
 
   @override
@@ -184,6 +191,37 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                           },
                   ),
                   const SizedBox(height: 16),
+                  DropdownButtonFormField<int?>(
+                    initialValue: _warningPercent,
+                    decoration: const InputDecoration(
+                      labelText: _warningShareLabel,
+                      helperText:
+                          'Warns once this share of the budget is '
+                          'spent.',
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        // The explicit null entry is the Default choice; the
+                        // analyzer cannot tell it apart from an omitted value.
+                        // ignore: avoid_redundant_argument_values
+                        value: null,
+                        child: Text(_defaultWarningShareLabel),
+                      ),
+                      for (final percent in _warningPercentChoices)
+                        DropdownMenuItem<int?>(
+                          value: percent,
+                          child: Text('$percent%'),
+                        ),
+                    ],
+                    onChanged: state.isSubmitting
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _warningPercent = value;
+                            });
+                          },
+                  ),
+                  const SizedBox(height: 16),
                   FilledButton(
                     onPressed: state.isSubmitting ? null : _submit,
                     child: const Text(_saveLabel),
@@ -213,12 +251,16 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final initial = widget.initial;
+    final warningShare = _warningPercent == null
+        ? null
+        : _warningPercent! / 100;
     final ok = initial == null
         ? await cubit.createBudget(
             categoryId: categoryId!,
             allocatedAmountMinorUnits: amount,
             period: _period,
             startDate: _startDate,
+            warningShare: warningShare,
           )
         : await cubit.updateBudget(
             original: initial,
@@ -226,6 +268,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             allocatedAmountMinorUnits: amount,
             period: _period,
             startDate: _startDate,
+            warningShare: warningShare,
           );
     if (!mounted) {
       return;
@@ -246,6 +289,14 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       return categoryId;
     }
     return null;
+  }
+
+  int? _initialWarningPercent(double? share) {
+    if (share == null) {
+      return null;
+    }
+    final percent = (share * 100).round();
+    return _warningPercentChoices.contains(percent) ? percent : null;
   }
 
   int? _parseMinorUnits(String input) {

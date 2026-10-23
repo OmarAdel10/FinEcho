@@ -64,12 +64,59 @@ void main() {
 
       expect(budget.id, 'budget-new');
       expect(budget.period, BudgetPeriod.monthly);
+      expect(budget.warningShare, isNull);
       expect(harness.budgetRepository.createdIds, <String>['budget-new']);
       expect(
         harness.budgetRepository.budgets,
         containsPair('budget-new', budget),
       );
     });
+
+    test('creates a budget with a configured warning share', () async {
+      final harness = BudgetTestHarness(
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      final budget = await harness.service.createBudget(
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 1250,
+        period: 'monthly',
+        startDate: DateTime.utc(2026, 10),
+        warningShare: 0.9,
+      );
+
+      expect(budget.warningShare, 0.9);
+      expect(harness.budgetRepository.budgets['budget-new']!.warningShare, 0.9);
+    });
+
+    test(
+      'rejects warning shares outside the valid range without writing',
+      () async {
+        final harness = BudgetTestHarness(
+          initialCategories: {'category-1': testCategory()},
+        );
+
+        for (final share in <double>[0, -0.5, 1, 1.5]) {
+          await expectLater(
+            harness.service.createBudget(
+              categoryId: 'category-1',
+              allocatedAmountMinorUnits: 1250,
+              period: 'monthly',
+              startDate: DateTime.utc(2026, 10),
+              warningShare: share,
+            ),
+            throwsA(
+              isA<BudgetValidationException>().having(
+                (error) => error.message,
+                'message',
+                'The warning threshold must be a share between zero and one.',
+              ),
+            ),
+          );
+        }
+        expect(harness.budgetRepository.createdIds, isEmpty);
+      },
+    );
 
     test('updates a budget and preserves its identity', () async {
       final original = testBudget();
@@ -91,6 +138,48 @@ void main() {
       expect(updated.period, BudgetPeriod.weekly);
       expect(harness.budgetRepository.updatedIds, <String>[original.id]);
       expect(harness.budgetRepository.budgets[original.id], updated);
+    });
+
+    test('updates the warning share of an existing budget', () async {
+      final original = testBudget().copyWith(warningShare: 0.9);
+      final harness = BudgetTestHarness(
+        initialBudgets: {original.id: original},
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      final updated = await harness.service.updateBudget(
+        budget: original,
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 2500,
+        period: 'weekly',
+        startDate: DateTime.utc(2026, 11),
+        warningShare: 0.7,
+      );
+
+      expect(updated.warningShare, 0.7);
+      expect(harness.budgetRepository.budgets[original.id]!.warningShare, 0.7);
+    });
+
+    test('clears the warning share when the update omits it', () async {
+      final original = testBudget().copyWith(warningShare: 0.9);
+      final harness = BudgetTestHarness(
+        initialBudgets: {original.id: original},
+        initialCategories: {'category-1': testCategory()},
+      );
+
+      final updated = await harness.service.updateBudget(
+        budget: original,
+        categoryId: 'category-1',
+        allocatedAmountMinorUnits: 2500,
+        period: 'weekly',
+        startDate: DateTime.utc(2026, 11),
+      );
+
+      expect(updated.warningShare, isNull);
+      expect(
+        harness.budgetRepository.budgets[original.id]!.warningShare,
+        isNull,
+      );
     });
 
     test('rejects a zero update allocation without writing', () async {

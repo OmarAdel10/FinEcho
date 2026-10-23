@@ -35,7 +35,7 @@ class DatabaseOpener {
     final database = await openDatabase(
       path,
       password: password,
-      version: 5,
+      version: 6,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
@@ -97,6 +97,7 @@ class DatabaseOpener {
         amount INTEGER NOT NULL,
         period_start INTEGER NOT NULL,
         period_end INTEGER NOT NULL,
+        warning_share REAL,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id)
@@ -246,6 +247,11 @@ class DatabaseOpener {
     }
     if (oldVersion < 5) {
       await database.execute('ALTER TABLE transactions ADD COLUMN payee TEXT');
+    }
+    if (oldVersion < 6) {
+      await database.execute(
+        'ALTER TABLE budgets ADD COLUMN warning_share REAL',
+      );
     }
   }
 
