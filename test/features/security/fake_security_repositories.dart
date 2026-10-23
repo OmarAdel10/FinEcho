@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
