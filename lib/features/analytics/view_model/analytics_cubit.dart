@@ -1,7 +1,7 @@
 import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
 import 'package:flutter/foundation.dart';
