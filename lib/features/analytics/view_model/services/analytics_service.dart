@@ -40,13 +40,14 @@ const String _unknownAccountLabel = 'Unknown account';
 /// Derives the statistics dashboard from persisted local history.
 class AnalyticsService {
   /// Creates an analytics service backed by the FinEcho repositories.
-  const new({
+  new({
     required AnalyticsRepository analytics,
     required TransactionRepository transactions,
     required AccountRepository accounts,
     required BudgetRepository budgets,
     required CategoryRepository categories,
     DateTime Function()? now,
+    Duration? localUtcOffset,
   }) : this._(
          analytics,
          transactions,
@@ -54,15 +55,17 @@ class AnalyticsService {
          budgets,
          categories,
          now ?? DateTime.now,
+         localUtcOffset ?? DateTime.now().timeZoneOffset,
        );
 
-  const new _(
+  new _(
     this._analytics,
     this._transactions,
     this._accounts,
     this._budgets,
     this._categories,
     this._now,
+    this._localUtcOffset,
   );
 
   final AnalyticsRepository _analytics;
@@ -72,19 +75,30 @@ class AnalyticsService {
   final CategoryRepository _categories;
   final DateTime Function() _now;
 
+  /// How far east of UTC the device's local calendar runs.
+  ///
+  /// Calendar boundaries are derived from the local wall clock and converted
+  /// back to UTC with this offset, so tests can pin the view while production
+  /// follows the device zone.
+  final Duration _localUtcOffset;
+
   /// Derives the dashboard for [period] from current local history.
   ///
-  /// Calendar ranges use UTC to match the stored transaction timestamps.
+  /// Calendar ranges follow the device's local calendar and are converted to
+  /// UTC to match the stored transaction timestamps, so a user east of UTC
+  /// does not see the previous month for the first hours of a new local
+  /// month.
   /// Aggregates assume every account shares one display currency; totals are
   /// summed in minor units without conversion.
   Future<AnalyticsDashboard> loadDashboard({
     required AnalyticsPeriod period,
   }) async {
     final nowUtc = _now().toUtc();
-    final (startUtc, endUtc) = _rangeFor(period, nowUtc);
+    final (startUtc, endUtc) = _rangeFor(period, nowUtc, _localUtcOffset);
     final (previousStartUtc, previousEndUtc) = _previousRangeFor(
       period,
       nowUtc,
+      _localUtcOffset,
     );
     final previousComparisonEndUtc = _previousComparisonEnd(
       startUtc: startUtc,
@@ -169,36 +183,56 @@ class AnalyticsService {
   static (DateTime, DateTime) _rangeFor(
     AnalyticsPeriod period,
     DateTime nowUtc,
+    Duration localUtcOffset,
   ) {
+    final nowLocal = nowUtc.add(localUtcOffset);
     switch (period) {
       case AnalyticsPeriod.week:
-        final start = _startOfWeek(nowUtc);
-        return (start, start.add(const Duration(days: 7)));
+        final start = _startOfWeek(nowLocal);
+        return (
+          start.subtract(localUtcOffset),
+          start.add(const Duration(days: 7)).subtract(localUtcOffset),
+        );
       case AnalyticsPeriod.month:
         return (
-          DateTime.utc(nowUtc.year, nowUtc.month),
-          DateTime.utc(nowUtc.year, nowUtc.month + 1),
+          DateTime.utc(nowLocal.year, nowLocal.month).subtract(localUtcOffset),
+          DateTime.utc(
+            nowLocal.year,
+            nowLocal.month + 1,
+          ).subtract(localUtcOffset),
         );
       case AnalyticsPeriod.year:
-        return (DateTime.utc(nowUtc.year), DateTime.utc(nowUtc.year + 1));
+        return (
+          DateTime.utc(nowLocal.year).subtract(localUtcOffset),
+          DateTime.utc(nowLocal.year + 1).subtract(localUtcOffset),
+        );
     }
   }
 
   static (DateTime, DateTime) _previousRangeFor(
     AnalyticsPeriod period,
     DateTime nowUtc,
+    Duration localUtcOffset,
   ) {
+    final current = _rangeFor(period, nowUtc, localUtcOffset);
     switch (period) {
       case AnalyticsPeriod.week:
-        final start = _startOfWeek(nowUtc);
-        return (start.subtract(const Duration(days: 7)), start);
+        return (current.$1.subtract(const Duration(days: 7)), current.$1);
       case AnalyticsPeriod.month:
+        final localStart = current.$1.add(localUtcOffset);
         return (
-          DateTime.utc(nowUtc.year, nowUtc.month - 1),
-          DateTime.utc(nowUtc.year, nowUtc.month),
+          DateTime.utc(
+            localStart.year,
+            localStart.month - 1,
+          ).subtract(localUtcOffset),
+          current.$1,
         );
       case AnalyticsPeriod.year:
-        return (DateTime.utc(nowUtc.year - 1), DateTime.utc(nowUtc.year));
+        final localStart = current.$1.add(localUtcOffset);
+        return (
+          DateTime.utc(localStart.year - 1).subtract(localUtcOffset),
+          current.$1,
+        );
     }
   }
 
@@ -217,8 +251,8 @@ class AnalyticsService {
         : comparisonEnd;
   }
 
-  static DateTime _startOfWeek(DateTime nowUtc) {
-    final date = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
+  static DateTime _startOfWeek(DateTime nowLocal) {
+    final date = DateTime.utc(nowLocal.year, nowLocal.month, nowLocal.day);
     return date.subtract(Duration(days: date.weekday - DateTime.monday));
   }
 

@@ -82,6 +82,7 @@ class AnalyticsTestHarness {
     Map<String, Budget> initialBudgets = const {},
     AnalyticsSummary Function(DateTime startUtc, DateTime endUtc)? onSummary,
     DateTime Function()? now,
+    Duration? localUtcOffset,
   }) : analyticsRepository = FakeAnalyticsRepository(onSummary: onSummary),
        transactionRepository = FakeTransactionRepository(
          initialTransactions: initialTransactions,
@@ -100,6 +101,7 @@ class AnalyticsTestHarness {
       budgets: budgetRepository,
       categories: categoryRepository,
       now: now ?? () => analyticsTestNow,
+      localUtcOffset: localUtcOffset ?? Duration.zero,
     );
   }
 
