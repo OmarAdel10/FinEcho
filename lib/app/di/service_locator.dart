@@ -22,6 +22,8 @@ import 'package:finecho/features/onboarding/data/repositories/onboarding_reposit
 import 'package:finecho/features/onboarding/data/repositories/sql_cipher_onboarding_repository.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';
+import 'package:finecho/features/security/data/biometrics/biometric_authenticator.dart';
+import 'package:finecho/features/security/data/biometrics/local_auth_biometric_authenticator.dart';
 import 'package:finecho/features/security/data/repositories/in_memory_security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/in_memory_security_repository.dart';
 import 'package:finecho/features/security/data/repositories/secure_storage_security_credential_repository.dart';
@@ -114,8 +116,11 @@ Future<void> configureDependencies({
     ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new)
     ..registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
 
-  // Register security service and cubit
+  // Register the platform biometric prompt, service, and cubit.
   sl
+    ..registerLazySingleton<BiometricAuthenticator>(
+      LocalAuthBiometricAuthenticator.new,
+    )
     ..registerLazySingleton<SecurityService>(
       () => SecurityService(
         repository: sl<SecurityRepository>(),
@@ -127,7 +132,10 @@ Future<void> configureDependencies({
       ),
     )
     ..registerLazySingleton<SecurityCubit>(
-      () => SecurityCubit(sl<SecurityService>()),
+      () => SecurityCubit(
+        sl<SecurityService>(),
+        biometrics: sl<BiometricAuthenticator>(),
+      ),
     );
 
   // Register transaction components

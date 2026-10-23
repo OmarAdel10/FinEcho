@@ -12,6 +12,7 @@ import 'fake_security_repositories.dart';
 SecurityState _configuredState({
   int failedAttempts = 0,
   DateTime? lockedUntil,
+  bool biometricsEnabled = false,
 }) {
   return SecurityState(
     appLockEnabled: true,
@@ -19,6 +20,7 @@ SecurityState _configuredState({
     failedUnlockAttempts: failedAttempts,
     lockedUntil: lockedUntil,
     secureKeyReady: true,
+    biometricsEnabled: biometricsEnabled,
     updatedAt: DateTime.utc(2026, 10, 15, 12),
   );
 }
@@ -926,6 +928,131 @@ void main() {
 
       expect(cubit.state.status, SecurityAccessStatus.loading);
       expect(harness.securityRepository.updates, isEmpty);
+    });
+  });
+
+  group('SecurityCubit biometric unlock', () {
+    test('unlocks with the device biometric when it succeeds', () async {
+      final biometrics = FakeBiometricAuthenticator()..available = true;
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(biometricsEnabled: true),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service, biometrics: biometrics);
+
+      await cubit.load();
+
+      expect(cubit.state.canUseBiometrics, isTrue);
+
+      final unlocked = await cubit.unlockWithBiometrics();
+
+      expect(unlocked, isTrue);
+      expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      expect(biometrics.authenticateCalls, 1);
+      // A successful biometric unlock clears the streak like the PIN does.
+      expect(cubit.state.securityState.failedUnlockAttempts, isZero);
+      expect(cubit.state.securityState.lockedUntil, isNull);
+      await cubit.close();
+    });
+
+    test('keeps the lock when the biometric prompt fails', () async {
+      final biometrics = FakeBiometricAuthenticator()
+        ..available = true
+        ..authenticateResult = false;
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(biometricsEnabled: true),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service, biometrics: biometrics);
+
+      await cubit.load();
+      final unlocked = await cubit.unlockWithBiometrics();
+
+      expect(unlocked, isFalse);
+      expect(cubit.state.status, SecurityAccessStatus.failure);
+      expect(cubit.state.isLocked, isTrue);
+      // A cancelled prompt does not grow the PIN lockout streak.
+      expect(cubit.state.securityState.failedUnlockAttempts, isZero);
+      await cubit.close();
+    });
+
+    test('hides the biometric path when the device has no biometric', () async {
+      final biometrics = FakeBiometricAuthenticator()..available = false;
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(biometricsEnabled: true),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service, biometrics: biometrics);
+
+      await cubit.load();
+
+      expect(cubit.state.canUseBiometrics, isFalse);
+      final unlocked = await cubit.unlockWithBiometrics();
+
+      expect(unlocked, isFalse);
+      expect(biometrics.authenticateCalls, isZero);
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      await cubit.close();
+    });
+
+    test('skips the biometric prompt during a lockout window', () async {
+      final biometrics = FakeBiometricAuthenticator()..available = true;
+      final harness = SecurityTestHarness(
+        initialState: _configuredState(
+          failedAttempts: 5,
+          lockedUntil: DateTime.utc(2026, 10, 15, 13),
+          biometricsEnabled: true,
+        ),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      await harness.credentialRepository.savePin('123456');
+      final cubit = SecurityCubit(harness.service, biometrics: biometrics);
+
+      await cubit.load();
+      final unlocked = await cubit.unlockWithBiometrics();
+
+      expect(unlocked, isFalse);
+      expect(biometrics.authenticateCalls, isZero);
+      expect(cubit.state.isLocked, isTrue);
+      await cubit.close();
+    });
+
+    test(
+      'does nothing when the biometric authenticator is not wired',
+      () async {
+        final harness = SecurityTestHarness(
+          initialState: _configuredState(biometricsEnabled: true),
+          now: () => DateTime.utc(2026, 10, 15, 12),
+        );
+        await harness.credentialRepository.savePin('123456');
+        final cubit = SecurityCubit(harness.service);
+
+        await cubit.load();
+
+        expect(cubit.state.canUseBiometrics, isFalse);
+        expect(await cubit.unlockWithBiometrics(), isFalse);
+        await cubit.close();
+      },
+    );
+
+    test('persists the biometrics preference during setup', () async {
+      final now = DateTime.utc(2026, 10, 15, 12);
+      final harness = SecurityTestHarness(now: () => now);
+      final cubit = SecurityCubit(harness.service);
+
+      await cubit.load();
+      final configured = await cubit.configure(
+        '123456',
+        biometricsEnabled: true,
+      );
+
+      expect(configured, isTrue);
+      expect(cubit.state.securityState.biometricsEnabled, isTrue);
+      expect(harness.securityRepository.state?.biometricsEnabled, isTrue);
+      await cubit.close();
     });
   });
 }

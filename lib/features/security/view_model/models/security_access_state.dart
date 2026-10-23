@@ -34,6 +34,7 @@ class SecurityAccessState {
     this.status = SecurityAccessStatus.loading,
     this.errorMessage,
     this.canEraseAppLock = false,
+    this.biometricsAvailable = false,
   });
 
   /// The persisted, non-secret security metadata.
@@ -51,11 +52,24 @@ class SecurityAccessState {
   /// offered when the stored app-lock data cannot be read at all.
   final bool canEraseAppLock;
 
+  /// Whether the device currently has an enrolled biometric the platform
+  /// can prompt with.
+  final bool biometricsAvailable;
+
   /// Whether the app should show the lock UI instead of protected content.
   bool get isLocked =>
       securityState.appLockEnabled &&
       securityState.pinConfigured &&
       status != SecurityAccessStatus.unlocked;
+
+  /// Whether the locked app can offer the biometric unlock prompt.
+  bool get canUseBiometrics =>
+      securityState.appLockEnabled &&
+      securityState.pinConfigured &&
+      securityState.biometricsEnabled &&
+      biometricsAvailable &&
+      status != SecurityAccessStatus.unlocked &&
+      status != SecurityAccessStatus.submitting;
 
   /// Whether a security operation is in progress.
   bool get isSubmitting =>
@@ -81,6 +95,7 @@ class SecurityAccessState {
     String? errorMessage,
     bool clearErrorMessage = false,
     bool? canEraseAppLock,
+    bool? biometricsAvailable,
   }) {
     return SecurityAccessState(
       securityState: securityState ?? this.securityState,
@@ -89,6 +104,7 @@ class SecurityAccessState {
           ? null
           : (errorMessage ?? this.errorMessage),
       canEraseAppLock: canEraseAppLock ?? this.canEraseAppLock,
+      biometricsAvailable: biometricsAvailable ?? this.biometricsAvailable,
     );
   }
 }

@@ -57,6 +57,58 @@ void main() {
         ]);
       });
 
+      test('uses the local calendar for the month boundary', () async {
+        // Nov 1, 00:30 EEST is still Oct 31 in UTC; the dashboard must
+        // follow the user's local month, not the UTC month (FINECHO-22).
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 10, 31, 21, 30),
+          localUtcOffset: const Duration(hours: 3),
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.startUtc, DateTime.utc(2026, 10, 31, 21));
+        expect(dashboard.endUtc, DateTime.utc(2026, 11, 30, 21));
+        expect(harness.analyticsRepository.requestedRanges.first, (
+          DateTime.utc(2026, 10, 31, 21),
+          DateTime.utc(2026, 11, 30, 21),
+        ));
+      });
+
+      test('derives the previous month from the local calendar', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 10, 31, 21, 30),
+          localUtcOffset: const Duration(hours: 3),
+        );
+
+        await harness.service.loadDashboard(period: AnalyticsPeriod.month);
+
+        expect(harness.analyticsRepository.requestedRanges, [
+          (DateTime.utc(2026, 10, 31, 21), DateTime.utc(2026, 11, 30, 21)),
+          // The comparison runs only for the elapsed half hour of the new
+          // local month, measured from the local boundary.
+          (DateTime.utc(2026, 9, 30, 21), DateTime.utc(2026, 9, 30, 21, 30)),
+        ]);
+      });
+
+      test('uses the local calendar for the week boundary', () async {
+        // Mon Nov 2 2026, 00:30 EEST = Sun Nov 1, 21:30 UTC. The local week
+        // starts on Monday Nov 2 local time, not the UTC week of Oct 26.
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 11, 1, 21, 30),
+          localUtcOffset: const Duration(hours: 3),
+        );
+
+        await harness.service.loadDashboard(period: AnalyticsPeriod.week);
+
+        expect(harness.analyticsRepository.requestedRanges.first, (
+          DateTime.utc(2026, 11, 1, 21),
+          DateTime.utc(2026, 11, 8, 21),
+        ));
+      });
+
       test('reports no change ratio without previous expenses', () async {
         final harness = AnalyticsTestHarness(
           onSummary: (startUtc, endUtc) => _summary(
