@@ -54,12 +54,34 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
         .map(CategoryTotal.fromMap)
         .toList(growable: false);
 
+    final incomeRows = await _database.rawQuery(
+      '''
+      SELECT
+        t.category_id AS category_id,
+        c.name AS name,
+        0 AS expense_minor_units,
+        SUM(t.amount_minor_units) AS income_minor_units
+      FROM transactions AS t
+      LEFT JOIN categories AS c ON c.id = t.category_id
+      WHERE t.timestamp >= ? AND t.timestamp < ?
+        AND t.type = ?
+      GROUP BY t.category_id, c.name
+      ORDER BY income_minor_units DESC, t.category_id IS NULL, t.category_id
+      ''',
+      <Object?>[startMillis, endMillis, 'income'],
+    );
+
+    final categoryIncomeTotals = incomeRows
+        .map(CategoryTotal.fromMap)
+        .toList(growable: false);
+
     return AnalyticsSummary(
       startUtc: startUtc,
       endUtc: endUtc,
       totalIncomeMinorUnits: _totalForType(totalRows, 'income'),
       totalExpenseMinorUnits: _totalForType(totalRows, 'expense'),
       categoryExpenseTotals: categoryTotals,
+      categoryIncomeTotals: categoryIncomeTotals,
     );
   }
 

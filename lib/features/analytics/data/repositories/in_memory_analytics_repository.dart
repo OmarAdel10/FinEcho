@@ -40,6 +40,7 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
     var totalIncomeMinorUnits = 0;
     var totalExpenseMinorUnits = 0;
     final expenseMinorUnitsByCategory = <String?, int>{};
+    final incomeMinorUnitsByCategory = <String?, int>{};
 
     for (final transaction in transactions) {
       final timestampMillis = transaction.timestamp
@@ -53,6 +54,11 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
       }
       if (transaction.type == TransactionType.income) {
         totalIncomeMinorUnits += transaction.amountMinorUnits;
+        incomeMinorUnitsByCategory.update(
+          transaction.categoryId,
+          (total) => total + transaction.amountMinorUnits,
+          ifAbsent: () => transaction.amountMinorUnits,
+        );
         continue;
       }
       totalExpenseMinorUnits += transaction.amountMinorUnits;
@@ -79,12 +85,26 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
             .toList(growable: false)
           ..sort(_compareCategoryTotals);
 
+    final categoryIncomeTotals =
+        incomeMinorUnitsByCategory.entries
+            .map(
+              (entry) => CategoryTotal(
+                categoryId: entry.key,
+                name: categoryNames[entry.key],
+                expenseMinorUnits: 0,
+                incomeMinorUnits: entry.value,
+              ),
+            )
+            .toList(growable: false)
+          ..sort(_compareCategoryIncomeTotals);
+
     return AnalyticsSummary(
       startUtc: startUtc,
       endUtc: endUtc,
       totalIncomeMinorUnits: totalIncomeMinorUnits,
       totalExpenseMinorUnits: totalExpenseMinorUnits,
       categoryExpenseTotals: categoryExpenseTotals,
+      categoryIncomeTotals: categoryIncomeTotals,
     );
   }
 
@@ -93,6 +113,14 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
       throw ArgumentError.value(timestamp, parameterName, 'must be UTC');
     }
     return timestamp.toUtc().millisecondsSinceEpoch;
+  }
+
+  static int _compareCategoryIncomeTotals(CategoryTotal a, CategoryTotal b) {
+    final byIncome = b.incomeMinorUnits.compareTo(a.incomeMinorUnits);
+    if (byIncome != 0) {
+      return byIncome;
+    }
+    return _compareCategoryTotals(a, b);
   }
 
   static int _compareCategoryTotals(CategoryTotal a, CategoryTotal b) {

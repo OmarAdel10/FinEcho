@@ -15,11 +15,14 @@ class AnalyticsSummary {
     required this.totalIncomeMinorUnits,
     required this.totalExpenseMinorUnits,
     required this.categoryExpenseTotals,
+    required this.categoryIncomeTotals,
   }) : netAmountMinorUnits = totalIncomeMinorUnits - totalExpenseMinorUnits;
 
   /// Creates an analytics summary from a serialized row map.
   factory fromMap(Map<String, Object?> map) {
     final categoryMaps = map['category_expense_totals']! as List<Object?>;
+    final incomeMaps =
+        (map['category_income_totals'] as List<Object?>?) ?? const <Object?>[];
 
     return AnalyticsSummary(
       startUtc: DateTime.fromMillisecondsSinceEpoch(
@@ -33,6 +36,12 @@ class AnalyticsSummary {
       totalIncomeMinorUnits: map['total_income_minor_units']! as int,
       totalExpenseMinorUnits: map['total_expense_minor_units']! as int,
       categoryExpenseTotals: categoryMaps
+          .map(
+            (categoryMap) =>
+                CategoryTotal.fromMap(categoryMap! as Map<String, Object?>),
+          )
+          .toList(growable: false),
+      categoryIncomeTotals: incomeMaps
           .map(
             (categoryMap) =>
                 CategoryTotal.fromMap(categoryMap! as Map<String, Object?>),
@@ -61,6 +70,11 @@ class AnalyticsSummary {
   /// Uncategorized expenses use a `null` [CategoryTotal.categoryId] and name.
   final List<CategoryTotal> categoryExpenseTotals;
 
+  /// Income totals ordered from highest to lowest amount.
+  ///
+  /// Uncategorized income uses a `null` [CategoryTotal.categoryId] and name.
+  final List<CategoryTotal> categoryIncomeTotals;
+
   /// Returns a copy with non-null fields replaced by the supplied values.
   AnalyticsSummary copyWith({
     DateTime? startUtc,
@@ -68,6 +82,7 @@ class AnalyticsSummary {
     int? totalIncomeMinorUnits,
     int? totalExpenseMinorUnits,
     List<CategoryTotal>? categoryExpenseTotals,
+    List<CategoryTotal>? categoryIncomeTotals,
   }) {
     return AnalyticsSummary(
       startUtc: startUtc ?? this.startUtc,
@@ -78,6 +93,7 @@ class AnalyticsSummary {
           totalExpenseMinorUnits ?? this.totalExpenseMinorUnits,
       categoryExpenseTotals:
           categoryExpenseTotals ?? this.categoryExpenseTotals,
+      categoryIncomeTotals: categoryIncomeTotals ?? this.categoryIncomeTotals,
     );
   }
 
@@ -90,6 +106,9 @@ class AnalyticsSummary {
       'total_expense_minor_units': totalExpenseMinorUnits,
       'net_amount_minor_units': netAmountMinorUnits,
       'category_expense_totals': categoryExpenseTotals
+          .map((total) => total.toMap())
+          .toList(growable: false),
+      'category_income_totals': categoryIncomeTotals
           .map((total) => total.toMap())
           .toList(growable: false),
     };
@@ -105,7 +124,8 @@ class AnalyticsSummary {
             totalIncomeMinorUnits == other.totalIncomeMinorUnits &&
             totalExpenseMinorUnits == other.totalExpenseMinorUnits &&
             netAmountMinorUnits == other.netAmountMinorUnits &&
-            listEquals(categoryExpenseTotals, other.categoryExpenseTotals);
+            listEquals(categoryExpenseTotals, other.categoryExpenseTotals) &&
+            listEquals(categoryIncomeTotals, other.categoryIncomeTotals);
   }
 
   /// A hash code derived from every analytics summary field.
@@ -117,5 +137,6 @@ class AnalyticsSummary {
     totalExpenseMinorUnits,
     netAmountMinorUnits,
     Object.hashAll(categoryExpenseTotals),
+    Object.hashAll(categoryIncomeTotals),
   );
 }
