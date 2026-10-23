@@ -10,6 +10,7 @@ class SecurityState {
     required this.failedUnlockAttempts,
     required this.secureKeyReady,
     required this.updatedAt,
+    this.biometricsEnabled = false,
     this.lockedUntil,
   });
 
@@ -31,6 +32,7 @@ class SecurityState {
               isUtc: true,
             ),
       secureKeyReady: map['secure_key_ready']! as int == 1,
+      biometricsEnabled: (map['biometrics_enabled'] as int? ?? 0) == 1,
       updatedAt: DateTime.fromMillisecondsSinceEpoch(
         map['updated_at']! as int,
         isUtc: true,
@@ -56,6 +58,12 @@ class SecurityState {
   /// Whether the platform secure key has been initialized and is readable.
   final bool secureKeyReady;
 
+  /// Whether the app lock may fall back to device biometric unlock.
+  ///
+  /// The PIN always remains the fallback; biometrics only shortens the path
+  /// when the device has an enrolled biometric.
+  final bool biometricsEnabled;
+
   /// The UTC time at which this security state was last written.
   final DateTime updatedAt;
 
@@ -68,6 +76,7 @@ class SecurityState {
     int? failedUnlockAttempts,
     DateTime? lockedUntil,
     bool? secureKeyReady,
+    bool? biometricsEnabled,
     DateTime? updatedAt,
     bool clearLockedUntil = false,
   }) {
@@ -77,6 +86,7 @@ class SecurityState {
       failedUnlockAttempts: failedUnlockAttempts ?? this.failedUnlockAttempts,
       lockedUntil: clearLockedUntil ? null : (lockedUntil ?? this.lockedUntil),
       secureKeyReady: secureKeyReady ?? this.secureKeyReady,
+      biometricsEnabled: biometricsEnabled ?? this.biometricsEnabled,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -90,6 +100,7 @@ class SecurityState {
       'failed_unlock_attempts': failedUnlockAttempts,
       'locked_until': lockedUntil?.toUtc().millisecondsSinceEpoch,
       'secure_key_ready': secureKeyReady ? 1 : 0,
+      'biometrics_enabled': biometricsEnabled ? 1 : 0,
       'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
     };
   }
@@ -104,6 +115,7 @@ class SecurityState {
             failedUnlockAttempts == other.failedUnlockAttempts &&
             lockedUntil == other.lockedUntil &&
             secureKeyReady == other.secureKeyReady &&
+            biometricsEnabled == other.biometricsEnabled &&
             updatedAt == other.updatedAt;
   }
 
@@ -115,6 +127,7 @@ class SecurityState {
     failedUnlockAttempts,
     lockedUntil,
     secureKeyReady,
+    biometricsEnabled,
     updatedAt,
   );
 }
