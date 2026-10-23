@@ -12,9 +12,12 @@ import 'package:pinput/pinput.dart';
 import 'fake_security_repositories.dart';
 
 void main() {
-  Future<SecurityCubit> createCubit(SecurityTestHarness harness) async {
+  Future<SecurityCubit> createCubit(
+    SecurityTestHarness harness, {
+    FakeBiometricAuthenticator? biometrics,
+  }) async {
     await harness.credentialRepository.savePin('123456');
-    final cubit = SecurityCubit(harness.service);
+    final cubit = SecurityCubit(harness.service, biometrics: biometrics);
     await cubit.load();
     return cubit;
   }
@@ -153,6 +156,101 @@ void main() {
       gate.complete();
       await tester.pump();
       expect(cubit.state.status, SecurityAccessStatus.ready);
+      await cubit.close();
+    });
+
+    testWidgets('auto-prompts and unlocks with the device biometric', (
+      tester,
+    ) async {
+      final biometrics = FakeBiometricAuthenticator()..available = true;
+      final harness = SecurityTestHarness(
+        initialState: SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          biometricsEnabled: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final pinController = TextEditingController();
+      addTearDown(pinController.dispose);
+      final cubit = await createCubit(harness, biometrics: biometrics);
+
+      await tester.pumpWidget(wrapScreen(cubit, pinController));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // The lock screen auto-prompts once, and the successful prompt
+      // unlocks the app and removes the lock UI.
+      expect(biometrics.authenticateCalls, 1);
+      expect(cubit.state.status, SecurityAccessStatus.unlocked);
+      await cubit.close();
+    });
+
+    testWidgets('keeps the PIN-only screen when biometrics are off', (
+      tester,
+    ) async {
+      final biometrics = FakeBiometricAuthenticator()..available = true;
+      final harness = SecurityTestHarness(
+        initialState: SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final pinController = TextEditingController();
+      addTearDown(pinController.dispose);
+      final cubit = await createCubit(harness, biometrics: biometrics);
+
+      await tester.pumpWidget(wrapScreen(cubit, pinController));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Use biometrics'), findsNothing);
+      expect(biometrics.authenticateCalls, isZero);
+      expect(cubit.state.status, SecurityAccessStatus.ready);
+      await cubit.close();
+    });
+
+    testWidgets('keeps the lock when the biometric prompt is cancelled', (
+      tester,
+    ) async {
+      final biometrics = FakeBiometricAuthenticator()
+        ..available = true
+        ..authenticateResult = false;
+      final harness = SecurityTestHarness(
+        initialState: SecurityState(
+          appLockEnabled: true,
+          pinConfigured: true,
+          failedUnlockAttempts: 0,
+          secureKeyReady: true,
+          biometricsEnabled: true,
+          updatedAt: DateTime.utc(2026, 10, 15, 12),
+        ),
+        now: () => DateTime.utc(2026, 10, 15, 12),
+      );
+      final pinController = TextEditingController();
+      addTearDown(pinController.dispose);
+      final cubit = await createCubit(harness, biometrics: biometrics);
+
+      await tester.pumpWidget(wrapScreen(cubit, pinController));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(cubit.state.status, SecurityAccessStatus.failure);
+      expect(cubit.state.isLocked, isTrue);
+      expect(
+        find.text('Biometric unlock was cancelled. Enter your PIN.'),
+        findsOneWidget,
+      );
+      // The retry button stays available next to the PIN fallback.
+      expect(find.text('Use biometrics'), findsOneWidget);
+      expect(biometrics.authenticateCalls, 1);
       await cubit.close();
     });
   });

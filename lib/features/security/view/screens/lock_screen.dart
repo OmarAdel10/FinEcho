@@ -23,6 +23,7 @@ class _LockScreenState extends State<LockScreen> {
   late final TextEditingController _pinController =
       widget.pinController ?? TextEditingController();
   late final bool _ownsPinController = widget.pinController == null;
+  bool _biometricPromptShown = false;
 
   @override
   void dispose() {
@@ -34,6 +35,22 @@ class _LockScreenState extends State<LockScreen> {
 
   Future<void> _unlock(String pin) async {
     await context.read<SecurityCubit>().unlockWithPin(pin);
+  }
+
+  Future<void> _unlockWithBiometrics() async {
+    await context.read<SecurityCubit>().unlockWithBiometrics();
+  }
+
+  void _maybeAutoPromptBiometrics(SecurityAccessState state) {
+    if (_biometricPromptShown || !state.canUseBiometrics) {
+      return;
+    }
+    _biometricPromptShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_unlockWithBiometrics());
+      }
+    });
   }
 
   @override
@@ -49,6 +66,7 @@ class _LockScreenState extends State<LockScreen> {
             }
           },
           builder: (context, state) {
+            _maybeAutoPromptBiometrics(state);
             return ListView(
               padding: const EdgeInsets.all(24),
               children: [
@@ -107,6 +125,15 @@ class _LockScreenState extends State<LockScreen> {
                       : () => _unlock(_pinController.text),
                   child: Text(state.isSubmitting ? 'Verifying…' : 'Unlock'),
                 ),
+                if (state.canUseBiometrics) ...[
+                  const SizedBox(height: 12),
+                  FilledButton.tonal(
+                    onPressed: state.isSubmitting
+                        ? null
+                        : _unlockWithBiometrics,
+                    child: const Text('Use biometrics'),
+                  ),
+                ],
               ],
             );
           },

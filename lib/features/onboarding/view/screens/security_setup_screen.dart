@@ -16,10 +16,14 @@ class SecuritySetupScreen extends StatelessWidget {
   Future<void> _finishSetup({
     required BuildContext context,
     required String pin,
+    required bool biometricsEnabled,
     required OnboardingCubit onboardingCubit,
     required SecurityCubit securityCubit,
   }) async {
-    final configured = await securityCubit.configure(pin);
+    final configured = await securityCubit.configure(
+      pin,
+      biometricsEnabled: biometricsEnabled,
+    );
     if (!configured) {
       return;
     }
@@ -107,6 +111,7 @@ class SecuritySetupScreen extends StatelessWidget {
                           : () => _finishSetup(
                               context: context,
                               pin: state.pin,
+                              biometricsEnabled: state.biometricsEnabled,
                               onboardingCubit: context.read<OnboardingCubit>(),
                               securityCubit: context.read<SecurityCubit>(),
                             ),

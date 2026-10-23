@@ -1,26 +1,33 @@
 import 'package:bloc/bloc.dart';
 import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/features/security/data/biometrics/biometric_authenticator.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 
 /// The app-lock ViewModel.
 class SecurityCubit extends Cubit<SecurityAccessState> {
   /// Creates an app-lock ViewModel.
-  new(SecurityService service, {this.loadTimeout = const Duration(seconds: 5)})
-    : _service = service,
-      super(
-        SecurityAccessState(
-          securityState: SecurityState(
-            appLockEnabled: false,
-            pinConfigured: false,
-            failedUnlockAttempts: 0,
-            secureKeyReady: false,
-            updatedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-          ),
-        ),
-      );
+  new(
+    SecurityService service, {
+    this._biometrics,
+    this.loadTimeout = const Duration(seconds: 5),
+  }) : _service = service,
+       super(
+         SecurityAccessState(
+           securityState: SecurityState(
+             appLockEnabled: false,
+             pinConfigured: false,
+             failedUnlockAttempts: 0,
+             secureKeyReady: false,
+             updatedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+           ),
+         ),
+       );
 
   final SecurityService _service;
+
+  /// Prompts the device biometric; null hides the biometric unlock path.
+  final BiometricAuthenticator? _biometrics;
 
   /// The maximum time a security read may take before the app fails closed.
   final Duration loadTimeout;
@@ -58,6 +65,12 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       final configured =
           securityState.appLockEnabled && securityState.pinConfigured;
       final relocked = lockEpoch != _lockEpoch;
+      final biometricsAvailable = await _checkBiometrics(
+        securityState.biometricsEnabled,
+      );
+      if (isClosed) {
+        return;
+      }
       emit(
         SecurityAccessState(
           securityState: securityState,
@@ -66,6 +79,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
                     ? SecurityAccessStatus.unlocked
                     : SecurityAccessStatus.ready
               : SecurityAccessStatus.unlocked,
+          biometricsAvailable: biometricsAvailable,
         ),
       );
     } on Object catch (error) {
@@ -101,6 +115,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       SecurityAccessState(
         securityState: securityState,
         status: SecurityAccessStatus.ready,
+        biometricsAvailable: state.biometricsAvailable,
       ),
     );
   }
@@ -110,7 +125,11 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
   /// When the app is backgrounded while the setup is running, the PIN is
   /// still stored but the app stays locked, so a setup can never leave the
   /// app unlocked in the background.
-  Future<bool> configure(String pin) async {
+  ///
+  /// The [biometricsEnabled] preference from the setup screen is persisted
+  /// with the lock metadata so the unlock flow can offer the biometric
+  /// prompt on later launches.
+  Future<bool> configure(String pin, {bool biometricsEnabled = false}) async {
     if (state.isSubmitting) {
       return false;
     }
@@ -149,18 +168,23 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
     try {
       await _service.configurePin(pin);
       final securityState = await _service.saveConfiguredState(
-        state.securityState,
+        state.securityState.copyWith(biometricsEnabled: biometricsEnabled),
       );
       if (isClosed) {
         return true;
       }
       final relocked = lockEpoch != _lockEpoch;
+      final biometricsAvailable = await _checkBiometrics(biometricsEnabled);
+      if (isClosed) {
+        return true;
+      }
       emit(
         SecurityAccessState(
           securityState: securityState,
           status: relocked
               ? SecurityAccessStatus.ready
               : SecurityAccessStatus.unlocked,
+          biometricsAvailable: biometricsAvailable,
         ),
       );
       return true;
@@ -325,6 +349,76 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
           canEraseAppLock: false,
         ),
       );
+      return false;
+    }
+  }
+
+  /// Unlocks the app with the device biometric.
+  ///
+  /// A cancelled or failed prompt keeps the app locked without recording a
+  /// failed PIN attempt, so the lockout streak only grows on PIN entry. The
+  /// biometric prompt cannot run while the app is inside a lockout window,
+  /// because the lock would then be bypassable.
+  Future<bool> unlockWithBiometrics() async {
+    final biometrics = _biometrics;
+    if (biometrics == null ||
+        state.isSubmitting ||
+        isLockedOut ||
+        !state.canUseBiometrics) {
+      return false;
+    }
+
+    final lockEpoch = _lockEpoch;
+    emit(
+      state.copyWith(
+        status: SecurityAccessStatus.submitting,
+        clearErrorMessage: true,
+      ),
+    );
+    final authenticated = await biometrics.authenticate(
+      reason: 'Unlock your FinEcho ledger',
+    );
+    if (isClosed) {
+      return false;
+    }
+    if (!authenticated) {
+      emit(
+        state.copyWith(
+          status: SecurityAccessStatus.failure,
+          errorMessage: 'Biometric unlock was cancelled. Enter your PIN.',
+        ),
+      );
+      return false;
+    }
+    if (lockEpoch != _lockEpoch) {
+      return false;
+    }
+    final securityState = await _service.markUnlocked(state.securityState);
+    if (isClosed || lockEpoch != _lockEpoch) {
+      return false;
+    }
+    emit(
+      SecurityAccessState(
+        securityState: securityState,
+        status: SecurityAccessStatus.unlocked,
+        biometricsAvailable: state.biometricsAvailable,
+      ),
+    );
+    return true;
+  }
+
+  /// Reports whether the biometric prompt can run, when it is wired.
+  Future<bool> _checkBiometrics(bool enabled) async {
+    if (!enabled) {
+      return false;
+    }
+    final biometrics = _biometrics;
+    if (biometrics == null) {
+      return false;
+    }
+    try {
+      return await biometrics.isAvailable();
+    } on Object {
       return false;
     }
   }

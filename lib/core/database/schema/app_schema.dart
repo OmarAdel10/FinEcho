@@ -1,7 +1,7 @@
 /// The SQLCipher schema used by FinEcho's local database.
 abstract final class AppSchema {
   /// The current schema version.
-  static const int version = 3;
+  static const int version = 4;
 
   static const String _createAccounts =
       'CREATE TABLE accounts (\n'
@@ -121,6 +121,7 @@ abstract final class AppSchema {
       '  failed_unlock_attempts INTEGER NOT NULL,\n'
       '  locked_until INTEGER,\n'
       '  secure_key_ready INTEGER NOT NULL,\n'
+      '  biometrics_enabled INTEGER NOT NULL DEFAULT 0,\n'
       '  updated_at INTEGER NOT NULL\n'
       ')';
 

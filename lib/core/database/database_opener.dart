@@ -35,7 +35,7 @@ class DatabaseOpener {
     final database = await openDatabase(
       path,
       password: password,
-      version: 3,
+      version: 4,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
@@ -162,6 +162,7 @@ class DatabaseOpener {
         failed_unlock_attempts INTEGER NOT NULL,
         locked_until INTEGER,
         secure_key_ready INTEGER NOT NULL,
+        biometrics_enabled INTEGER NOT NULL DEFAULT 0,
         updated_at INTEGER NOT NULL
       )
     ''');
@@ -235,6 +236,12 @@ class DatabaseOpener {
           updated_at INTEGER NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 4) {
+      await database.execute(
+        'ALTER TABLE security_state '
+        'ADD COLUMN biometrics_enabled INTEGER NOT NULL DEFAULT 0',
+      );
     }
   }
 
