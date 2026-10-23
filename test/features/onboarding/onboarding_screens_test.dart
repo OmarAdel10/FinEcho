@@ -62,6 +62,8 @@ void main() {
     });
 
     testWidgets('saves security setup after a valid PIN', (tester) async {
+      // Close the setUp cubit before replacing it so it does not leak.
+      await cubit.close();
       repository = FakeOnboardingRepository(
         initialSnapshot: const OnboardingSnapshot(
           currentStep: OnboardingStep.securitySetup,
@@ -291,6 +293,8 @@ void main() {
     });
 
     testWidgets('warns when the setup cannot be completed', (tester) async {
+      // Close the setUp cubit before replacing it so it does not leak.
+      await cubit.close();
       repository = FakeOnboardingRepository(
         initialSnapshot: const OnboardingSnapshot(
           currentStep: OnboardingStep.securitySetup,

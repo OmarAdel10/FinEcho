@@ -121,7 +121,7 @@ void main() {
       await cubit.close();
     });
 
-    test('fails closed when the metadata repair cannot be persisted', () async {
+    test('keeps the lock when the metadata repair write fails', () async {
       final harness = SecurityTestHarness(
         now: () => DateTime.utc(2026, 10, 15, 12),
       );

@@ -36,6 +36,22 @@ void main() {
       expect(repository.saved.single.currentStep, OnboardingStep.voiceLogging);
     });
 
+    test('keeps advancing when progress persistence fails', () async {
+      await cubit.load();
+      repository.saveError = Exception('save failed');
+
+      await cubit.nextStep();
+      repository.saveError = Exception('save failed');
+      await cubit.enterSecuritySetup();
+
+      // Progress persistence is best effort, so the step still moves even
+      // when the snapshot cannot be saved.
+      expect(cubit.state.currentStep, OnboardingStep.securitySetup);
+      expect(cubit.state.errorMessage, isNull);
+      expect(cubit.state.status, OnboardingStatus.ready);
+      expect(repository.saved, isEmpty);
+    });
+
     test('returns to the previous step', () async {
       await cubit.load();
       await cubit.nextStep();
