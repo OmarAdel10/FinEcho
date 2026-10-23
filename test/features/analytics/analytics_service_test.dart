@@ -1,3 +1,4 @@
+import 'package:finecho/core/models/account.dart';
 import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
@@ -346,18 +347,21 @@ void main() {
           AccountTotal(
             accountId: 'account-1',
             name: 'Cash',
+            currency: 'EGP',
             incomeMinorUnits: 25000,
             expenseMinorUnits: 10000,
           ),
           AccountTotal(
             accountId: 'account-2',
             name: 'Bank',
+            currency: 'EGP',
             incomeMinorUnits: 0,
             expenseMinorUnits: 10000,
           ),
           AccountTotal(
             accountId: 'account-9',
             name: 'Unknown account',
+            currency: 'EGP',
             incomeMinorUnits: 0,
             expenseMinorUnits: 3000,
           ),
@@ -394,6 +398,7 @@ void main() {
           AccountTotal(
             accountId: 'account-1',
             name: 'Cash',
+            currency: 'EGP',
             incomeMinorUnits: 0,
             expenseMinorUnits: 2000,
           ),
@@ -429,12 +434,14 @@ void main() {
           AccountTotal(
             accountId: 'account-2',
             name: 'Alpha',
+            currency: 'EGP',
             incomeMinorUnits: 0,
             expenseMinorUnits: 5000,
           ),
           AccountTotal(
             accountId: 'account-1',
             name: 'Beta',
+            currency: 'EGP',
             incomeMinorUnits: 0,
             expenseMinorUnits: 5000,
           ),
@@ -1852,6 +1859,134 @@ void main() {
         expect(harness.analyticsRepository.requestedRanges, [
           (DateTime.utc(2026, 10), DateTime.utc(2026, 11)),
           (DateTime.utc(2026, 9), DateTime.utc(2026, 10)),
+        ]);
+      });
+    });
+
+    group('multi-currency aggregation', () {
+      test('picks the most common active currency as primary', () async {
+        final harness = AnalyticsTestHarness(
+          initialAccounts: {
+            'account-1': testAccount(),
+            'account-2': testAccount(id: 'account-2'),
+            'account-3': const Account(
+              id: 'account-3',
+              name: 'Dollar Wallet',
+              type: AccountType.cash,
+              currency: 'USD',
+              balanceMinorUnits: 100,
+            ),
+          },
+          onSummary: (startUtc, endUtc) =>
+              _summary(startUtc: startUtc, endUtc: endUtc),
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.primaryCurrency, 'EGP');
+        expect(
+          harness.analyticsRepository.requestedCurrencies,
+          everyElement('EGP'),
+        );
+      });
+
+      test('breaks currency ties alphabetically', () async {
+        final harness = AnalyticsTestHarness(
+          initialAccounts: {
+            'account-1': testAccount(),
+            'account-2': const Account(
+              id: 'account-2',
+              name: 'Dollar Wallet',
+              type: AccountType.cash,
+              currency: 'USD',
+              balanceMinorUnits: 100,
+            ),
+          },
+          onSummary: (startUtc, endUtc) =>
+              _summary(startUtc: startUtc, endUtc: endUtc),
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.primaryCurrency, 'EGP');
+      });
+
+      test('falls back to no filter when every account is archived', () async {
+        final harness = AnalyticsTestHarness(
+          initialAccounts: {
+            'account-1': const Account(
+              id: 'account-1',
+              name: 'Archived',
+              type: AccountType.cash,
+              currency: 'EGP',
+              balanceMinorUnits: 0,
+              archived: true,
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.primaryCurrency, isNull);
+        expect(
+          harness.analyticsRepository.requestedCurrencies,
+          everyElement(isNull),
+        );
+      });
+
+      test('filters budget spending to the primary currency', () async {
+        final harness = AnalyticsTestHarness(
+          initialAccounts: {
+            'account-1': testAccount(),
+            'account-2': const Account(
+              id: 'account-2',
+              name: 'USD Wallet',
+              type: AccountType.cash,
+              currency: 'USD',
+              balanceMinorUnits: 100,
+            ),
+          },
+          initialCategories: {'category-1': testCategory()},
+          initialBudgets: {
+            'budget-1': testBudget(allocatedAmountMinorUnits: 5000),
+          },
+          initialTransactions: {
+            'txn-egp': testTransaction(
+              id: 'txn-egp',
+              timestamp: DateTime.utc(2026, 10, 5),
+              amountMinorUnits: 1250,
+              categoryId: 'category-1',
+            ),
+            'txn-usd': testTransaction(
+              id: 'txn-usd',
+              timestamp: DateTime.utc(2026, 10, 6),
+              amountMinorUnits: 999,
+              accountId: 'account-2',
+              categoryId: 'category-1',
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.primaryCurrency, 'EGP');
+        expect(dashboard.budgetProgress, [
+          const BudgetProgress(
+            budgetId: 'budget-1',
+            categoryId: 'category-1',
+            categoryName: 'Food',
+            allocatedAmountMinorUnits: 5000,
+            spentAmountMinorUnits: 1250,
+            level: BudgetProgressLevel.normal,
+          ),
         ]);
       });
     });

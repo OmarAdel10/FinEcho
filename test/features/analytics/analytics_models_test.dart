@@ -37,18 +37,21 @@ void main() {
       const total = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
       const same = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
       const different = AccountTotal(
         accountId: 'account-2',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
@@ -230,12 +233,14 @@ void main() {
       const total = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
       const same = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
@@ -369,6 +374,7 @@ AnalyticsDashboard _dashboard() {
     period: AnalyticsPeriod.month,
     startUtc: DateTime.utc(2026, 10),
     endUtc: DateTime.utc(2026, 11),
+    primaryCurrency: 'EGP',
     totalIncomeMinorUnits: 200000,
     totalExpenseMinorUnits: 150000,
     netAmountMinorUnits: 50000,
