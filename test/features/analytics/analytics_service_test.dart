@@ -489,42 +489,49 @@ void main() {
               categoryId: 'category-1',
               amountMinorUnits: 4530,
               timestamp: DateTime.utc(2026, 9, 10),
+              payee: 'Netflix',
             ),
             'r2': testTransaction(
               id: 'r2',
               categoryId: 'category-1',
               amountMinorUnits: 4530,
               timestamp: DateTime.utc(2026, 10, 10),
+              payee: 'Netflix',
             ),
             'r3': testTransaction(
               id: 'r3',
               categoryId: 'category-1',
               amountMinorUnits: 8000,
               timestamp: DateTime.utc(2026, 10, 12),
+              payee: 'KFC',
             ),
             'r4': testTransaction(
               id: 'r4',
               categoryId: 'category-2',
               amountMinorUnits: 2000,
               timestamp: DateTime.utc(2026, 8, 15),
+              payee: 'Metro',
             ),
             'r5': testTransaction(
               id: 'r5',
               categoryId: 'category-2',
               amountMinorUnits: 2000,
               timestamp: DateTime.utc(2026, 9, 15),
+              payee: 'Metro',
             ),
             'r6': testTransaction(
               id: 'r6',
               categoryId: 'category-2',
               amountMinorUnits: 2000,
               timestamp: DateTime.utc(2026, 10, 15),
+              payee: 'Metro',
             ),
             'r7': testTransaction(
               id: 'r7',
               categoryId: 'category-1',
               amountMinorUnits: 4500,
               timestamp: DateTime.utc(2026, 7, 10),
+              payee: 'Steam',
             ),
             'r8': testTransaction(
               id: 'r8',
@@ -532,6 +539,7 @@ void main() {
               amountMinorUnits: 4500,
               timestamp: DateTime.utc(2026, 9, 12),
               type: TransactionType.income,
+              payee: 'Employer',
             ),
             'r9': testTransaction(
               id: 'r9',
@@ -539,16 +547,19 @@ void main() {
               amountMinorUnits: 4500,
               timestamp: DateTime.utc(2026, 10, 12),
               type: TransactionType.transfer,
+              payee: 'Savings',
             ),
             'r10': testTransaction(
               id: 'r10',
               amountMinorUnits: 6000,
               timestamp: DateTime.utc(2026, 9, 20),
+              payee: 'Gym',
             ),
             'r11': testTransaction(
               id: 'r11',
               amountMinorUnits: 6000,
               timestamp: DateTime.utc(2026, 10, 14),
+              payee: 'Gym',
             ),
           },
         );
@@ -560,26 +571,26 @@ void main() {
         expect(dashboard.recurringCharges, const [
           RecurringCharge(
             categoryId: 'category-2',
-            name: 'Transport',
+            name: 'Metro',
             amountMinorUnits: 2000,
             monthsSeen: 3,
           ),
           RecurringCharge(
             categoryId: null,
-            name: 'Uncategorized',
+            name: 'Gym',
             amountMinorUnits: 6000,
             monthsSeen: 2,
           ),
           RecurringCharge(
             categoryId: 'category-1',
-            name: 'Food',
+            name: 'Netflix',
             amountMinorUnits: 4530,
             monthsSeen: 2,
           ),
         ]);
       });
 
-      test('groups recurring amounts that round into one bucket', () async {
+      test('recurs even when the amount changes between months', () async {
         final harness = AnalyticsTestHarness(
           initialCategories: {'category-1': testCategory()},
           initialTransactions: {
@@ -588,12 +599,14 @@ void main() {
               categoryId: 'category-1',
               amountMinorUnits: 4575,
               timestamp: DateTime.utc(2026, 9, 10),
+              payee: 'Netflix',
             ),
             'b2': testTransaction(
               id: 'b2',
               categoryId: 'category-1',
               amountMinorUnits: 4600,
               timestamp: DateTime.utc(2026, 10, 10),
+              payee: 'Netflix',
             ),
           },
         );
@@ -605,7 +618,7 @@ void main() {
         expect(dashboard.recurringCharges, const [
           RecurringCharge(
             categoryId: 'category-1',
-            name: 'Food',
+            name: 'Netflix',
             amountMinorUnits: 4600,
             monthsSeen: 2,
           ),
@@ -621,12 +634,14 @@ void main() {
               categoryId: 'category-1',
               amountMinorUnits: 4500,
               timestamp: DateTime.utc(2026, 8, 10),
+              payee: 'Netflix',
             ),
             'sep': testTransaction(
               id: 'sep',
               categoryId: 'category-1',
               amountMinorUnits: 4500,
               timestamp: DateTime.utc(2026, 9, 10),
+              payee: 'Netflix',
             ),
           },
         );
@@ -647,6 +662,34 @@ void main() {
               categoryId: 'category-1',
               amountMinorUnits: 4500,
               timestamp: DateTime.utc(2026, 8, 10),
+              payee: 'Netflix',
+            ),
+            'oct': testTransaction(
+              id: 'oct',
+              categoryId: 'category-1',
+              amountMinorUnits: 4500,
+              timestamp: DateTime.utc(2026, 10, 10),
+              payee: 'Netflix',
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.recurringCharges, isEmpty);
+      });
+
+      test('ignores transactions without a payee', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {'category-1': testCategory()},
+          initialTransactions: {
+            'sep': testTransaction(
+              id: 'sep',
+              categoryId: 'category-1',
+              amountMinorUnits: 4500,
+              timestamp: DateTime.utc(2026, 9, 10),
             ),
             'oct': testTransaction(
               id: 'oct',
@@ -664,36 +707,75 @@ void main() {
         expect(dashboard.recurringCharges, isEmpty);
       });
 
-      test('orders equal charges by category id', () async {
+      test('matches payees regardless of case or padding', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {'category-1': testCategory()},
+          initialTransactions: {
+            'sep': testTransaction(
+              id: 'sep',
+              categoryId: 'category-1',
+              amountMinorUnits: 4500,
+              timestamp: DateTime.utc(2026, 9, 10),
+              payee: ' NETFLIX ',
+            ),
+            'oct': testTransaction(
+              id: 'oct',
+              categoryId: 'category-1',
+              amountMinorUnits: 4600,
+              timestamp: DateTime.utc(2026, 10, 10),
+              payee: 'netflix',
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.recurringCharges, const [
+          RecurringCharge(
+            categoryId: 'category-1',
+            name: 'netflix',
+            amountMinorUnits: 4600,
+            monthsSeen: 2,
+          ),
+        ]);
+      });
+
+      test('orders equal charges by payee name', () async {
         final harness = AnalyticsTestHarness(
           initialCategories: {
             'category-1': testCategory(),
             'category-2': testAnalyticsCategory(id: 'category-2', name: 'Food'),
           },
           initialTransactions: {
-            'food-1-sep': testTransaction(
-              id: 'food-1-sep',
+            'alpha-sep': testTransaction(
+              id: 'alpha-sep',
               categoryId: 'category-1',
               amountMinorUnits: 2000,
               timestamp: DateTime.utc(2026, 9, 10),
+              payee: 'Alpha Gym',
             ),
-            'food-1-oct': testTransaction(
-              id: 'food-1-oct',
+            'alpha-oct': testTransaction(
+              id: 'alpha-oct',
               categoryId: 'category-1',
               amountMinorUnits: 2000,
               timestamp: DateTime.utc(2026, 10, 10),
+              payee: 'Alpha Gym',
             ),
-            'food-2-sep': testTransaction(
-              id: 'food-2-sep',
+            'beta-sep': testTransaction(
+              id: 'beta-sep',
               categoryId: 'category-2',
               amountMinorUnits: 2000,
               timestamp: DateTime.utc(2026, 9, 15),
+              payee: 'Beta Gym',
             ),
-            'food-2-oct': testTransaction(
-              id: 'food-2-oct',
+            'beta-oct': testTransaction(
+              id: 'beta-oct',
               categoryId: 'category-2',
               amountMinorUnits: 2000,
               timestamp: DateTime.utc(2026, 10, 15),
+              payee: 'Beta Gym',
             ),
           },
         );
@@ -703,10 +785,8 @@ void main() {
         );
 
         expect(
-          dashboard.recurringCharges
-              .map((charge) => charge.categoryId)
-              .toList(),
-          ['category-1', 'category-2'],
+          dashboard.recurringCharges.map((charge) => charge.name).toList(),
+          ['Alpha Gym', 'Beta Gym'],
         );
       });
     });

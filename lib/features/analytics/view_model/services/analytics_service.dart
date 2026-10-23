@@ -18,8 +18,6 @@ import 'package:finecho/features/analytics/view_model/models/monthly_forecast.da
 import 'package:finecho/features/analytics/view_model/models/recurring_charge.dart';
 
 /// Expenses are grouped into amount buckets of this size for recurrence.
-const int _recurringAmountBucketMinorUnits = 50;
-
 /// Consecutive months required before an expense counts as recurring.
 const int _recurringMinimumMonths = 2;
 
@@ -192,11 +190,7 @@ class AnalyticsService {
       categoryTotals: summary.categoryExpenseTotals,
       categoryIncomeTotals: summary.categoryIncomeTotals,
       accountTotals: _accountTotals(accountActivityTotals, accountsById),
-      recurringCharges: _recurringCharges(
-        recurringWindowExpenses,
-        categoriesById,
-        nowUtc,
-      ),
+      recurringCharges: _recurringCharges(recurringWindowExpenses, nowUtc),
       unusualSpikes: _unusualSpikes(
         monthlyCategoryExpenses,
         categoriesById,
@@ -330,14 +324,20 @@ class AnalyticsService {
 
   /// [expenses] are the bounded expense transactions of the recurrence
   /// window, ordered or not; the repository guarantees the window and type.
+  ///
+  /// Charges are identified by their payee, so transactions without a payee
+  /// cannot be attributed to a merchant and never count as recurring.
   static List<RecurringCharge> _recurringCharges(
     List<Transaction> expenses,
-    Map<String, Category> categoriesById,
     DateTime nowUtc,
   ) {
     final candidates =
         expenses
-            .where((transaction) => transaction.type == TransactionType.expense)
+            .where(
+              (transaction) =>
+                  transaction.type == TransactionType.expense &&
+                  (transaction.payee?.trim().isNotEmpty ?? false),
+            )
             .toList()
           ..sort((a, b) {
             final byTimestamp = a.timestamp.compareTo(b.timestamp);
@@ -347,23 +347,21 @@ class AnalyticsService {
             return a.amountMinorUnits.compareTo(b.amountMinorUnits);
           });
 
-    final monthsByGroup = <String, Set<int>>{};
-    final latestByGroup = <String, Transaction>{};
+    final monthsByPayee = <String, Set<int>>{};
+    final latestByPayee = <String, Transaction>{};
     for (final transaction in candidates) {
-      final key =
-          '${transaction.categoryId ?? ''}|'
-          '${_amountBucket(transaction.amountMinorUnits)}';
-      latestByGroup[key] = transaction;
+      final key = transaction.payee!.trim().toLowerCase();
+      latestByPayee[key] = transaction;
       final timestamp = transaction.timestamp.toUtc();
-      monthsByGroup
+      monthsByPayee
           .putIfAbsent(key, () => <int>{})
           .add(timestamp.year * 12 + timestamp.month);
     }
 
     final currentMonth = nowUtc.year * 12 + nowUtc.month;
     final charges = <RecurringCharge>[];
-    for (final entry in latestByGroup.entries) {
-      final months = monthsByGroup[entry.key]!;
+    for (final entry in latestByPayee.entries) {
+      final months = monthsByPayee[entry.key]!;
       final latestMonth = months.reduce((a, b) => a > b ? a : b);
       final monthsSeen = _consecutiveMonthRun(months);
       if (latestMonth < currentMonth || monthsSeen < _recurringMinimumMonths) {
@@ -373,7 +371,7 @@ class AnalyticsService {
       charges.add(
         RecurringCharge(
           categoryId: transaction.categoryId,
-          name: _categoryName(transaction.categoryId, categoriesById),
+          name: transaction.payee!.trim(),
           amountMinorUnits: transaction.amountMinorUnits,
           monthsSeen: monthsSeen,
         ),
@@ -395,12 +393,6 @@ class AnalyticsService {
       return (a.categoryId ?? '').compareTo(b.categoryId ?? '');
     });
     return charges;
-  }
-
-  static int _amountBucket(int amountMinorUnits) {
-    return (amountMinorUnits + _recurringAmountBucketMinorUnits ~/ 2) ~/
-        _recurringAmountBucketMinorUnits *
-        _recurringAmountBucketMinorUnits;
   }
 
   /// The longest run of consecutive calendar months in [months].

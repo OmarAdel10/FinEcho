@@ -303,6 +303,7 @@ Transaction testTransaction({
   String accountId = 'account-1',
   String? categoryId,
   TransactionSource source = TransactionSource.manual,
+  String? payee,
 }) {
   return Transaction(
     id: id,
@@ -312,5 +313,6 @@ Transaction testTransaction({
     type: type,
     source: source,
     categoryId: categoryId,
+    payee: payee,
   );
 }
