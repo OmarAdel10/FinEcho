@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:finecho/core/models/account.dart';
+import 'package:finecho/core/models/analytics_account_total.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category.dart';
+import 'package:finecho/core/models/category_expense_total.dart';
+import 'package:finecho/core/models/category_monthly_expense.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
@@ -17,8 +20,15 @@ final DateTime analyticsTestNow = DateTime.utc(2026, 10, 15, 12);
 /// An in-memory [AnalyticsRepository] fake for analytics tests.
 class FakeAnalyticsRepository implements AnalyticsRepository {
   /// Creates a fake analytics repository.
-  new({AnalyticsSummary? summary, this.onSummary, this.error})
-    : summary = summary ?? _emptySummary;
+  new({
+    AnalyticsSummary? summary,
+    this.onSummary,
+    this.error,
+    this.transactionsSource,
+  }) : summary = summary ?? _emptySummary;
+
+  /// The transactions the aggregate queries read, or empty when unset.
+  Future<List<Transaction>> Function()? transactionsSource;
 
   /// The summary returned when [onSummary] is not set.
   final AnalyticsSummary summary;
@@ -59,6 +69,144 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
     }
     return summary;
   }
+
+  List<Transaction> _windowExpenses(
+    DateTime startUtc,
+    DateTime endUtc,
+    List<Transaction> transactions,
+  ) {
+    final startMillis = startUtc.millisecondsSinceEpoch;
+    final endMillis = endUtc.millisecondsSinceEpoch;
+    final expenses = transactions.where((transaction) {
+      if (transaction.type != TransactionType.expense) {
+        return false;
+      }
+      final millis = transaction.timestamp.toUtc().millisecondsSinceEpoch;
+      return millis >= startMillis && millis < endMillis;
+    }).toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return expenses;
+  }
+
+  Future<List<Transaction>> _transactions() {
+    final source = transactionsSource;
+    if (source == null) {
+      return Future.value(const <Transaction>[]);
+    }
+    return source();
+  }
+
+  @override
+  Future<List<AnalyticsAccountTotal>> accountTotalsForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = startUtc.millisecondsSinceEpoch;
+    final endMillis = endUtc.millisecondsSinceEpoch;
+    final incomeByAccount = <String, int>{};
+    final expenseByAccount = <String, int>{};
+    for (final transaction in await _transactions()) {
+      if (transaction.type == TransactionType.transfer) {
+        continue;
+      }
+      final millis = transaction.timestamp.toUtc().millisecondsSinceEpoch;
+      if (millis < startMillis || millis >= endMillis) {
+        continue;
+      }
+      final amount = transaction.amountMinorUnits;
+      final accountId = transaction.accountId;
+      if (transaction.type == TransactionType.income) {
+        incomeByAccount.update(
+          accountId,
+          (value) => value + amount,
+          ifAbsent: () => amount,
+        );
+      } else {
+        expenseByAccount.update(
+          accountId,
+          (value) => value + amount,
+          ifAbsent: () => amount,
+        );
+      }
+    }
+    return [
+      for (final accountId in <String>{
+        ...incomeByAccount.keys,
+        ...expenseByAccount.keys,
+      })
+        AnalyticsAccountTotal(
+          accountId: accountId,
+          incomeMinorUnits: incomeByAccount[accountId] ?? 0,
+          expenseMinorUnits: expenseByAccount[accountId] ?? 0,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<CategoryExpenseTotal>> expenseTotalsByCategoryForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final totals = <String?, int>{};
+    for (final transaction in _windowExpenses(
+      startUtc,
+      endUtc,
+      await _transactions(),
+    )) {
+      totals.update(
+        transaction.categoryId,
+        (value) => value + transaction.amountMinorUnits,
+        ifAbsent: () => transaction.amountMinorUnits,
+      );
+    }
+    return [
+      for (final entry in totals.entries)
+        CategoryExpenseTotal(
+          categoryId: entry.key,
+          totalMinorUnits: entry.value,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<CategoryMonthlyExpense>> expenseMonthlyTotalsByCategory({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final totals = <String, int>{};
+    for (final transaction in _windowExpenses(
+      startUtc,
+      endUtc,
+      await _transactions(),
+    )) {
+      final timestamp = transaction.timestamp.toUtc();
+      final monthUtc = timestamp.year * 12 + timestamp.month;
+      final key = '${transaction.categoryId ?? ''}|$monthUtc';
+      totals.update(
+        key,
+        (value) => value + transaction.amountMinorUnits,
+        ifAbsent: () => transaction.amountMinorUnits,
+      );
+    }
+    return [
+      for (final entry in totals.entries)
+        CategoryMonthlyExpense(
+          categoryId: entry.key.split('|').first.isEmpty
+              ? null
+              : entry.key.split('|').first,
+          monthUtc: int.parse(entry.key.split('|').last),
+          totalMinorUnits: entry.value,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<Transaction>> expenseTransactionsForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final transactions = await _transactions();
+    return _windowExpenses(startUtc, endUtc, transactions);
+  }
 }
 
 /// A zeroed summary for tests that do not provide one.
@@ -95,9 +243,10 @@ class AnalyticsTestHarness {
          initialCategories: initialCategories,
        ),
        budgetRepository = FakeBudgetRepository(initialBudgets: initialBudgets) {
+    analyticsRepository.transactionsSource = () =>
+        Future.value(transactionRepository.list());
     service = AnalyticsService(
       analytics: analyticsRepository,
-      transactions: transactionRepository,
       accounts: accountRepository,
       budgets: budgetRepository,
       categories: categoryRepository,

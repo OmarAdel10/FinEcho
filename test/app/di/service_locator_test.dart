@@ -190,7 +190,6 @@ void main() {
     sl.registerLazySingleton<AnalyticsService>(
       () => AnalyticsService(
         analytics: sl<AnalyticsRepository>(),
-        transactions: sl<TransactionRepository>(),
         accounts: sl<AccountRepository>(),
         budgets: sl<BudgetRepository>(),
         categories: sl<CategoryRepository>(),

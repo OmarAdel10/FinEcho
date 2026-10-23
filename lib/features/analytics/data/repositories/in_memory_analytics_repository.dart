@@ -1,4 +1,7 @@
+import 'package:finecho/core/models/analytics_account_total.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
+import 'package:finecho/core/models/category_expense_total.dart';
+import 'package:finecho/core/models/category_monthly_expense.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
@@ -137,5 +140,147 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
       return aCategoryId == null ? 1 : -1;
     }
     return aCategoryId.compareTo(bCategoryId);
+  }
+
+  @override
+  Future<List<AnalyticsAccountTotal>> accountTotalsForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    final incomeByAccount = <String, int>{};
+    final expenseByAccount = <String, int>{};
+    for (final transaction in await _transactions.list()) {
+      if (!_isExpenseOrIncomeInWindow(transaction, startMillis, endMillis)) {
+        continue;
+      }
+      final amount = transaction.amountMinorUnits;
+      final accountId = transaction.accountId;
+      if (transaction.type == TransactionType.income) {
+        incomeByAccount.update(
+          accountId,
+          (value) => value + amount,
+          ifAbsent: () => amount,
+        );
+      } else {
+        expenseByAccount.update(
+          accountId,
+          (value) => value + amount,
+          ifAbsent: () => amount,
+        );
+      }
+    }
+    final accountIds = <String>{
+      ...incomeByAccount.keys,
+      ...expenseByAccount.keys,
+    };
+    return [
+      for (final accountId in accountIds)
+        AnalyticsAccountTotal(
+          accountId: accountId,
+          incomeMinorUnits: incomeByAccount[accountId] ?? 0,
+          expenseMinorUnits: expenseByAccount[accountId] ?? 0,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<CategoryExpenseTotal>> expenseTotalsByCategoryForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    final totalsByCategory = <String?, int>{};
+    for (final transaction in await _transactions.list()) {
+      if (transaction.type != TransactionType.expense ||
+          !_isInWindow(transaction, startMillis, endMillis)) {
+        continue;
+      }
+      totalsByCategory.update(
+        transaction.categoryId,
+        (value) => value + transaction.amountMinorUnits,
+        ifAbsent: () => transaction.amountMinorUnits,
+      );
+    }
+    return [
+      for (final entry in totalsByCategory.entries)
+        CategoryExpenseTotal(
+          categoryId: entry.key,
+          totalMinorUnits: entry.value,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<CategoryMonthlyExpense>> expenseMonthlyTotalsByCategory({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    final totalsByCategoryMonth = <String, int>{};
+    for (final transaction in await _transactions.list()) {
+      if (transaction.type != TransactionType.expense ||
+          !_isInWindow(transaction, startMillis, endMillis)) {
+        continue;
+      }
+      final timestamp = transaction.timestamp.toUtc();
+      final monthUtc = timestamp.year * 12 + timestamp.month;
+      final key = '${transaction.categoryId ?? ''}|$monthUtc';
+      totalsByCategoryMonth.update(
+        key,
+        (value) => value + transaction.amountMinorUnits,
+        ifAbsent: () => transaction.amountMinorUnits,
+      );
+    }
+    return [
+      for (final entry in totalsByCategoryMonth.entries)
+        CategoryMonthlyExpense(
+          categoryId: entry.key.split('|').first.isEmpty
+              ? null
+              : entry.key.split('|').first,
+          monthUtc: int.parse(entry.key.split('|').last),
+          totalMinorUnits: entry.value,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<Transaction>> expenseTransactionsForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    return [
+      for (final transaction in await _transactions.list())
+        if (transaction.type == TransactionType.expense &&
+            _isInWindow(transaction, startMillis, endMillis))
+          transaction,
+    ]..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+  }
+
+  static bool _isExpenseOrIncomeInWindow(
+    Transaction transaction,
+    int startMillis,
+    int endMillis,
+  ) {
+    if (transaction.type == TransactionType.transfer) {
+      return false;
+    }
+    return _isInWindow(transaction, startMillis, endMillis);
+  }
+
+  static bool _isInWindow(
+    Transaction transaction,
+    int startMillis,
+    int endMillis,
+  ) {
+    final timestampMillis = transaction.timestamp
+        .toUtc()
+        .millisecondsSinceEpoch;
+    return timestampMillis >= startMillis && timestampMillis < endMillis;
   }
 }
