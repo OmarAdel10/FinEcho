@@ -88,6 +88,11 @@ class FakeTransactionRepository implements TransactionRepository {
     deletedIds.add(id);
     _transactions.remove(id);
   }
+
+  @override
+  Future<void> eraseAll() async {
+    _transactions.clear();
+  }
 }
 
 /// An in-memory [AccountRepository] fake for transaction tests.
@@ -163,6 +168,11 @@ class FakeAccountRepository implements AccountRepository {
     deletedIds.add(id);
     _accounts.remove(id);
   }
+
+  @override
+  Future<void> eraseAll() async {
+    _accounts.clear();
+  }
 }
 
 /// An in-memory [CategoryRepository] fake for transaction tests.
@@ -237,6 +247,11 @@ class FakeCategoryRepository implements CategoryRepository {
     }
     deletedIds.add(id);
     _categories.remove(id);
+  }
+
+  @override
+  Future<void> eraseAll() async {
+    _categories.clear();
   }
 }
 

@@ -52,4 +52,9 @@ class SqfliteCategoryRepository implements CategoryRepository {
       whereArgs: <Object?>[id],
     );
   }
+
+  @override
+  Future<void> eraseAll() async {
+    await _database.delete('categories');
+  }
 }

@@ -16,4 +16,7 @@ abstract interface class TransactionRepository {
 
   /// Deletes the transaction with [id].
   Future<void> delete(String id);
+
+  /// Erases all transactions.
+  Future<void> eraseAll();
 }

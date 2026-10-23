@@ -36,4 +36,9 @@ class InMemoryBudgetRepository implements BudgetRepository {
   Future<void> delete(String id) async {
     _budgets.remove(id);
   }
+
+  @override
+  Future<void> eraseAll() async {
+    _budgets.clear();
+  }
 }

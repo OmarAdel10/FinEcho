@@ -2,6 +2,10 @@ import 'dart:async';
 
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
+import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 
@@ -171,10 +175,18 @@ class SecurityTestHarness {
   /// Creates the fake repository bundle and its deterministic service.
   new({SecurityState? initialState, DateTime Function()? now})
     : securityRepository = FakeSecurityRepository(initialState: initialState),
-      credentialRepository = FakeSecurityCredentialRepository() {
+      credentialRepository = FakeSecurityCredentialRepository(),
+      transactionRepository = InMemoryTransactionRepository(),
+      accountRepository = InMemoryAccountRepository(),
+      categoryRepository = InMemoryCategoryRepository(),
+      budgetRepository = InMemoryBudgetRepository() {
     service = SecurityService(
       repository: securityRepository,
       credentials: credentialRepository,
+      transactionRepository: transactionRepository,
+      accountRepository: accountRepository,
+      categoryRepository: categoryRepository,
+      budgetRepository: budgetRepository,
       now: now,
     );
   }
@@ -184,6 +196,18 @@ class SecurityTestHarness {
 
   /// The fake PIN verifier store.
   final FakeSecurityCredentialRepository credentialRepository;
+
+  /// The in-memory transaction store erased by a reset.
+  final InMemoryTransactionRepository transactionRepository;
+
+  /// The in-memory account store erased by a reset.
+  final InMemoryAccountRepository accountRepository;
+
+  /// The in-memory category store erased by a reset.
+  final InMemoryCategoryRepository categoryRepository;
+
+  /// The in-memory budget store erased by a reset.
+  final InMemoryBudgetRepository budgetRepository;
 
   /// The service under test, backed by the fakes.
   late final SecurityService service;

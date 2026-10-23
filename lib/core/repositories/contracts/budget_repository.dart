@@ -16,4 +16,7 @@ abstract interface class BudgetRepository {
 
   /// Deletes the budget with [id].
   Future<void> delete(String id);
+
+  /// Erases all budgets.
+  Future<void> eraseAll();
 }

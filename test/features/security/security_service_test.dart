@@ -1,4 +1,8 @@
+import 'package:finecho/core/models/account.dart';
+import 'package:finecho/core/models/budget.dart';
+import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -152,6 +156,59 @@ void main() {
       expect(await harness.credentialRepository.hasPin(), isFalse);
       expect(harness.securityRepository.state?.appLockEnabled, isFalse);
       expect(harness.securityRepository.state?.pinConfigured, isFalse);
+    });
+
+    test('erases all financial data', () async {
+      final harness = SecurityTestHarness(
+        initialState: configuredState(),
+        now: () => now,
+      );
+      await harness.credentialRepository.savePin('123456');
+      await harness.accountRepository.create(
+        const Account(
+          id: 'account-1',
+          name: 'Checking',
+          type: AccountType.cash,
+          currency: 'USD',
+          balanceMinorUnits: 1000,
+        ),
+      );
+      await harness.categoryRepository.create(
+        const Category(
+          id: 'category-1',
+          name: 'Food',
+          iconKey: 'restaurant',
+          colorHex: '#FF5722',
+        ),
+      );
+      await harness.transactionRepository.create(
+        Transaction(
+          id: 'tx-1',
+          accountId: 'account-1',
+          amountMinorUnits: 1234,
+          timestamp: now,
+          type: TransactionType.expense,
+          source: TransactionSource.manual,
+          categoryId: 'category-1',
+        ),
+      );
+      await harness.budgetRepository.create(
+        Budget(
+          id: 'budget-1',
+          categoryId: 'category-1',
+          allocatedAmountMinorUnits: 5000,
+          period: BudgetPeriod.monthly,
+          startDate: now,
+        ),
+      );
+
+      final result = await harness.service.reset();
+
+      expect(result.erased, isTrue);
+      expect(await harness.transactionRepository.list(), isEmpty);
+      expect(await harness.accountRepository.list(), isEmpty);
+      expect(await harness.categoryRepository.list(), isEmpty);
+      expect(await harness.budgetRepository.list(), isEmpty);
     });
 
     test('clears the metadata when the verifier cannot be erased', () async {

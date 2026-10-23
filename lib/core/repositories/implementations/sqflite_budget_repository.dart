@@ -52,4 +52,9 @@ class SqfliteBudgetRepository implements BudgetRepository {
       whereArgs: <Object?>[id],
     );
   }
+
+  @override
+  Future<void> eraseAll() async {
+    await _database.delete('budgets');
+  }
 }

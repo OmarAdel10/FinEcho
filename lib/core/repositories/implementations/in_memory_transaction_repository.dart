@@ -36,4 +36,9 @@ class InMemoryTransactionRepository implements TransactionRepository {
   Future<void> delete(String id) async {
     _transactions.remove(id);
   }
+
+  @override
+  Future<void> eraseAll() async {
+    _transactions.clear();
+  }
 }
