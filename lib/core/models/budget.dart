@@ -26,6 +26,7 @@ class Budget {
     required this.period,
     required this.startDate,
     this.warningShare,
+    this.currency,
   });
 
   /// Creates a budget from a SQLite row map.
@@ -40,6 +41,7 @@ class Budget {
         isUtc: true,
       ),
       warningShare: map['warning_share'] as double?,
+      currency: map['currency'] as String?,
     );
   }
 
@@ -65,9 +67,17 @@ class Budget {
   /// spent. The value must lie strictly between zero and one.
   final double? warningShare;
 
+  /// The ISO currency code the allocated amount is denominated in, or null
+  /// to follow the primary analytics currency.
+  final String? currency;
+
   /// Sentinel for [copyWith] that distinguishes an omitted warning share from
   /// an explicit reset to null.
   static const Object _unsetWarningShare = Object();
+
+  /// Sentinel for [copyWith] that distinguishes an omitted currency from an
+  /// explicit reset to null.
+  static const Object _unsetCurrency = Object();
 
   /// Returns a copy with non-null fields replaced by the supplied values.
   ///
@@ -80,6 +90,7 @@ class Budget {
     BudgetPeriod? period,
     DateTime? startDate,
     Object? warningShare = _unsetWarningShare,
+    Object? currency = _unsetCurrency,
   }) {
     return Budget(
       id: id ?? this.id,
@@ -91,6 +102,9 @@ class Budget {
       warningShare: identical(warningShare, _unsetWarningShare)
           ? this.warningShare
           : warningShare as double?,
+      currency: identical(currency, _unsetCurrency)
+          ? this.currency
+          : currency as String?,
     );
   }
 
@@ -103,6 +117,7 @@ class Budget {
       'period': period.name,
       'start_date': startDate.toUtc().millisecondsSinceEpoch,
       'warning_share': warningShare,
+      'currency': currency,
     };
   }
 
@@ -116,7 +131,8 @@ class Budget {
             allocatedAmountMinorUnits == other.allocatedAmountMinorUnits &&
             period == other.period &&
             startDate == other.startDate &&
-            warningShare == other.warningShare;
+            warningShare == other.warningShare &&
+            currency == other.currency;
   }
 
   /// A hash code derived from every budget field.
@@ -128,5 +144,6 @@ class Budget {
     period,
     startDate,
     warningShare,
+    currency,
   );
 }

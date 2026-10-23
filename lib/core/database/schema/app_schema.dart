@@ -1,7 +1,7 @@
 /// The SQLCipher schema used by FinEcho's local database.
 abstract final class AppSchema {
   /// The current schema version.
-  static const int version = 6;
+  static const int version = 7;
 
   static const String _createAccounts =
       'CREATE TABLE accounts (\n'
@@ -55,6 +55,7 @@ abstract final class AppSchema {
       '  period TEXT NOT NULL,\n'
       '  start_date INTEGER NOT NULL,\n'
       '  warning_share REAL,\n'
+      '  currency TEXT,\n'
       '  FOREIGN KEY(category_id)\n'
       '    REFERENCES categories(id) ON DELETE CASCADE\n'
       ')';

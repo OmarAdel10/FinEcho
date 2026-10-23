@@ -43,6 +43,7 @@ class BudgetService {
     required String period,
     required DateTime startDate,
     double? warningShare,
+    String? currency,
   }) async {
     if (allocatedAmountMinorUnits <= 0) {
       throw const BudgetValidationException(
@@ -57,13 +58,24 @@ class BudgetService {
       throw const BudgetValidationException('Choose a valid category.');
     }
 
+    var id = _newId();
+    final existing = await _budgets.list();
+    var attempt = 0;
+    while (existing.any((budget) => budget.id == id) && attempt < 5) {
+      id = '${_newId()}-${++attempt}';
+    }
+    if (existing.any((budget) => budget.id == id)) {
+      throw StateError('Could not generate a unique budget id.');
+    }
+
     final budget = Budget(
-      id: _newId(),
+      id: id,
       categoryId: categoryId,
       allocatedAmountMinorUnits: allocatedAmountMinorUnits,
       period: BudgetPeriod.values.byName(period),
       startDate: startDate,
       warningShare: warningShare,
+      currency: currency,
     );
     await _budgets.create(budget);
     return budget;
@@ -77,6 +89,7 @@ class BudgetService {
     required String period,
     required DateTime startDate,
     double? warningShare,
+    String? currency,
   }) async {
     if (allocatedAmountMinorUnits <= 0) {
       throw const BudgetValidationException(
@@ -97,6 +110,7 @@ class BudgetService {
       period: BudgetPeriod.values.byName(period),
       startDate: startDate,
       warningShare: warningShare,
+      currency: currency,
     );
     await _budgets.update(updated);
     return updated;

@@ -30,6 +30,7 @@ abstract final class AppMigrations {
     ],
     4: <String>['ALTER TABLE transactions ADD COLUMN payee TEXT'],
     5: <String>['ALTER TABLE budgets ADD COLUMN warning_share REAL'],
+    6: <String>['ALTER TABLE budgets ADD COLUMN currency TEXT'],
   };
 
   /// Moves a database from [fromVersion] through [toVersion].

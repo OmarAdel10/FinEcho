@@ -36,6 +36,7 @@ class BudgetCubit extends Cubit<BudgetState> {
     required String period,
     required DateTime startDate,
     double? warningShare,
+    String? currency,
   }) async {
     if (state.status == BudgetStatus.submitting) {
       return false;
@@ -48,6 +49,7 @@ class BudgetCubit extends Cubit<BudgetState> {
         period: period,
         startDate: startDate,
         warningShare: warningShare,
+        currency: currency,
       );
       try {
         await _refresh();
@@ -92,6 +94,7 @@ class BudgetCubit extends Cubit<BudgetState> {
     required String period,
     required DateTime startDate,
     double? warningShare,
+    String? currency,
   }) async {
     if (state.status == BudgetStatus.submitting) {
       return false;
@@ -105,6 +108,7 @@ class BudgetCubit extends Cubit<BudgetState> {
         period: period,
         startDate: startDate,
         warningShare: warningShare,
+        currency: currency,
       );
       try {
         await _refresh();
