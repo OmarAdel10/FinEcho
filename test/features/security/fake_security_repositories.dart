@@ -1,11 +1,11 @@
 import 'dart:async';
-
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
 import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';
+import 'package:finecho/features/security/data/biometrics/biometric_authenticator.dart';
 import 'package:finecho/features/security/data/repositories/security_credential_repository.dart';
 import 'package:finecho/features/security/data/repositories/security_pin_hasher.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
@@ -191,6 +191,27 @@ class FakeSecurityCredentialRepository implements SecurityCredentialRepository {
     }
     _salt = null;
     _hash = null;
+  }
+}
+
+/// A deterministic [BiometricAuthenticator] fake for security tests.
+class FakeBiometricAuthenticator implements BiometricAuthenticator {
+  /// Whether the device reports an enrolled biometric.
+  bool available = false;
+
+  /// The result reported by the next [authenticate] call.
+  bool authenticateResult = true;
+
+  /// The number of times the platform prompt ran.
+  int authenticateCalls = 0;
+
+  @override
+  Future<bool> isAvailable() async => available;
+
+  @override
+  Future<bool> authenticate({required String reason}) async {
+    authenticateCalls++;
+    return authenticateResult;
   }
 }
 
