@@ -161,6 +161,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ],
                         _AnalyticsMode.income => [
                           const SizedBox(height: 12),
+                          CategoryBreakdownCard(
+                            categoryTotals: dashboard.categoryIncomeTotals,
+                            metric: CategoryBreakdownMetric.income,
+                          ),
+                          const SizedBox(height: 12),
                           AccountBreakdownCard(
                             accountTotals: dashboard.accountTotals,
                             metric: AccountBreakdownMetric.income,

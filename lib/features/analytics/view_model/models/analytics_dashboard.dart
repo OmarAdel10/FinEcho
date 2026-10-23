@@ -21,6 +21,7 @@ class AnalyticsDashboard {
     required this.previousExpenseMinorUnits,
     required this.expenseChangeRatio,
     required this.categoryTotals,
+    required this.categoryIncomeTotals,
     required this.accountTotals,
     required this.recurringCharges,
     required this.unusualSpikes,
@@ -54,6 +55,9 @@ class AnalyticsDashboard {
 
   /// Expenses per category, highest first.
   final List<CategoryTotal> categoryTotals;
+
+  /// Income per category, highest first.
+  final List<CategoryTotal> categoryIncomeTotals;
 
   /// Income and expenses per account, highest expense first.
   final List<AccountTotal> accountTotals;

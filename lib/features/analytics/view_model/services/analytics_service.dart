@@ -131,6 +131,7 @@ class AnalyticsService {
                 totalIncomeMinorUnits: 0,
                 totalExpenseMinorUnits: 0,
                 categoryExpenseTotals: const [],
+                categoryIncomeTotals: const [],
               ),
             ),
       _transactions.list(),
@@ -162,6 +163,7 @@ class AnalyticsService {
       previousExpenseMinorUnits: previousExpense,
       expenseChangeRatio: expenseChangeRatio,
       categoryTotals: summary.categoryExpenseTotals,
+      categoryIncomeTotals: summary.categoryIncomeTotals,
       accountTotals: _accountTotals(
         transactions,
         accountsById,

@@ -4,10 +4,22 @@ import 'package:finecho/app/theme/fin_echo_theme.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:flutter/material.dart';
 
-const String _title = 'Spending by category';
-const String _emptyMessage = 'No spending in this period.';
+/// Which per-category metric the breakdown card renders.
+enum CategoryBreakdownMetric {
+  /// Expenses per category.
+  spending,
+
+  /// Income per category.
+  income,
+}
+
+const String _spendingTitle = 'Spending by category';
+const String _incomeTitle = 'Income by category';
+const String _spendingEmptyMessage = 'No spending in this period.';
+const String _incomeEmptyMessage = 'No income in this period.';
 const String _uncategorizedLabel = 'Uncategorized';
-const String _ringSemanticsLabel = 'Spending ring by category';
+const String _spendingRingLabel = 'Spending ring by category';
+const String _incomeRingLabel = 'Income ring by category';
 const double _ringSize = 160;
 const double _ringStrokeWidth = 20;
 const List<Color> _slicePalette = [
@@ -16,23 +28,38 @@ const List<Color> _slicePalette = [
   FinEchoColors.softStone,
 ];
 
-/// A card that breaks the period's spending down by category.
+/// A card that breaks the period's spending or income down by category.
 class CategoryBreakdownCard extends StatelessWidget {
   /// Creates the category breakdown card.
-  const new({required this.categoryTotals, super.key});
+  const new({
+    required this.categoryTotals,
+    this.metric = CategoryBreakdownMetric.spending,
+    super.key,
+  });
 
-  /// Expenses per category, highest first.
+  /// The per-category amounts to render, highest first.
+  ///
+  /// Spending entries carry [CategoryTotal.expenseMinorUnits]; income
+  /// entries carry [CategoryTotal.incomeMinorUnits].
   final List<CategoryTotal> categoryTotals;
+
+  /// Which metric the card renders.
+  final CategoryBreakdownMetric metric;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalExpense = categoryTotals.fold<int>(
+    final isSpending = metric == CategoryBreakdownMetric.spending;
+    final totalMinorUnits = categoryTotals.fold<int>(
       0,
-      (total, categoryTotal) => total + categoryTotal.expenseMinorUnits,
+      (total, categoryTotal) =>
+          total +
+          (isSpending
+              ? categoryTotal.expenseMinorUnits
+              : categoryTotal.incomeMinorUnits),
     );
     final ringSemanticsLabel = [
-      _ringSemanticsLabel,
+      if (isSpending) _spendingRingLabel else _incomeRingLabel,
       for (final categoryTotal in categoryTotals)
         _ringSliceLabel(categoryTotal),
     ].join(', ');
@@ -44,14 +71,14 @@ class CategoryBreakdownCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _title,
+              isSpending ? _spendingTitle : _incomeTitle,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 12),
             if (categoryTotals.isEmpty)
-              const Text(_emptyMessage)
+              Text(isSpending ? _spendingEmptyMessage : _incomeEmptyMessage)
             else ...[
               Center(
                 child: Semantics(
@@ -63,8 +90,11 @@ class CategoryBreakdownCard extends StatelessWidget {
                       painter: _CategoryRingPainter(
                         slices: [
                           for (final categoryTotal in categoryTotals)
-                            if (totalExpense > 0)
-                              categoryTotal.expenseMinorUnits / totalExpense
+                            if (totalMinorUnits > 0)
+                              (isSpending
+                                      ? categoryTotal.expenseMinorUnits
+                                      : categoryTotal.incomeMinorUnits) /
+                                  totalMinorUnits
                             else
                               0.0,
                         ],
@@ -79,12 +109,16 @@ class CategoryBreakdownCard extends StatelessWidget {
               for (var index = 0; index < categoryTotals.length; index++)
                 _LegendRow(
                   name: categoryTotals[index].name ?? _uncategorizedLabel,
-                  amountMinorUnits: categoryTotals[index].expenseMinorUnits,
+                  amountMinorUnits: isSpending
+                      ? categoryTotals[index].expenseMinorUnits
+                      : categoryTotals[index].incomeMinorUnits,
                   color: _slicePalette[index % _slicePalette.length],
-                  percent: totalExpense > 0
-                      ? (categoryTotals[index].expenseMinorUnits *
+                  percent: totalMinorUnits > 0
+                      ? ((isSpending
+                                    ? categoryTotals[index].expenseMinorUnits
+                                    : categoryTotals[index].incomeMinorUnits) *
                                 100 /
-                                totalExpense)
+                                totalMinorUnits)
                             .round()
                       : 0,
                 ),
@@ -213,7 +247,9 @@ class _CategoryRingPainter extends CustomPainter {
 
 String _ringSliceLabel(CategoryTotal categoryTotal) {
   final name = categoryTotal.name ?? _uncategorizedLabel;
-  final amount = _formatMinorUnits(categoryTotal.expenseMinorUnits);
+  final amount = _formatMinorUnits(
+    categoryTotal.expenseMinorUnits + categoryTotal.incomeMinorUnits,
+  );
   return '$name $amount';
 }
 

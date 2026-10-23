@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// A per-category expense total for one analytics range.
+/// A per-category amount for one analytics range.
 @immutable
 class CategoryTotal {
   /// Creates an immutable category total.
@@ -8,6 +8,7 @@ class CategoryTotal {
     required this.categoryId,
     required this.name,
     required this.expenseMinorUnits,
+    this.incomeMinorUnits = 0,
   });
 
   /// Creates a category total from a SQLite or serialized row map.
@@ -16,6 +17,7 @@ class CategoryTotal {
       categoryId: map['category_id'] as String?,
       name: map['name'] as String?,
       expenseMinorUnits: map['expense_minor_units']! as int,
+      incomeMinorUnits: (map['income_minor_units'] as int?) ?? 0,
     );
   }
 
@@ -28,16 +30,24 @@ class CategoryTotal {
   /// The expense total in the source transaction's minor units.
   final int expenseMinorUnits;
 
+  /// The income total in the source transaction's minor units.
+  ///
+  /// Income breakdowns carry their amount here, so one model serves both
+  /// metrics the way [CategoryTotal] already served expenses.
+  final int incomeMinorUnits;
+
   /// Returns a copy with non-null fields replaced by the supplied values.
   CategoryTotal copyWith({
     String? categoryId,
     String? name,
     int? expenseMinorUnits,
+    int? incomeMinorUnits,
   }) {
     return CategoryTotal(
       categoryId: categoryId ?? this.categoryId,
       name: name ?? this.name,
       expenseMinorUnits: expenseMinorUnits ?? this.expenseMinorUnits,
+      incomeMinorUnits: incomeMinorUnits ?? this.incomeMinorUnits,
     );
   }
 
@@ -47,6 +57,7 @@ class CategoryTotal {
       'category_id': categoryId,
       'name': name,
       'expense_minor_units': expenseMinorUnits,
+      'income_minor_units': incomeMinorUnits,
     };
   }
 
@@ -57,10 +68,12 @@ class CategoryTotal {
         other is CategoryTotal &&
             categoryId == other.categoryId &&
             name == other.name &&
-            expenseMinorUnits == other.expenseMinorUnits;
+            expenseMinorUnits == other.expenseMinorUnits &&
+            incomeMinorUnits == other.incomeMinorUnits;
   }
 
   /// A hash code derived from every category total field.
   @override
-  int get hashCode => Object.hash(categoryId, name, expenseMinorUnits);
+  int get hashCode =>
+      Object.hash(categoryId, name, expenseMinorUnits, incomeMinorUnits);
 }
