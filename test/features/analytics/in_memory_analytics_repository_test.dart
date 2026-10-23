@@ -134,6 +134,68 @@ void main() {
           expenseMinorUnits: 42500,
         ),
       ]);
+      expect(summary.categoryIncomeTotals, <CategoryTotal>[
+        const CategoryTotal(
+          categoryId: null,
+          name: null,
+          expenseMinorUnits: 0,
+          incomeMinorUnits: 150000,
+        ),
+      ]);
+    });
+
+    test('breaks income down by category, highest first', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'income-salary',
+            amountMinorUnits: 200000,
+            timestamp: DateTime.utc(2026, 1, 5),
+            type: TransactionType.income,
+            categoryId: 'category-salary',
+          ),
+          _transaction(
+            'income-freelance',
+            amountMinorUnits: 75000,
+            timestamp: DateTime.utc(2026, 1, 8),
+            type: TransactionType.income,
+            categoryId: 'category-freelance',
+          ),
+          _transaction(
+            'income-freelance-2',
+            amountMinorUnits: 25000,
+            timestamp: DateTime.utc(2026, 1, 9),
+            type: TransactionType.income,
+            categoryId: 'category-freelance',
+          ),
+        ],
+        categories: [
+          _category('category-salary', 'Salary'),
+          _category('category-freelance', 'Freelance'),
+        ],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      expect(summary.categoryIncomeTotals, <CategoryTotal>[
+        const CategoryTotal(
+          categoryId: 'category-salary',
+          name: 'Salary',
+          expenseMinorUnits: 0,
+          incomeMinorUnits: 200000,
+        ),
+        const CategoryTotal(
+          categoryId: 'category-freelance',
+          name: 'Freelance',
+          expenseMinorUnits: 0,
+          incomeMinorUnits: 100000,
+        ),
+      ]);
+      // Expenses stay separate from the income breakdown.
+      expect(summary.categoryExpenseTotals, isEmpty);
     });
 
     test(

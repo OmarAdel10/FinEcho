@@ -45,6 +45,7 @@ AnalyticsSummary _summary({
   int income = 0,
   int expense = 0,
   List<CategoryTotal> categories = const [],
+  List<CategoryTotal> incomeCategories = const [],
 }) {
   return AnalyticsSummary(
     startUtc: startUtc,
@@ -52,6 +53,7 @@ AnalyticsSummary _summary({
     totalIncomeMinorUnits: income,
     totalExpenseMinorUnits: expense,
     categoryExpenseTotals: categories,
+    categoryIncomeTotals: incomeCategories,
   );
 }
 
@@ -73,6 +75,14 @@ AnalyticsSummary _dashboardSummary(DateTime startUtc, DateTime endUtc) {
         categoryId: 'category-2',
         name: 'Transport',
         expenseMinorUnits: 10000,
+      ),
+    ],
+    incomeCategories: const [
+      CategoryTotal(
+        categoryId: 'category-salary',
+        name: 'Salary',
+        expenseMinorUnits: 0,
+        incomeMinorUnits: 200000,
       ),
     ],
   );
@@ -277,6 +287,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Spending by category'), findsNothing);
+    expect(find.text('Income by category'), findsOneWidget);
+    expect(find.text('Salary'), findsOneWidget);
     expect(find.byType(AccountBreakdownCard), findsOneWidget);
     expect(find.text('By account'), findsOneWidget);
 

@@ -1668,6 +1668,7 @@ AnalyticsSummary _summary({
   int income = 0,
   int expense = 0,
   List<CategoryTotal> categoryTotals = const [],
+  List<CategoryTotal> categoryIncomeTotals = const [],
 }) {
   return AnalyticsSummary(
     startUtc: startUtc,
@@ -1675,5 +1676,6 @@ AnalyticsSummary _summary({
     totalIncomeMinorUnits: income,
     totalExpenseMinorUnits: expense,
     categoryExpenseTotals: categoryTotals,
+    categoryIncomeTotals: categoryIncomeTotals,
   );
 }

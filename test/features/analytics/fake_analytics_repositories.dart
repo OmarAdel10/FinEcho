@@ -68,6 +68,7 @@ final AnalyticsSummary _emptySummary = AnalyticsSummary(
   totalIncomeMinorUnits: 0,
   totalExpenseMinorUnits: 0,
   categoryExpenseTotals: const [],
+  categoryIncomeTotals: const [],
 );
 
 /// A bundle of analytics fakes and the service built from them.

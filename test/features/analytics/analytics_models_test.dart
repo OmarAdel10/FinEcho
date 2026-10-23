@@ -381,6 +381,14 @@ AnalyticsDashboard _dashboard() {
         expenseMinorUnits: 42000,
       ),
     ],
+    categoryIncomeTotals: const [
+      CategoryTotal(
+        categoryId: 'category-1',
+        name: 'Salary',
+        expenseMinorUnits: 0,
+        incomeMinorUnits: 200000,
+      ),
+    ],
     accountTotals: const [],
     recurringCharges: const [],
     unusualSpikes: const [],
