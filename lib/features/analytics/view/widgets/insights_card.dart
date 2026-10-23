@@ -1,4 +1,5 @@
 import 'package:finecho/app/theme/fin_echo_theme.dart';
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/features/analytics/view_model/models/category_spike.dart';
 import 'package:finecho/features/analytics/view_model/models/monthly_forecast.dart';
 import 'package:finecho/features/analytics/view_model/models/recurring_charge.dart';
@@ -19,8 +20,13 @@ class InsightsCard extends StatelessWidget {
     required this.forecast,
     required this.recurringCharges,
     required this.unusualSpikes,
+    this.currency,
     super.key,
   });
+
+  /// The projected expenses, recurring charges, and unusual spikes are all
+  /// aggregated in this currency.
+  final String? currency;
 
   /// The projection for the current calendar month.
   final MonthlyForecast forecast;
@@ -57,7 +63,7 @@ class InsightsCard extends StatelessWidget {
             const _SectionTitle(_forecastTitle),
             const SizedBox(height: 4),
             Text(
-              _formatMinorUnits(forecast.projectedExpenseMinorUnits),
+              formatMinorUnits(forecast.projectedExpenseMinorUnits, currency),
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -75,13 +81,15 @@ class InsightsCard extends StatelessWidget {
             if (recurringCharges.isEmpty)
               const Text(_noRecurringMessage)
             else
-              for (final charge in recurringCharges) _RecurringRow(charge),
+              for (final charge in recurringCharges)
+                _RecurringRow(charge, currency: currency),
             const SizedBox(height: 16),
             const _SectionTitle(_spikesTitle),
             if (unusualSpikes.isEmpty)
               const Text(_noSpikesMessage)
             else
-              for (final spike in unusualSpikes) _SpikeRow(spike),
+              for (final spike in unusualSpikes)
+                _SpikeRow(spike, currency: currency),
           ],
         ),
       ),
@@ -105,9 +113,12 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _RecurringRow extends StatelessWidget {
-  const new(this.charge);
+  const new(this.charge, {required this.currency});
 
   final RecurringCharge charge;
+
+  /// The ISO currency code the charge amounts are denominated in.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +131,7 @@ class _RecurringRow extends StatelessWidget {
           Text('${charge.monthsSeen} months', style: theme.textTheme.bodySmall),
           const SizedBox(width: 12),
           Text(
-            _formatMinorUnits(charge.amountMinorUnits),
+            formatMinorUnits(charge.amountMinorUnits, currency),
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -132,9 +143,12 @@ class _RecurringRow extends StatelessWidget {
 }
 
 class _SpikeRow extends StatelessWidget {
-  const new(this.spike);
+  const new(this.spike, {required this.currency});
 
   final CategorySpike spike;
+
+  /// The ISO currency code the spike amounts are denominated in.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +181,7 @@ class _SpikeRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            _formatMinorUnits(spike.currentExpenseMinorUnits),
+            formatMinorUnits(spike.currentExpenseMinorUnits, currency),
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -176,11 +190,4 @@ class _SpikeRow extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatMinorUnits(int amount) {
-  final sign = amount < 0 ? '-' : '';
-  final absolute = amount.abs();
-  final fraction = (absolute % 100).toString().padLeft(2, '0');
-  return '$sign${absolute ~/ 100}.$fraction';
 }

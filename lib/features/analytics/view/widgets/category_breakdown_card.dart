@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:finecho/app/theme/fin_echo_theme.dart';
 import 'package:finecho/core/models/category_total.dart';
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:flutter/material.dart';
 
 /// Which per-category metric the breakdown card renders.
@@ -34,6 +35,7 @@ class CategoryBreakdownCard extends StatelessWidget {
   const new({
     required this.categoryTotals,
     this.metric = CategoryBreakdownMetric.spending,
+    this.currency,
     super.key,
   });
 
@@ -42,6 +44,9 @@ class CategoryBreakdownCard extends StatelessWidget {
   /// Spending entries carry [CategoryTotal.expenseMinorUnits]; income
   /// entries carry [CategoryTotal.incomeMinorUnits].
   final List<CategoryTotal> categoryTotals;
+
+  /// The ISO currency code the category totals are denominated in.
+  final String? currency;
 
   /// Which metric the card renders.
   final CategoryBreakdownMetric metric;
@@ -61,7 +66,7 @@ class CategoryBreakdownCard extends StatelessWidget {
     final ringSemanticsLabel = [
       if (isSpending) _spendingRingLabel else _incomeRingLabel,
       for (final categoryTotal in categoryTotals)
-        _ringSliceLabel(categoryTotal),
+        _ringSliceLabel(categoryTotal, currency),
     ].join(', ');
 
     return Card(
@@ -121,6 +126,7 @@ class CategoryBreakdownCard extends StatelessWidget {
                                 totalMinorUnits)
                             .round()
                       : 0,
+                  currency: currency,
                 ),
             ],
           ],
@@ -136,12 +142,16 @@ class _LegendRow extends StatelessWidget {
     required this.amountMinorUnits,
     required this.color,
     required this.percent,
+    required this.currency,
   });
 
   final String name;
   final int amountMinorUnits;
   final Color color;
   final int percent;
+
+  /// The ISO currency code the amounts are denominated in.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +169,7 @@ class _LegendRow extends StatelessWidget {
           Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
           const SizedBox(width: 8),
           Text(
-            _formatMinorUnits(amountMinorUnits),
+            formatMinorUnits(amountMinorUnits, currency),
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -245,17 +255,11 @@ class _CategoryRingPainter extends CustomPainter {
   }
 }
 
-String _ringSliceLabel(CategoryTotal categoryTotal) {
+String _ringSliceLabel(CategoryTotal categoryTotal, String? currency) {
   final name = categoryTotal.name ?? _uncategorizedLabel;
-  final amount = _formatMinorUnits(
+  final amount = formatMinorUnits(
     categoryTotal.expenseMinorUnits + categoryTotal.incomeMinorUnits,
+    currency,
   );
   return '$name $amount';
-}
-
-String _formatMinorUnits(int amount) {
-  final sign = amount < 0 ? '-' : '';
-  final absolute = amount.abs();
-  final fraction = (absolute % 100).toString().padLeft(2, '0');
-  return '$sign${absolute ~/ 100}.$fraction';
 }

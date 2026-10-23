@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/features/analytics/view_model/models/account_total.dart';
 import 'package:flutter/material.dart';
 
@@ -39,6 +40,7 @@ class AccountBreakdownCard extends StatelessWidget {
             (
               name: accountTotal.name,
               accountId: accountTotal.accountId,
+              currency: accountTotal.currency,
               amountMinorUnits: _metricAmount(accountTotal, metric),
             ),
         ]..sort((a, b) {
@@ -64,6 +66,7 @@ class AccountBreakdownCard extends StatelessWidget {
       for (final row in sorted)
         (
           name: row.name,
+          currency: row.currency,
           amountMinorUnits: row.amountMinorUnits,
           share: maxAmount > 0
               ? (row.amountMinorUnits / maxAmount).clamp(0.0, 1.0)
@@ -111,7 +114,7 @@ class AccountBreakdownCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 16),
                       Text(
-                        _formatMinorUnits(row.amountMinorUnits),
+                        formatMinorUnits(row.amountMinorUnits, row.currency),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -131,11 +134,4 @@ int _metricAmount(AccountTotal accountTotal, AccountBreakdownMetric metric) {
     AccountBreakdownMetric.expense => accountTotal.expenseMinorUnits,
     AccountBreakdownMetric.income => accountTotal.incomeMinorUnits,
   };
-}
-
-String _formatMinorUnits(int amount) {
-  final sign = amount < 0 ? '-' : '';
-  final absolute = amount.abs();
-  final fraction = (absolute % 100).toString().padLeft(2, '0');
-  return '$sign${absolute ~/ 100}.$fraction';
 }
