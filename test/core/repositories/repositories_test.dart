@@ -44,13 +44,15 @@ void main() {
     accountRepository = SqfliteAccountRepository(database);
     categoryRepository = SqfliteCategoryRepository(database);
     transactionRepository = SqfliteTransactionRepository(database);
-    budgetRepository = SqfliteBudgetRepository(database);
+    budgetRepository = SqfliteBudgetRepository(opener: () async => database);
     speechRepository = SqfliteSpeechRepository(database);
     smsRepository = SqfliteSmsIngestionRepository(database);
     notificationRepository = SqfliteNotificationRepository(database);
     settingsRepository = SqfliteSettingsRepository(database);
     securityRepository = SqfliteSecurityRepository(database);
-    analyticsRepository = SqfliteAnalyticsRepository(database);
+    analyticsRepository = SqfliteAnalyticsRepository(
+      opener: () async => database,
+    );
   });
 
   tearDown(() async {

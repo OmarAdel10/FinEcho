@@ -11,6 +11,8 @@ import 'package:finecho/core/repositories/contracts/transaction_repository.dart'
 import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_analytics_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_budget_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
@@ -107,14 +109,22 @@ Future<void> configureDependencies({
       );
   }
 
-  // Register financial repositories (needed by the security reset)
+  // Register financial repositories (needed by the security reset).
+  // Budgets persist in the encrypted database in production; tests opt into
+  // the in-memory graph explicitly.
   sl
     ..registerLazySingleton<TransactionRepository>(
       InMemoryTransactionRepository.new,
     )
     ..registerLazySingleton<AccountRepository>(InMemoryAccountRepository.new)
-    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new)
-    ..registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
+    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new);
+  if (useInMemoryStorage) {
+    sl.registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
+  } else {
+    sl.registerLazySingleton<BudgetRepository>(
+      () => SqfliteBudgetRepository(opener: sl<DatabaseOpener>().open),
+    );
+  }
 
   // Register the platform biometric prompt, service, and cubit.
   sl
@@ -159,13 +169,20 @@ Future<void> configureDependencies({
   );
   sl.registerLazySingleton<BudgetCubit>(() => BudgetCubit(sl<BudgetService>()));
 
-  // Register analytics components
-  sl.registerLazySingleton<AnalyticsRepository>(
-    () => InMemoryAnalyticsRepository(
-      transactions: sl<TransactionRepository>(),
-      categories: sl<CategoryRepository>(),
-    ),
-  );
+  // Register analytics components. Production aggregates with SQL over the
+  // encrypted database; tests opt into the in-memory graph explicitly.
+  if (useInMemoryStorage) {
+    sl.registerLazySingleton<AnalyticsRepository>(
+      () => InMemoryAnalyticsRepository(
+        transactions: sl<TransactionRepository>(),
+        categories: sl<CategoryRepository>(),
+      ),
+    );
+  } else {
+    sl.registerLazySingleton<AnalyticsRepository>(
+      () => SqfliteAnalyticsRepository(opener: sl<DatabaseOpener>().open),
+    );
+  }
   sl.registerLazySingleton<AnalyticsService>(
     () => AnalyticsService(
       analytics: sl<AnalyticsRepository>(),

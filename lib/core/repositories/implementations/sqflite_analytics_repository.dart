@@ -5,10 +5,14 @@ import 'package:sqflite_sqlcipher/sqlite_api.dart' show Database;
 
 /// A SQLCipher-backed analytics repository implementation.
 class SqfliteAnalyticsRepository implements AnalyticsRepository {
-  /// Creates a repository backed by the supplied SQLite database.
-  const new(this._database);
+  /// Creates a repository that opens the encrypted database on demand.
+  const new({required this.opener});
 
-  final Database _database;
+  /// Opens the encrypted database when a query runs.
+  ///
+  /// The database is opened lazily so nothing touches secure storage or the
+  /// file system before the first query.
+  final Future<Database> Function() opener;
 
   @override
   Future<AnalyticsSummary> summaryForRange({
@@ -20,8 +24,9 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
     if (startMillis >= endMillis) {
       throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
     }
+    final database = await opener();
 
-    final totalRows = await _database.rawQuery(
+    final totalRows = await database.rawQuery(
       '''
       SELECT
         type,
@@ -34,7 +39,7 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
       <Object?>[startMillis, endMillis, 'income', 'expense'],
     );
 
-    final categoryRows = await _database.rawQuery(
+    final categoryRows = await database.rawQuery(
       '''
       SELECT
         t.category_id AS category_id,
@@ -54,7 +59,7 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
         .map(CategoryTotal.fromMap)
         .toList(growable: false);
 
-    final incomeRows = await _database.rawQuery(
+    final incomeRows = await database.rawQuery(
       '''
       SELECT
         t.category_id AS category_id,
