@@ -45,6 +45,20 @@ Still open:
 - Cover the transfer amount prefix on TransactionTile (empty sign branch),
   lib/features/transactions/view/widgets/transaction_tile.dart:55-62.
 
+- Break the palette seam duplicate: with 7/13/19… categories the last and
+  first slices share palette[0] at the −π/2 seam; offset later cycles by half
+  the palette
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:144,257).
+
+- Render transaction amounts with the account's currency in the tile and
+  period totals, not only the edit sheet; zero-decimal accounts (JPY) show
+  scaled amounts
+  (lib/features/transactions/view/widgets/transaction_tile.dart:61,
+  lib/features/transactions/view/widgets/period_totals_card.dart:146).
+
+- Track localization debt: hardcoded const English labels across analytics and
+  transactions have no l10n migration path yet.
+
 ## Analytics review round 2
 
 Deferred during the round-two review; tracked in Plane:

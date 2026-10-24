@@ -297,7 +297,7 @@ List<int> _legendPercents(List<int> amounts, int total) {
   if (total <= 0) {
     return List<int>.filled(amounts.length, 0);
   }
-  final exact = [for (final amount in amounts) amount * 100 / total];
+  final exact = [for (final amount in amounts) amount / total * 100];
   final result = [for (final value in exact) value.floor()];
   final order = List<int>.generate(amounts.length, (index) => index)
     ..sort((a, b) {

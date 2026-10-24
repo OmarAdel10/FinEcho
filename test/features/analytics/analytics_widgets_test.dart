@@ -325,7 +325,23 @@ void main() {
         ]),
       );
       final before = tester.widget<CustomPaint>(_ringPainter()).painter!;
-      expect(before.shouldRepaint(before), isFalse);
+
+      await tester.pumpWidget(
+        card(const [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 7500,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 2500,
+          ),
+        ]),
+      );
+      final same = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      expect(same.shouldRepaint(before), isFalse);
 
       await tester.pumpWidget(
         card(const [
@@ -362,15 +378,31 @@ void main() {
           ),
         ],
       );
-      await tester.pumpWidget(_wrap(card, theme: FinEchoTheme.light()));
+      // Pin the track color so a repaint decision can only come from the
+      // palette comparison, not the differing default outline variants.
+      ThemeData themed(Brightness brightness) {
+        final base = brightness == Brightness.dark
+            ? FinEchoTheme.dark()
+            : FinEchoTheme.light();
+        return base.copyWith(
+          colorScheme: base.colorScheme.copyWith(
+            outlineVariant: const Color(0xFF555555),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(_wrap(card, theme: themed(Brightness.light)));
       await tester.pumpAndSettle();
       final lightPainter = tester.widget<CustomPaint>(_ringPainter()).painter!;
-      await tester.pumpWidget(_wrap(card, theme: FinEchoTheme.dark()));
+      await tester.pumpWidget(_wrap(card, theme: themed(Brightness.dark)));
       await tester.pumpAndSettle();
       final darkPainter = tester.widget<CustomPaint>(_ringPainter()).painter!;
-
-      expect(lightPainter.shouldRepaint(lightPainter), isFalse);
       expect(darkPainter.shouldRepaint(lightPainter), isTrue);
+
+      await tester.pumpWidget(_wrap(card, theme: themed(Brightness.light)));
+      await tester.pumpAndSettle();
+      final lightAgain = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      expect(lightAgain.shouldRepaint(lightPainter), isFalse);
     });
 
     testWidgets('rounds legend percentages so they sum to one hundred', (
@@ -457,6 +489,45 @@ void main() {
 
       expect(percents, [14, 29, 57]);
       expect(percents.fold<int>(0, (sum, value) => sum + value), 100);
+
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 3,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Transport',
+                expenseMinorUnits: 3,
+              ),
+              CategoryTotal(
+                categoryId: 'category-3',
+                name: 'Bills',
+                expenseMinorUnits: 2,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final tiePercents = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .where((text) => text.endsWith('%'))
+          .map((text) => int.parse(text.substring(0, text.length - 1)))
+          .toList();
+
+      expect(tiePercents, [38, 37, 25]);
     });
 
     testWidgets('cycles the slice palette after six categories', (
