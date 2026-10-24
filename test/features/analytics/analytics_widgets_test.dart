@@ -344,6 +344,35 @@ void main() {
       final after = tester.widget<CustomPaint>(_ringPainter()).painter!;
       expect(after.shouldRepaint(before), isTrue);
     });
+
+    testWidgets('repaints when the palette changes with the theme', (
+      tester,
+    ) async {
+      const card = CategoryBreakdownCard(
+        categoryTotals: [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 7500,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 2500,
+          ),
+        ],
+      );
+      await tester.pumpWidget(_wrap(card, theme: FinEchoTheme.light()));
+      await tester.pumpAndSettle();
+      final lightPainter = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      await tester.pumpWidget(_wrap(card, theme: FinEchoTheme.dark()));
+      await tester.pumpAndSettle();
+      final darkPainter = tester.widget<CustomPaint>(_ringPainter()).painter!;
+
+      expect(lightPainter.shouldRepaint(lightPainter), isFalse);
+      expect(darkPainter.shouldRepaint(lightPainter), isTrue);
+    });
+
     testWidgets('rounds legend percentages so they sum to one hundred', (
       tester,
     ) async {
@@ -385,6 +414,48 @@ void main() {
           .toList();
 
       expect(percents, [34, 33, 33]);
+      expect(percents.fold<int>(0, (sum, value) => sum + value), 100);
+    });
+
+    testWidgets('awards remainder points by largest fraction', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 1,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Transport',
+                expenseMinorUnits: 2,
+              ),
+              CategoryTotal(
+                categoryId: 'category-3',
+                name: 'Bills',
+                expenseMinorUnits: 4,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final percents = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .where((text) => text.endsWith('%'))
+          .map((text) => int.parse(text.substring(0, text.length - 1)))
+          .toList();
+
+      expect(percents, [14, 29, 57]);
       expect(percents.fold<int>(0, (sum, value) => sum + value), 100);
     });
 

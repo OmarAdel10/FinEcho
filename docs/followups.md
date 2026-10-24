@@ -38,6 +38,13 @@ Still open:
 - Verify the in-memory analytics category tie-break matches the SQLite BINARY
   collation for non-ASCII category identifiers.
 
+- Prefill the transaction sheet amount using the selected account's currency;
+  zero-decimal accounts (JPY) show 12.34 instead of 1234
+  (lib/features/transactions/view/widgets/add_transaction_sheet.dart:52-54).
+
+- Cover the transfer amount prefix on TransactionTile (empty sign branch),
+  lib/features/transactions/view/widgets/transaction_tile.dart:55-62.
+
 ## Analytics review round 2
 
 Deferred during the round-two review; tracked in Plane:
