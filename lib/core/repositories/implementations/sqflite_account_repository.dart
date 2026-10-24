@@ -4,20 +4,24 @@ import 'package:sqflite_sqlcipher/sqlite_api.dart' show Database;
 
 /// A SQLCipher-backed account repository implementation.
 class SqfliteAccountRepository implements AccountRepository {
-  /// Creates a repository backed by the supplied SQLite database.
-  const new(this._database);
+  /// Creates a repository that opens the encrypted database that stores the
+  /// accounts for every call.
+  const new({required this.opener});
 
-  final Database _database;
+  /// Opens the encrypted database that stores the accounts.
+  final Future<Database> Function() opener;
 
   @override
   Future<List<Account>> list() async {
-    final rows = await _database.query('accounts', orderBy: 'name');
+    final database = await opener();
+    final rows = await database.query('accounts', orderBy: 'name');
     return rows.map(Account.fromMap).toList();
   }
 
   @override
   Future<Account?> get(String id) async {
-    final rows = await _database.query(
+    final database = await opener();
+    final rows = await database.query(
       'accounts',
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -31,12 +35,14 @@ class SqfliteAccountRepository implements AccountRepository {
 
   @override
   Future<void> create(Account account) async {
-    await _database.insert('accounts', account.toMap());
+    final database = await opener();
+    await database.insert('accounts', account.toMap());
   }
 
   @override
   Future<void> update(Account account) async {
-    await _database.update(
+    final database = await opener();
+    await database.update(
       'accounts',
       account.toMap(),
       where: 'id = ?',
@@ -46,7 +52,8 @@ class SqfliteAccountRepository implements AccountRepository {
 
   @override
   Future<void> delete(String id) async {
-    await _database.delete(
+    final database = await opener();
+    await database.delete(
       'accounts',
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -55,6 +62,7 @@ class SqfliteAccountRepository implements AccountRepository {
 
   @override
   Future<void> eraseAll() async {
-    await _database.delete('accounts');
+    final database = await opener();
+    await database.delete('accounts');
   }
 }

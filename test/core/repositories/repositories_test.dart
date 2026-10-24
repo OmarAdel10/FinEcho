@@ -41,9 +41,13 @@ void main() {
 
   setUp(() async {
     database = await createTestDatabase();
-    accountRepository = SqfliteAccountRepository(database);
-    categoryRepository = SqfliteCategoryRepository(database);
-    transactionRepository = SqfliteTransactionRepository(database);
+    accountRepository = SqfliteAccountRepository(opener: () async => database);
+    categoryRepository = SqfliteCategoryRepository(
+      opener: () async => database,
+    );
+    transactionRepository = SqfliteTransactionRepository(
+      opener: () async => database,
+    );
     budgetRepository = SqfliteBudgetRepository(opener: () async => database);
     speechRepository = SqfliteSpeechRepository(database);
     smsRepository = SqfliteSmsIngestionRepository(database);
