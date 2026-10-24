@@ -124,6 +124,7 @@ void main() {
         );
 
         expect(dashboard.previousExpenseMinorUnits, 0);
+        expect(dashboard.hasPreviousPeriod, isTrue);
         expect(dashboard.expenseChangeRatio, isNull);
       });
 
@@ -232,6 +233,7 @@ void main() {
           (DateTime.utc(2026, 11), DateTime.utc(2026, 12)),
         ]);
         expect(dashboard.previousExpenseMinorUnits, 0);
+        expect(dashboard.hasPreviousPeriod, isFalse);
         expect(dashboard.expenseChangeRatio, isNull);
       });
 

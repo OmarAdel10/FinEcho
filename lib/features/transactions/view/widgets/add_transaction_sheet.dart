@@ -1,3 +1,4 @@
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/features/transactions/view_model/models/transactions_state.dart';
 import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
@@ -48,7 +49,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     super.initState();
     final initial = widget.initial;
     _amountController = TextEditingController(
-      text: initial == null ? '' : _formatMinorUnits(initial.amountMinorUnits),
+      text: initial == null
+          ? ''
+          : formatMinorUnits(initial.amountMinorUnits, null),
     );
     _noteController = TextEditingController(text: initial?.rawText ?? '');
     _type = initial?.type ?? TransactionType.expense;
@@ -292,11 +295,5 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     final fraction = int.parse(fractionText.padRight(2, '0'));
     final minorUnits = major * 100 + fraction;
     return minorUnits <= 0 ? null : minorUnits;
-  }
-
-  String _formatMinorUnits(int amountMinorUnits) {
-    final major = amountMinorUnits ~/ 100;
-    final fraction = (amountMinorUnits % 100).toString().padLeft(2, '0');
-    return '$major.$fraction';
   }
 }

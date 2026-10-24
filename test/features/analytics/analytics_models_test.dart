@@ -379,6 +379,7 @@ AnalyticsDashboard _dashboard() {
     totalExpenseMinorUnits: 150000,
     netAmountMinorUnits: 50000,
     previousExpenseMinorUnits: 100000,
+    hasPreviousPeriod: true,
     expenseChangeRatio: 0.5,
     categoryTotals: const [
       CategoryTotal(

@@ -25,8 +25,11 @@ const double _ringSize = 160;
 const double _ringStrokeWidth = 20;
 const List<Color> _slicePalette = [
   FinEchoColors.deepGreen,
+  Color(0xFF8A6D00),
   FinEchoColors.blue,
-  FinEchoColors.softStone,
+  Color(0xFFB4462B),
+  FinEchoColors.darkNavy,
+  Color(0xFF6A4C93),
 ];
 
 /// A card that breaks the period's spending or income down by category.
@@ -63,6 +66,14 @@ class CategoryBreakdownCard extends StatelessWidget {
               ? categoryTotal.expenseMinorUnits
               : categoryTotal.incomeMinorUnits),
     );
+    final amounts = <int>[
+      for (final categoryTotal in categoryTotals)
+        if (isSpending)
+          categoryTotal.expenseMinorUnits
+        else
+          categoryTotal.incomeMinorUnits,
+    ];
+    final legendPercents = _legendPercents(amounts, totalMinorUnits);
     final ringSemanticsLabel = [
       if (isSpending) _spendingRingLabel else _incomeRingLabel,
       for (final categoryTotal in categoryTotals)
@@ -94,12 +105,9 @@ class CategoryBreakdownCard extends StatelessWidget {
                     child: CustomPaint(
                       painter: _CategoryRingPainter(
                         slices: [
-                          for (final categoryTotal in categoryTotals)
+                          for (final amount in amounts)
                             if (totalMinorUnits > 0)
-                              (isSpending
-                                      ? categoryTotal.expenseMinorUnits
-                                      : categoryTotal.incomeMinorUnits) /
-                                  totalMinorUnits
+                              amount / totalMinorUnits
                             else
                               0.0,
                         ],
@@ -114,18 +122,9 @@ class CategoryBreakdownCard extends StatelessWidget {
               for (var index = 0; index < categoryTotals.length; index++)
                 _LegendRow(
                   name: categoryTotals[index].name ?? _uncategorizedLabel,
-                  amountMinorUnits: isSpending
-                      ? categoryTotals[index].expenseMinorUnits
-                      : categoryTotals[index].incomeMinorUnits,
+                  amountMinorUnits: amounts[index],
                   color: _slicePalette[index % _slicePalette.length],
-                  percent: totalMinorUnits > 0
-                      ? ((isSpending
-                                    ? categoryTotals[index].expenseMinorUnits
-                                    : categoryTotals[index].incomeMinorUnits) *
-                                100 /
-                                totalMinorUnits)
-                            .round()
-                      : 0,
+                  percent: legendPercents[index],
                   currency: currency,
                 ),
             ],
@@ -262,4 +261,27 @@ String _ringSliceLabel(CategoryTotal categoryTotal, String? currency) {
     currency,
   );
   return '$name $amount';
+}
+
+/// Splits 100 percent across [amounts] with the largest-remainder method so
+/// the legend always sums to exactly 100 when [total] is positive.
+List<int> _legendPercents(List<int> amounts, int total) {
+  if (total <= 0) {
+    return List<int>.filled(amounts.length, 0);
+  }
+  final exact = [for (final amount in amounts) amount * 100 / total];
+  final result = [for (final value in exact) value.floor()];
+  final order = List<int>.generate(amounts.length, (index) => index)
+    ..sort((a, b) {
+      final remainderComparison = (exact[b] - result[b]).compareTo(
+        exact[a] - result[a],
+      );
+      return remainderComparison != 0 ? remainderComparison : a.compareTo(b);
+    });
+  var remainder = 100 - result.fold<int>(0, (sum, value) => sum + value);
+  for (var index = 0; index < order.length && remainder > 0; index++) {
+    result[order[index]]++;
+    remainder--;
+  }
+  return result;
 }

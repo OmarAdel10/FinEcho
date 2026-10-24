@@ -147,6 +147,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             dashboard.totalExpenseMinorUnits,
                         netAmountMinorUnits: dashboard.netAmountMinorUnits,
                         expenseChangeRatio: dashboard.expenseChangeRatio,
+                        hasPreviousPeriod: dashboard.hasPreviousPeriod,
                         currency: dashboard.primaryCurrency,
                       ),
                       ...switch (_mode) {

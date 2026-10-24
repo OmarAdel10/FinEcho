@@ -35,6 +35,7 @@ void main() {
             totalExpenseMinorUnits: 124000,
             netAmountMinorUnits: 376000,
             expenseChangeRatio: 0.24,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -56,6 +57,7 @@ void main() {
             totalExpenseMinorUnits: 112000,
             netAmountMinorUnits: -12000,
             expenseChangeRatio: -0.12,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -72,6 +74,7 @@ void main() {
             totalExpenseMinorUnits: 100000,
             netAmountMinorUnits: 0,
             expenseChangeRatio: 0,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -88,11 +91,29 @@ void main() {
             totalExpenseMinorUnits: 100000,
             netAmountMinorUnits: 0,
             expenseChangeRatio: null,
+            hasPreviousPeriod: false,
           ),
         ),
       );
 
       expect(find.text('No previous period to compare'), findsOneWidget);
+    });
+
+    testWidgets('explains a previous period without spending', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AnalyticsSummaryCard(
+            totalIncomeMinorUnits: 100000,
+            totalExpenseMinorUnits: 100000,
+            netAmountMinorUnits: 0,
+            expenseChangeRatio: null,
+            hasPreviousPeriod: true,
+          ),
+        ),
+      );
+
+      expect(find.text('No spending in the previous period'), findsOneWidget);
+      expect(find.text('No previous period to compare'), findsNothing);
     });
 
     testWidgets('formats cents and negative cents', (tester) async {
@@ -103,6 +124,7 @@ void main() {
             totalExpenseMinorUnits: 5,
             netAmountMinorUnits: -12345,
             expenseChangeRatio: null,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -122,6 +144,7 @@ void main() {
             totalExpenseMinorUnits: 2,
             netAmountMinorUnits: 1232,
             expenseChangeRatio: null,
+            hasPreviousPeriod: true,
             currency: 'JPY',
           ),
         ),
@@ -143,6 +166,7 @@ void main() {
             totalExpenseMinorUnits: 500,
             netAmountMinorUnits: 122956,
             expenseChangeRatio: null,
+            hasPreviousPeriod: true,
             currency: 'BHD',
           ),
         ),
@@ -302,6 +326,86 @@ void main() {
       );
       final after = tester.widget<CustomPaint>(_ringPainter()).painter!;
       expect(after.shouldRepaint(before), isTrue);
+    });
+    testWidgets('rounds legend percentages so they sum to one hundred', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 1,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Transport',
+                expenseMinorUnits: 1,
+              ),
+              CategoryTotal(
+                categoryId: 'category-3',
+                name: 'Bills',
+                expenseMinorUnits: 1,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final percents = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .where((text) => text.endsWith('%'))
+          .map((text) => int.parse(text.substring(0, text.length - 1)))
+          .toList();
+
+      expect(percents, [34, 33, 33]);
+      expect(percents.fold<int>(0, (sum, value) => sum + value), 100);
+    });
+
+    testWidgets('cycles the slice palette after six categories', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          CategoryBreakdownCard(
+            categoryTotals: [
+              for (var index = 0; index < 8; index++)
+                CategoryTotal(
+                  categoryId: 'category-$index',
+                  name: 'Category $index',
+                  expenseMinorUnits: 1000,
+                ),
+            ],
+          ),
+        ),
+      );
+
+      final colors = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Container),
+            ),
+          )
+          .map((container) => container.decoration)
+          .whereType<BoxDecoration>()
+          .where((decoration) => decoration.shape == BoxShape.circle)
+          .map((decoration) => decoration.color)
+          .toList();
+
+      expect(colors, hasLength(8));
+      expect(colors.take(6).toSet(), hasLength(6));
+      expect(colors[6], colors[0]);
+      expect(colors[7], colors[1]);
     });
   });
 
