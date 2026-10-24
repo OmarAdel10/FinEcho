@@ -2,16 +2,18 @@ import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
 import 'package:sqflite_sqlcipher/sqlite_api.dart' show Database;
 
-/// A SQLCipher-backed transaction repository implementation.
+/// SQLCipher-backed [TransactionRepository].
 class SqfliteTransactionRepository implements TransactionRepository {
-  /// Creates a repository backed by the supplied SQLite database.
-  const new(this._database);
+  /// Creates a repository that opens the encrypted database for each call.
+  const new({required this.opener});
 
-  final Database _database;
+  /// Opens the encrypted database that stores the transactions.
+  final Future<Database> Function() opener;
 
   @override
   Future<List<Transaction>> list() async {
-    final rows = await _database.query(
+    final database = await opener();
+    final rows = await database.query(
       'transactions',
       orderBy: 'timestamp DESC',
     );
@@ -20,7 +22,8 @@ class SqfliteTransactionRepository implements TransactionRepository {
 
   @override
   Future<Transaction?> get(String id) async {
-    final rows = await _database.query(
+    final database = await opener();
+    final rows = await database.query(
       'transactions',
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -34,12 +37,14 @@ class SqfliteTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> create(Transaction transaction) async {
-    await _database.insert('transactions', transaction.toMap());
+    final database = await opener();
+    await database.insert('transactions', transaction.toMap());
   }
 
   @override
   Future<void> update(Transaction transaction) async {
-    await _database.update(
+    final database = await opener();
+    await database.update(
       'transactions',
       transaction.toMap(),
       where: 'id = ?',
@@ -49,7 +54,8 @@ class SqfliteTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> delete(String id) async {
-    await _database.delete(
+    final database = await opener();
+    await database.delete(
       'transactions',
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -58,6 +64,7 @@ class SqfliteTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> eraseAll() async {
-    await _database.delete('transactions');
+    final database = await opener();
+    await database.delete('transactions');
   }
 }
