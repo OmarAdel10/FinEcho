@@ -1398,6 +1398,70 @@ void main() {
         ]);
       });
 
+      test('honors a per-budget warning share over the default', () async {
+        final harness = AnalyticsTestHarness(
+          initialCategories: {
+            'category-1': testAnalyticsCategory(id: 'category-1', name: 'Food'),
+            'category-2': testAnalyticsCategory(
+              id: 'category-2',
+              name: 'Transport',
+            ),
+          },
+          initialBudgets: {
+            'budget-lenient': testBudget(
+              id: 'budget-lenient',
+              allocatedAmountMinorUnits: 100000,
+              warningShare: 0.95,
+            ),
+            'budget-strict': testBudget(
+              id: 'budget-strict',
+              categoryId: 'category-2',
+              allocatedAmountMinorUnits: 100000,
+              warningShare: 0.5,
+            ),
+          },
+          initialTransactions: {
+            'food': testTransaction(
+              id: 'food',
+              categoryId: 'category-1',
+              amountMinorUnits: 90000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+            'transport': testTransaction(
+              id: 'transport',
+              categoryId: 'category-2',
+              amountMinorUnits: 60000,
+              timestamp: DateTime.utc(2026, 10, 6),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        // 90% spent: normal against a 95% threshold, warning against the
+        // 0.85 default. 60% spent: warning against a 50% threshold.
+        expect(dashboard.budgetProgress, const [
+          BudgetProgress(
+            budgetId: 'budget-strict',
+            categoryId: 'category-2',
+            categoryName: 'Transport',
+            allocatedAmountMinorUnits: 100000,
+            spentAmountMinorUnits: 60000,
+            level: BudgetProgressLevel.warning,
+          ),
+          BudgetProgress(
+            budgetId: 'budget-lenient',
+            categoryId: 'category-1',
+            categoryName: 'Food',
+            allocatedAmountMinorUnits: 100000,
+            spentAmountMinorUnits: 90000,
+            level: BudgetProgressLevel.normal,
+          ),
+        ]);
+      });
+
       test('reports spending against a zero allocation as exceeded', () async {
         final harness = AnalyticsTestHarness(
           initialCategories: {'category-1': testCategory()},

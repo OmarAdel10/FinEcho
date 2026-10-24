@@ -35,6 +35,7 @@ class BudgetCubit extends Cubit<BudgetState> {
     required int allocatedAmountMinorUnits,
     required String period,
     required DateTime startDate,
+    double? warningShare,
   }) async {
     if (state.status == BudgetStatus.submitting) {
       return false;
@@ -46,6 +47,7 @@ class BudgetCubit extends Cubit<BudgetState> {
         allocatedAmountMinorUnits: allocatedAmountMinorUnits,
         period: period,
         startDate: startDate,
+        warningShare: warningShare,
       );
       try {
         await _refresh();
@@ -89,6 +91,7 @@ class BudgetCubit extends Cubit<BudgetState> {
     required int allocatedAmountMinorUnits,
     required String period,
     required DateTime startDate,
+    double? warningShare,
   }) async {
     if (state.status == BudgetStatus.submitting) {
       return false;
@@ -101,6 +104,7 @@ class BudgetCubit extends Cubit<BudgetState> {
         allocatedAmountMinorUnits: allocatedAmountMinorUnits,
         period: period,
         startDate: startDate,
+        warningShare: warningShare,
       );
       try {
         await _refresh();

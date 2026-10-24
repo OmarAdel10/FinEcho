@@ -30,6 +30,13 @@ Future<void> _selectCategory(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _selectWarningThreshold(WidgetTester tester, String label) async {
+  await tester.tap(find.byType(DropdownButtonFormField<int?>));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(label).last);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('creates a budget and closes after success', (tester) async {
     final harness = BudgetTestHarness(
@@ -115,6 +122,44 @@ void main() {
     );
   });
 
+  testWidgets('saves the chosen warning threshold', (tester) async {
+    final harness = BudgetTestHarness(
+      initialCategories: {'category-1': testCategory()},
+      newId: () => 'budget-new',
+    );
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, const AddBudgetSheet()));
+    await tester.enterText(find.byType(TextFormField).first, '10');
+    await _selectCategory(tester);
+    await _selectWarningThreshold(tester, '90%');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(harness.budgetRepository.budgets['budget-new']?.warningShare, 0.9);
+  });
+
+  testWidgets('defaults the warning threshold to the app default', (
+    tester,
+  ) async {
+    final harness = BudgetTestHarness(
+      initialCategories: {'category-1': testCategory()},
+      newId: () => 'budget-new',
+    );
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, const AddBudgetSheet()));
+    await tester.enterText(find.byType(TextFormField).first, '10');
+    await _selectCategory(tester);
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(
+      harness.budgetRepository.budgets['budget-new']?.warningShare,
+      isNull,
+    );
+  });
+
   testWidgets('pre-fills and updates an existing budget', (tester) async {
     final original = testBudget();
     final harness = BudgetTestHarness(
@@ -128,6 +173,7 @@ void main() {
     expect(find.text('Food'), findsOneWidget);
     expect(find.text('Monthly'), findsOneWidget);
     expect(find.text('2026-10-01'), findsOneWidget);
+    expect(find.text('Default (85%)'), findsOneWidget);
 
     await tester.enterText(find.byType(TextFormField).first, '25');
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
@@ -138,6 +184,26 @@ void main() {
       2500,
     );
     expect(harness.budgetRepository.updatedIds, <String>[original.id]);
+  });
+
+  testWidgets('pre-fills a configured threshold and can reset it', (
+    tester,
+  ) async {
+    final original = testBudget(warningShare: 0.9);
+    final harness = BudgetTestHarness(
+      initialBudgets: {original.id: original},
+      initialCategories: {'category-1': testCategory()},
+    );
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, AddBudgetSheet(initial: original)));
+    expect(find.text('90%'), findsOneWidget);
+
+    await _selectWarningThreshold(tester, 'Default (85%)');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(harness.budgetRepository.budgets[original.id]?.warningShare, isNull);
   });
 
   testWidgets('requires selecting a category when the original is invalid', (
