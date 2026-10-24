@@ -72,6 +72,23 @@ void main() {
         }
       });
 
+      test('skips the previous comparison at a week and year start', () async {
+        for (final (period, now) in [
+          (AnalyticsPeriod.week, DateTime.utc(2026, 10, 12)),
+          (AnalyticsPeriod.year, DateTime.utc(2026)),
+        ]) {
+          final harness = AnalyticsTestHarness(
+            onSummary: (startUtc, endUtc) =>
+                _summary(startUtc: startUtc, endUtc: endUtc),
+            now: () => now,
+          );
+
+          final dashboard = await harness.service.loadDashboard(period: period);
+
+          expect(dashboard.hasPreviousPeriod, isFalse, reason: '$period');
+        }
+      });
+
       test('uses the local calendar for the month boundary', () async {
         // Nov 1, 00:30 EEST is still Oct 31 in UTC; the dashboard must
         // follow the user's local month, not the UTC month (FINECHO-22).

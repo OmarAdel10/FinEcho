@@ -11,8 +11,11 @@ import 'package:finecho/features/analytics/view_model/models/monthly_forecast.da
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: child));
+Widget _wrap(Widget child, {ThemeData? theme}) {
+  return MaterialApp(
+    theme: theme,
+    home: Scaffold(body: child),
+  );
 }
 
 Finder _ringPainter() {
@@ -533,6 +536,76 @@ void main() {
           .toList();
 
       expect(painterColors.take(legendColors.length), legendColors);
+    });
+
+    testWidgets('threads the theme palette into the ring and legend', (
+      tester,
+    ) async {
+      const card = CategoryBreakdownCard(
+        categoryTotals: [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-3',
+            name: 'Bills',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-4',
+            name: 'Shopping',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-5',
+            name: 'Health',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-6',
+            name: 'Fun',
+            expenseMinorUnits: 1000,
+          ),
+        ],
+      );
+
+      for (final theme in [FinEchoTheme.light(), FinEchoTheme.dark()]) {
+        await tester.pumpWidget(_wrap(card, theme: theme));
+        // MaterialApp animates theme switches; let the transition finish
+        // before reading the resolved palette.
+        await tester.pumpAndSettle();
+
+        final expected = slicePaletteFor(theme.brightness);
+        final legendColors = tester
+            .widgetList<Container>(
+              find.descendant(
+                of: find.byType(CategoryBreakdownCard),
+                matching: find.byType(Container),
+              ),
+            )
+            .map((container) => container.decoration)
+            .whereType<BoxDecoration>()
+            .where((decoration) => decoration.shape == BoxShape.circle)
+            .map((decoration) => decoration.color)
+            .toList();
+        final painter = tester.widget<CustomPaint>(_ringPainter()).painter!;
+        final painterColors = (painter as dynamic).colors as List<Color>;
+
+        expect(legendColors, expected, reason: 'Legend ${theme.brightness}');
+        expect(painterColors, expected, reason: 'Painter ${theme.brightness}');
+      }
+
+      expect(
+        slicePaletteFor(Brightness.light),
+        isNot(slicePaletteFor(Brightness.dark)),
+      );
     });
   });
 

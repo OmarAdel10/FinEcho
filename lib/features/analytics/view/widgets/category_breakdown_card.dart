@@ -42,8 +42,8 @@ const List<Color> _darkSlicePalette = [
 
 /// Returns the slice colors for a breakdown ring rendered with [brightness].
 ///
-/// Neighbouring entries stay distinguishable, and every color keeps at least
-/// a 3:1 contrast ratio against the card surface in the matching theme.
+/// Entries stay distinct, and every color keeps at least a 3:1 contrast ratio
+/// against the card surface in the matching theme.
 @visibleForTesting
 List<Color> slicePaletteFor(Brightness brightness) =>
     brightness == Brightness.dark ? _darkSlicePalette : _lightSlicePalette;
