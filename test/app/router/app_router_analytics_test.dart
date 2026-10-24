@@ -1,9 +1,9 @@
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/features/analytics/view/screens/analytics_screen.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/services/onboarding_service.dart';

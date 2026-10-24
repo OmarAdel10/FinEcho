@@ -1,9 +1,11 @@
 import 'package:finecho/core/models/account.dart';
 import 'package:finecho/core/models/analytics_account_total.dart';
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/category_monthly_expense.dart';
+import 'package:finecho/core/models/period_range.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/account_repository.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
@@ -11,7 +13,6 @@ import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/features/analytics/view_model/models/account_total.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_dashboard.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/budget_progress.dart';
 import 'package:finecho/features/analytics/view_model/models/category_spike.dart';
 import 'package:finecho/features/analytics/view_model/models/monthly_forecast.dart';
@@ -206,57 +207,13 @@ class AnalyticsService {
     AnalyticsPeriod period,
     DateTime nowUtc,
     Duration localUtcOffset,
-  ) {
-    final nowLocal = nowUtc.add(localUtcOffset);
-    switch (period) {
-      case AnalyticsPeriod.week:
-        final start = _startOfWeek(nowLocal);
-        return (
-          start.subtract(localUtcOffset),
-          start.add(const Duration(days: 7)).subtract(localUtcOffset),
-        );
-      case AnalyticsPeriod.month:
-        return (
-          DateTime.utc(nowLocal.year, nowLocal.month).subtract(localUtcOffset),
-          DateTime.utc(
-            nowLocal.year,
-            nowLocal.month + 1,
-          ).subtract(localUtcOffset),
-        );
-      case AnalyticsPeriod.year:
-        return (
-          DateTime.utc(nowLocal.year).subtract(localUtcOffset),
-          DateTime.utc(nowLocal.year + 1).subtract(localUtcOffset),
-        );
-    }
-  }
+  ) => periodRange(period, nowUtc, localUtcOffset);
 
   static (DateTime, DateTime) _previousRangeFor(
     AnalyticsPeriod period,
     DateTime nowUtc,
     Duration localUtcOffset,
-  ) {
-    final current = _rangeFor(period, nowUtc, localUtcOffset);
-    switch (period) {
-      case AnalyticsPeriod.week:
-        return (current.$1.subtract(const Duration(days: 7)), current.$1);
-      case AnalyticsPeriod.month:
-        final localStart = current.$1.add(localUtcOffset);
-        return (
-          DateTime.utc(
-            localStart.year,
-            localStart.month - 1,
-          ).subtract(localUtcOffset),
-          current.$1,
-        );
-      case AnalyticsPeriod.year:
-        final localStart = current.$1.add(localUtcOffset);
-        return (
-          DateTime.utc(localStart.year - 1).subtract(localUtcOffset),
-          current.$1,
-        );
-    }
-  }
+  ) => previousPeriodRange(period, nowUtc, localUtcOffset);
 
   /// Compares like for like: the previous period runs for the same elapsed
   /// duration as the current period, so a partial current period is never
@@ -271,11 +228,6 @@ class AnalyticsService {
     return comparisonEnd.isAfter(previousEndUtc)
         ? previousEndUtc
         : comparisonEnd;
-  }
-
-  static DateTime _startOfWeek(DateTime nowLocal) {
-    final date = DateTime.utc(nowLocal.year, nowLocal.month, nowLocal.day);
-    return date.subtract(Duration(days: date.weekday - DateTime.monday));
   }
 
   static String _categoryName(

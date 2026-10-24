@@ -1,12 +1,12 @@
 import 'dart:async';
 
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view/widgets/account_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/analytics_summary_card.dart';
 import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dart';
 import 'package:finecho/features/analytics/view/widgets/category_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/insights_card.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

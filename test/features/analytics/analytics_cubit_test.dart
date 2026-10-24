@@ -1,7 +1,7 @@
 import 'dart:async';
 
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 

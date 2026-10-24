@@ -1,7 +1,7 @@
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/features/analytics/view_model/models/account_total.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_dashboard.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:finecho/features/analytics/view_model/models/budget_progress.dart';
 import 'package:finecho/features/analytics/view_model/models/category_spike.dart';

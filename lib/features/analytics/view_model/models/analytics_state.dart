@@ -1,5 +1,5 @@
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_dashboard.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:flutter/foundation.dart';
 
 /// The lifecycle of the analytics ViewModel.
