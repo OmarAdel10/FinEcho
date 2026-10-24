@@ -1,9 +1,11 @@
 import 'package:finecho/core/models/account.dart';
 import 'package:finecho/core/models/analytics_account_total.dart';
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/category_monthly_expense.dart';
+import 'package:finecho/core/models/period_range.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/account_repository.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
@@ -11,15 +13,12 @@ import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/features/analytics/view_model/models/account_total.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_dashboard.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/budget_progress.dart';
 import 'package:finecho/features/analytics/view_model/models/category_spike.dart';
 import 'package:finecho/features/analytics/view_model/models/monthly_forecast.dart';
 import 'package:finecho/features/analytics/view_model/models/recurring_charge.dart';
 
 /// Expenses are grouped into amount buckets of this size for recurrence.
-const int _recurringAmountBucketMinorUnits = 50;
-
 /// Consecutive months required before an expense counts as recurring.
 const int _recurringMinimumMonths = 2;
 
@@ -32,8 +31,9 @@ const int _spikeBaselineMonths = 3;
 /// Baseline months required before unusual spending can be flagged.
 const int _spikeMinimumBaselineMonths = 2;
 
-/// The spent share of a budget that raises a warning.
-const double _budgetWarningShare = 0.85;
+/// The spent share of a budget that raises a warning when the budget does not
+/// configure its own threshold.
+const double _defaultBudgetWarningShare = 0.85;
 
 const String _uncategorizedLabel = 'Uncategorized';
 const String _unknownAccountLabel = 'Unknown account';
@@ -88,8 +88,9 @@ class AnalyticsService {
   /// UTC to match the stored transaction timestamps, so a user east of UTC
   /// does not see the previous month for the first hours of a new local
   /// month.
-  /// Aggregates assume every account shares one display currency; totals are
-  /// summed in minor units without conversion.
+  /// Aggregates are filtered to the primary currency: the most common
+  /// currency across the user's active accounts. Amounts in other currencies
+  /// are excluded rather than converted, so totals never mix minor units.
   Future<AnalyticsDashboard> loadDashboard({
     required AnalyticsPeriod period,
   }) async {
@@ -110,12 +111,24 @@ class AnalyticsService {
       previousStartUtc,
     );
 
-    final (summary, previousSummary, accounts, budgets, categories) = await (
-      _analytics.summaryForRange(startUtc: startUtc, endUtc: endUtc),
+    final (accounts, budgets, categories) = await (
+      _accounts.list(),
+      _budgets.list(),
+      _categories.list(),
+    ).wait;
+    final primaryCurrency = _primaryCurrency(accounts);
+
+    final (summary, previousSummary) = await (
+      _analytics.summaryForRange(
+        startUtc: startUtc,
+        endUtc: endUtc,
+        currency: primaryCurrency,
+      ),
       hasPreviousComparison
           ? _analytics.summaryForRange(
               startUtc: previousStartUtc,
               endUtc: previousComparisonEndUtc,
+              currency: primaryCurrency,
             )
           : Future<AnalyticsSummary>.value(
               AnalyticsSummary(
@@ -127,9 +140,6 @@ class AnalyticsService {
                 categoryIncomeTotals: const [],
               ),
             ),
-      _accounts.list(),
-      _budgets.list(),
-      _categories.list(),
     ).wait;
 
     final accountsById = <String, Account>{
@@ -163,14 +173,17 @@ class AnalyticsService {
       _analytics.expenseTransactionsForRange(
         startUtc: recurringWindowStartUtc,
         endUtc: monthEndUtc,
+        currency: primaryCurrency,
       ),
       _analytics.expenseMonthlyTotalsByCategory(
         startUtc: spikeBaselineStartUtc,
         endUtc: monthEndUtc,
+        currency: primaryCurrency,
       ),
       _analytics.expenseTotalsByCategoryForRange(
         startUtc: monthStartUtc,
         endUtc: monthEndUtc,
+        currency: primaryCurrency,
       ),
     ).wait;
 
@@ -178,12 +191,17 @@ class AnalyticsService {
       0,
       (total, entry) => total + entry.totalMinorUnits,
     );
-    final spentByBudgetId = await _spentByBudgetId(budgets, nowUtc);
+    final spentByBudgetId = await _spentByBudgetId(
+      budgets,
+      nowUtc,
+      primaryCurrency,
+    );
 
     return AnalyticsDashboard(
       period: period,
       startUtc: startUtc,
       endUtc: endUtc,
+      primaryCurrency: primaryCurrency,
       totalIncomeMinorUnits: summary.totalIncomeMinorUnits,
       totalExpenseMinorUnits: totalExpense,
       netAmountMinorUnits: summary.netAmountMinorUnits,
@@ -192,11 +210,7 @@ class AnalyticsService {
       categoryTotals: summary.categoryExpenseTotals,
       categoryIncomeTotals: summary.categoryIncomeTotals,
       accountTotals: _accountTotals(accountActivityTotals, accountsById),
-      recurringCharges: _recurringCharges(
-        recurringWindowExpenses,
-        categoriesById,
-        nowUtc,
-      ),
+      recurringCharges: _recurringCharges(recurringWindowExpenses, nowUtc),
       unusualSpikes: _unusualSpikes(
         monthlyCategoryExpenses,
         categoriesById,
@@ -211,57 +225,13 @@ class AnalyticsService {
     AnalyticsPeriod period,
     DateTime nowUtc,
     Duration localUtcOffset,
-  ) {
-    final nowLocal = nowUtc.add(localUtcOffset);
-    switch (period) {
-      case AnalyticsPeriod.week:
-        final start = _startOfWeek(nowLocal);
-        return (
-          start.subtract(localUtcOffset),
-          start.add(const Duration(days: 7)).subtract(localUtcOffset),
-        );
-      case AnalyticsPeriod.month:
-        return (
-          DateTime.utc(nowLocal.year, nowLocal.month).subtract(localUtcOffset),
-          DateTime.utc(
-            nowLocal.year,
-            nowLocal.month + 1,
-          ).subtract(localUtcOffset),
-        );
-      case AnalyticsPeriod.year:
-        return (
-          DateTime.utc(nowLocal.year).subtract(localUtcOffset),
-          DateTime.utc(nowLocal.year + 1).subtract(localUtcOffset),
-        );
-    }
-  }
+  ) => periodRange(period, nowUtc, localUtcOffset);
 
   static (DateTime, DateTime) _previousRangeFor(
     AnalyticsPeriod period,
     DateTime nowUtc,
     Duration localUtcOffset,
-  ) {
-    final current = _rangeFor(period, nowUtc, localUtcOffset);
-    switch (period) {
-      case AnalyticsPeriod.week:
-        return (current.$1.subtract(const Duration(days: 7)), current.$1);
-      case AnalyticsPeriod.month:
-        final localStart = current.$1.add(localUtcOffset);
-        return (
-          DateTime.utc(
-            localStart.year,
-            localStart.month - 1,
-          ).subtract(localUtcOffset),
-          current.$1,
-        );
-      case AnalyticsPeriod.year:
-        final localStart = current.$1.add(localUtcOffset);
-        return (
-          DateTime.utc(localStart.year - 1).subtract(localUtcOffset),
-          current.$1,
-        );
-    }
-  }
+  ) => previousPeriodRange(period, nowUtc, localUtcOffset);
 
   /// Compares like for like: the previous period runs for the same elapsed
   /// duration as the current period, so a partial current period is never
@@ -278,11 +248,6 @@ class AnalyticsService {
         : comparisonEnd;
   }
 
-  static DateTime _startOfWeek(DateTime nowLocal) {
-    final date = DateTime.utc(nowLocal.year, nowLocal.month, nowLocal.day);
-    return date.subtract(Duration(days: date.weekday - DateTime.monday));
-  }
-
   static String _categoryName(
     String? categoryId,
     Map<String, Category> categoriesById,
@@ -291,6 +256,34 @@ class AnalyticsService {
       return _uncategorizedLabel;
     }
     return categoriesById[categoryId]?.name ?? _uncategorizedLabel;
+  }
+
+  /// The primary currency: the most common currency across active accounts.
+  ///
+  /// Ties resolve alphabetically so the choice is deterministic. When the
+  /// user has no active accounts there is nothing to aggregate, so the
+  /// aggregations run unfiltered.
+  static String? _primaryCurrency(List<Account> accounts) {
+    final counts = <String, int>{};
+    for (final account in accounts) {
+      if (account.archived) {
+        continue;
+      }
+      counts[account.currency] = (counts[account.currency] ?? 0) + 1;
+    }
+    if (counts.isEmpty) {
+      return null;
+    }
+    var primary = counts.keys.first;
+    var bestCount = counts[primary]!;
+    for (final entry in counts.entries) {
+      if (entry.value > bestCount ||
+          (entry.value == bestCount && entry.key.compareTo(primary) < 0)) {
+        primary = entry.key;
+        bestCount = entry.value;
+      }
+    }
+    return primary;
   }
 
   static List<AccountTotal> _accountTotals(
@@ -305,6 +298,7 @@ class AnalyticsService {
           name:
               accountsById[activityTotal.accountId]?.name ??
               _unknownAccountLabel,
+          currency: activityTotal.currency,
           incomeMinorUnits: activityTotal.incomeMinorUnits,
           expenseMinorUnits: activityTotal.expenseMinorUnits,
         ),
@@ -330,14 +324,20 @@ class AnalyticsService {
 
   /// [expenses] are the bounded expense transactions of the recurrence
   /// window, ordered or not; the repository guarantees the window and type.
+  ///
+  /// Charges are identified by their payee, so transactions without a payee
+  /// cannot be attributed to a merchant and never count as recurring.
   static List<RecurringCharge> _recurringCharges(
     List<Transaction> expenses,
-    Map<String, Category> categoriesById,
     DateTime nowUtc,
   ) {
     final candidates =
         expenses
-            .where((transaction) => transaction.type == TransactionType.expense)
+            .where(
+              (transaction) =>
+                  transaction.type == TransactionType.expense &&
+                  (transaction.payee?.trim().isNotEmpty ?? false),
+            )
             .toList()
           ..sort((a, b) {
             final byTimestamp = a.timestamp.compareTo(b.timestamp);
@@ -347,23 +347,21 @@ class AnalyticsService {
             return a.amountMinorUnits.compareTo(b.amountMinorUnits);
           });
 
-    final monthsByGroup = <String, Set<int>>{};
-    final latestByGroup = <String, Transaction>{};
+    final monthsByPayee = <String, Set<int>>{};
+    final latestByPayee = <String, Transaction>{};
     for (final transaction in candidates) {
-      final key =
-          '${transaction.categoryId ?? ''}|'
-          '${_amountBucket(transaction.amountMinorUnits)}';
-      latestByGroup[key] = transaction;
+      final key = transaction.payee!.trim().toLowerCase();
+      latestByPayee[key] = transaction;
       final timestamp = transaction.timestamp.toUtc();
-      monthsByGroup
+      monthsByPayee
           .putIfAbsent(key, () => <int>{})
           .add(timestamp.year * 12 + timestamp.month);
     }
 
     final currentMonth = nowUtc.year * 12 + nowUtc.month;
     final charges = <RecurringCharge>[];
-    for (final entry in latestByGroup.entries) {
-      final months = monthsByGroup[entry.key]!;
+    for (final entry in latestByPayee.entries) {
+      final months = monthsByPayee[entry.key]!;
       final latestMonth = months.reduce((a, b) => a > b ? a : b);
       final monthsSeen = _consecutiveMonthRun(months);
       if (latestMonth < currentMonth || monthsSeen < _recurringMinimumMonths) {
@@ -373,7 +371,7 @@ class AnalyticsService {
       charges.add(
         RecurringCharge(
           categoryId: transaction.categoryId,
-          name: _categoryName(transaction.categoryId, categoriesById),
+          name: transaction.payee!.trim(),
           amountMinorUnits: transaction.amountMinorUnits,
           monthsSeen: monthsSeen,
         ),
@@ -395,12 +393,6 @@ class AnalyticsService {
       return (a.categoryId ?? '').compareTo(b.categoryId ?? '');
     });
     return charges;
-  }
-
-  static int _amountBucket(int amountMinorUnits) {
-    return (amountMinorUnits + _recurringAmountBucketMinorUnits ~/ 2) ~/
-        _recurringAmountBucketMinorUnits *
-        _recurringAmountBucketMinorUnits;
   }
 
   /// The longest run of consecutive calendar months in [months].
@@ -521,6 +513,7 @@ class AnalyticsService {
   Future<Map<String, int>> _spentByBudgetId(
     List<Budget> budgets,
     DateTime nowUtc,
+    String? currency,
   ) async {
     if (budgets.isEmpty) {
       return const <String, int>{};
@@ -534,6 +527,7 @@ class AnalyticsService {
       final categoryTotals = await _analytics.expenseTotalsByCategoryForRange(
         startUtc: window.$1,
         endUtc: window.$2,
+        currency: currency,
       );
       totalsByWindow[window] = {
         for (final entry in categoryTotals)
@@ -564,10 +558,11 @@ class AnalyticsService {
 
       final allocated = budget.allocatedAmountMinorUnits;
       final ratio = allocated > 0 ? spent / allocated : 0.0;
+      final warningShare = budget.warningShare ?? _defaultBudgetWarningShare;
       final BudgetProgressLevel level;
       if ((allocated <= 0 && spent > 0) || ratio >= 1) {
         level = BudgetProgressLevel.exceeded;
-      } else if (ratio >= _budgetWarningShare) {
+      } else if (ratio >= warningShare) {
         level = BudgetProgressLevel.warning;
       } else {
         level = BudgetProgressLevel.normal;

@@ -1,4 +1,5 @@
 import 'package:finecho/core/models/budget.dart';
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:flutter/material.dart';
 
 /// A presentational row for a single budget.
@@ -48,13 +49,6 @@ class BudgetTile extends StatelessWidget {
   }
 
   String _amountLabel(Budget budget) {
-    if (budget.allocatedAmountMinorUnits <= 0) {
-      return '0.00';
-    }
-    final major = budget.allocatedAmountMinorUnits ~/ 100;
-    final fraction = (budget.allocatedAmountMinorUnits % 100)
-        .toString()
-        .padLeft(2, '0');
-    return '$major.$fraction';
+    return formatMinorUnits(budget.allocatedAmountMinorUnits, budget.currency);
   }
 }

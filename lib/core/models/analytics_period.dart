@@ -1,4 +1,4 @@
-/// The period summarized by the analytics dashboard.
+/// The period covered by a summary.
 enum AnalyticsPeriod {
   /// A calendar week that starts on Monday.
   week,

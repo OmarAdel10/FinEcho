@@ -1,3 +1,4 @@
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:flutter/material.dart';
 
 const String _incomeLabel = 'Income';
@@ -13,6 +14,7 @@ class AnalyticsSummaryCard extends StatelessWidget {
     required this.totalExpenseMinorUnits,
     required this.netAmountMinorUnits,
     required this.expenseChangeRatio,
+    this.currency,
     super.key,
   });
 
@@ -27,6 +29,10 @@ class AnalyticsSummaryCard extends StatelessWidget {
 
   /// The expense change versus the previous period, or `null` without history.
   final double? expenseChangeRatio;
+
+  /// The ISO currency code the amounts are denominated in, or `null` when
+  /// the user has no active accounts.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -43,18 +49,21 @@ class AnalyticsSummaryCard extends StatelessWidget {
                   child: _SummaryMetric(
                     label: _incomeLabel,
                     amountMinorUnits: totalIncomeMinorUnits,
+                    currency: currency,
                   ),
                 ),
                 Expanded(
                   child: _SummaryMetric(
                     label: _expensesLabel,
                     amountMinorUnits: totalExpenseMinorUnits,
+                    currency: currency,
                   ),
                 ),
                 Expanded(
                   child: _SummaryMetric(
                     label: _netLabel,
                     amountMinorUnits: netAmountMinorUnits,
+                    currency: currency,
                   ),
                 ),
               ],
@@ -83,10 +92,18 @@ class AnalyticsSummaryCard extends StatelessWidget {
 }
 
 class _SummaryMetric extends StatelessWidget {
-  const new({required this.label, required this.amountMinorUnits});
+  const new({
+    required this.label,
+    required this.amountMinorUnits,
+    required this.currency,
+  });
 
   final String label;
   final int amountMinorUnits;
+
+  /// The ISO currency code the amount is denominated in, or `null` when
+  /// the user has no active accounts.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +119,7 @@ class _SummaryMetric extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _formatMinorUnits(amountMinorUnits),
+          formatMinorUnits(amountMinorUnits, currency),
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -110,11 +127,4 @@ class _SummaryMetric extends StatelessWidget {
       ],
     );
   }
-}
-
-String _formatMinorUnits(int amount) {
-  final sign = amount < 0 ? '-' : '';
-  final absolute = amount.abs();
-  final fraction = (absolute % 100).toString().padLeft(2, '0');
-  return '$sign${absolute ~/ 100}.$fraction';
 }

@@ -2,6 +2,7 @@ import 'package:finecho/app/bootstrap/app_bootstrap.dart';
 import 'package:finecho/app/bootstrap/app_startup.dart';
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/security_state.dart';
 import 'package:finecho/core/models/transaction.dart';
@@ -15,7 +16,6 @@ import 'package:finecho/core/repositories/implementations/sqflite_analytics_repo
 import 'package:finecho/core/repositories/implementations/sqflite_budget_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
 import 'package:finecho/features/budget/data/repositories/in_memory_budget_repository.dart';

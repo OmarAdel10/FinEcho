@@ -30,8 +30,19 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   /// The transactions the aggregate queries read, or empty when unset.
   Future<List<Transaction>> Function()? transactionsSource;
 
+  /// The accounts consulted for currency filtering, or empty when unset.
+  Future<List<Account>> Function()? accountsSource;
+
+  /// The currency reported for activity whose account is not seeded.
+  ///
+  /// Matches the EGP fixtures used across the analytics tests.
+  static const String _unknownAccountCurrency = 'EGP';
+
   /// The summary returned when [onSummary] is not set.
   final AnalyticsSummary summary;
+
+  /// Every currency passed to [summaryForRange], in request order.
+  final List<String?> requestedCurrencies = [];
 
   /// Builds a summary for each requested range when set.
   final AnalyticsSummary Function(DateTime startUtc, DateTime endUtc)?
@@ -50,11 +61,13 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   Future<AnalyticsSummary> summaryForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     if (!startUtc.isBefore(endUtc)) {
       throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
     }
     requestedRanges.add((startUtc, endUtc));
+    requestedCurrencies.add(currency);
     final gate = this.gate;
     if (gate != null) {
       await gate.future;
@@ -74,11 +87,17 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
     DateTime startUtc,
     DateTime endUtc,
     List<Transaction> transactions,
+    Map<String, String> currencyByAccount,
+    String? currency,
   ) {
     final startMillis = startUtc.millisecondsSinceEpoch;
     final endMillis = endUtc.millisecondsSinceEpoch;
     final expenses = transactions.where((transaction) {
       if (transaction.type != TransactionType.expense) {
+        return false;
+      }
+      if (currency != null &&
+          currencyByAccount[transaction.accountId] != currency) {
         return false;
       }
       final millis = transaction.timestamp.toUtc().millisecondsSinceEpoch;
@@ -95,6 +114,14 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
     return source();
   }
 
+  Future<Map<String, String>> _currencyByAccount() async {
+    final source = accountsSource;
+    if (source == null) {
+      return const <String, String>{};
+    }
+    return {for (final account in await source()) account.id: account.currency};
+  }
+
   @override
   Future<List<AnalyticsAccountTotal>> accountTotalsForRange({
     required DateTime startUtc,
@@ -102,6 +129,7 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   }) async {
     final startMillis = startUtc.millisecondsSinceEpoch;
     final endMillis = endUtc.millisecondsSinceEpoch;
+    final currencyByAccount = await _currencyByAccount();
     final incomeByAccount = <String, int>{};
     final expenseByAccount = <String, int>{};
     for (final transaction in await _transactions()) {
@@ -135,6 +163,7 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
       })
         AnalyticsAccountTotal(
           accountId: accountId,
+          currency: currencyByAccount[accountId] ?? _unknownAccountCurrency,
           incomeMinorUnits: incomeByAccount[accountId] ?? 0,
           expenseMinorUnits: expenseByAccount[accountId] ?? 0,
         ),
@@ -145,12 +174,15 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   Future<List<CategoryExpenseTotal>> expenseTotalsByCategoryForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final totals = <String?, int>{};
     for (final transaction in _windowExpenses(
       startUtc,
       endUtc,
       await _transactions(),
+      await _currencyByAccount(),
+      currency,
     )) {
       totals.update(
         transaction.categoryId,
@@ -171,12 +203,15 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   Future<List<CategoryMonthlyExpense>> expenseMonthlyTotalsByCategory({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final totals = <String, int>{};
     for (final transaction in _windowExpenses(
       startUtc,
       endUtc,
       await _transactions(),
+      await _currencyByAccount(),
+      currency,
     )) {
       final timestamp = transaction.timestamp.toUtc();
       final monthUtc = timestamp.year * 12 + timestamp.month;
@@ -203,9 +238,16 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   Future<List<Transaction>> expenseTransactionsForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final transactions = await _transactions();
-    return _windowExpenses(startUtc, endUtc, transactions);
+    return _windowExpenses(
+      startUtc,
+      endUtc,
+      transactions,
+      await _currencyByAccount(),
+      currency,
+    );
   }
 }
 
@@ -245,6 +287,8 @@ class AnalyticsTestHarness {
        budgetRepository = FakeBudgetRepository(initialBudgets: initialBudgets) {
     analyticsRepository.transactionsSource = () =>
         Future.value(transactionRepository.list());
+    analyticsRepository.accountsSource = () =>
+        Future.value(accountRepository.list());
     service = AnalyticsService(
       analytics: analyticsRepository,
       accounts: accountRepository,
@@ -303,6 +347,7 @@ Transaction testTransaction({
   String accountId = 'account-1',
   String? categoryId,
   TransactionSource source = TransactionSource.manual,
+  String? payee,
 }) {
   return Transaction(
     id: id,
@@ -312,5 +357,6 @@ Transaction testTransaction({
     type: type,
     source: source,
     categoryId: categoryId,
+    payee: payee,
   );
 }

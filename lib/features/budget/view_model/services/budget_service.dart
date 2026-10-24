@@ -42,6 +42,8 @@ class BudgetService {
     required int allocatedAmountMinorUnits,
     required String period,
     required DateTime startDate,
+    double? warningShare,
+    String? currency,
   }) async {
     if (allocatedAmountMinorUnits <= 0) {
       throw const BudgetValidationException(
@@ -49,17 +51,31 @@ class BudgetService {
       );
     }
 
+    _validateWarningShare(warningShare);
+
     final category = await _categories.get(categoryId);
     if (category == null) {
       throw const BudgetValidationException('Choose a valid category.');
     }
 
+    var id = _newId();
+    final existing = await _budgets.list();
+    var attempt = 0;
+    while (existing.any((budget) => budget.id == id) && attempt < 5) {
+      id = '${_newId()}-${++attempt}';
+    }
+    if (existing.any((budget) => budget.id == id)) {
+      throw StateError('Could not generate a unique budget id.');
+    }
+
     final budget = Budget(
-      id: _newId(),
+      id: id,
       categoryId: categoryId,
       allocatedAmountMinorUnits: allocatedAmountMinorUnits,
       period: BudgetPeriod.values.byName(period),
       startDate: startDate,
+      warningShare: warningShare,
+      currency: currency,
     );
     await _budgets.create(budget);
     return budget;
@@ -72,12 +88,16 @@ class BudgetService {
     required int allocatedAmountMinorUnits,
     required String period,
     required DateTime startDate,
+    double? warningShare,
+    String? currency,
   }) async {
     if (allocatedAmountMinorUnits <= 0) {
       throw const BudgetValidationException(
         'Enter an allocated amount greater than zero.',
       );
     }
+
+    _validateWarningShare(warningShare);
 
     final category = await _categories.get(categoryId);
     if (category == null) {
@@ -89,6 +109,8 @@ class BudgetService {
       allocatedAmountMinorUnits: allocatedAmountMinorUnits,
       period: BudgetPeriod.values.byName(period),
       startDate: startDate,
+      warningShare: warningShare,
+      currency: currency,
     );
     await _budgets.update(updated);
     return updated;
@@ -97,6 +119,17 @@ class BudgetService {
   /// Deletes the budget with [id].
   Future<void> deleteBudget(String id) async {
     await _budgets.delete(id);
+  }
+
+  static void _validateWarningShare(double? warningShare) {
+    if (warningShare == null) {
+      return;
+    }
+    if (warningShare <= 0 || warningShare >= 1) {
+      throw const BudgetValidationException(
+        'The warning threshold must be a share between zero and one.',
+      );
+    }
   }
 
   static String _defaultNewId() {

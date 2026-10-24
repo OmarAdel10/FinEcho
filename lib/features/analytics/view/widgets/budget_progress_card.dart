@@ -1,4 +1,5 @@
 import 'package:finecho/app/theme/fin_echo_theme.dart';
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/features/analytics/view_model/models/budget_progress.dart';
 import 'package:flutter/material.dart';
 
@@ -7,10 +8,14 @@ const String _title = 'Budgets';
 /// A card that tracks spending against each budget.
 class BudgetProgressCard extends StatelessWidget {
   /// Creates the budget progress card.
-  const new({required this.budgetProgress, super.key});
+  const new({required this.budgetProgress, this.currency, super.key});
 
   /// Spending against every budget, most severe first.
   final List<BudgetProgress> budgetProgress;
+
+  /// The ISO currency code the spent amounts are denominated in. Spending is
+  /// aggregated in the dashboard primary currency.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +36,8 @@ class BudgetProgressCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            for (final progress in budgetProgress) _BudgetRow(progress),
+            for (final progress in budgetProgress)
+              _BudgetRow(progress, currency: currency),
           ],
         ),
       ),
@@ -40,9 +46,12 @@ class BudgetProgressCard extends StatelessWidget {
 }
 
 class _BudgetRow extends StatelessWidget {
-  const new(this.progress);
+  const new(this.progress, {required this.currency});
 
   final BudgetProgress progress;
+
+  /// The ISO currency code the amounts are denominated in.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +68,16 @@ class _BudgetRow extends StatelessWidget {
         : isWarning
         ? FinEchoColors.coral
         : theme.colorScheme.primary;
+    final spentLabel = formatMinorUnits(
+      progress.spentAmountMinorUnits,
+      currency,
+    );
+    final allocatedLabel = formatMinorUnits(
+      progress.allocatedAmountMinorUnits,
+      currency,
+    );
     final semanticsValue =
-        '${_formatMinorUnits(progress.spentAmountMinorUnits)} of '
-        '${_formatMinorUnits(progress.allocatedAmountMinorUnits)} spent'
+        '$spentLabel of $allocatedLabel spent'
         '${statusLabel == null ? '' : ', ${statusLabel.toLowerCase()}'}';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -78,8 +94,7 @@ class _BudgetRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '${_formatMinorUnits(progress.spentAmountMinorUnits)} / '
-                '${_formatMinorUnits(progress.allocatedAmountMinorUnits)}',
+                '$spentLabel / $allocatedLabel',
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -106,11 +121,4 @@ class _BudgetRow extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatMinorUnits(int amount) {
-  final sign = amount < 0 ? '-' : '';
-  final absolute = amount.abs();
-  final fraction = (absolute % 100).toString().padLeft(2, '0');
-  return '$sign${absolute ~/ 100}.$fraction';
 }

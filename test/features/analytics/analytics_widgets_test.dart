@@ -111,6 +111,47 @@ void main() {
       expect(find.text('0.05'), findsOneWidget);
       expect(find.text('-123.45'), findsOneWidget);
     });
+
+    testWidgets('drops the fraction for zero-decimal currencies', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AnalyticsSummaryCard(
+            totalIncomeMinorUnits: 1234,
+            totalExpenseMinorUnits: 2,
+            netAmountMinorUnits: 1232,
+            expenseChangeRatio: null,
+            currency: 'JPY',
+          ),
+        ),
+      );
+
+      expect(find.text('1234'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('1232'), findsOneWidget);
+      expect(find.text('1234.00'), findsNothing);
+    });
+
+    testWidgets('keeps three fraction digits for three-decimal currencies', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AnalyticsSummaryCard(
+            totalIncomeMinorUnits: 123456,
+            totalExpenseMinorUnits: 500,
+            netAmountMinorUnits: 122956,
+            expenseChangeRatio: null,
+            currency: 'BHD',
+          ),
+        ),
+      );
+
+      expect(find.text('123.456'), findsOneWidget);
+      expect(find.text('0.500'), findsOneWidget);
+      expect(find.text('122.956'), findsOneWidget);
+    });
   });
 
   group('CategoryBreakdownCard', () {

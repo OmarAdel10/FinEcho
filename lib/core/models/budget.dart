@@ -25,6 +25,8 @@ class Budget {
     required this.allocatedAmountMinorUnits,
     required this.period,
     required this.startDate,
+    this.warningShare,
+    this.currency,
   });
 
   /// Creates a budget from a SQLite row map.
@@ -38,6 +40,8 @@ class Budget {
         map['start_date']! as int,
         isUtc: true,
       ),
+      warningShare: map['warning_share'] as double?,
+      currency: map['currency'] as String?,
     );
   }
 
@@ -56,13 +60,37 @@ class Budget {
   /// The UTC date on which the first budget period starts.
   final DateTime startDate;
 
+  /// The share of the budget at which the warning level starts, or null to
+  /// use the app default.
+  ///
+  /// Values are exclusive: 0.9 warns once ninety percent of the budget is
+  /// spent. The value must lie strictly between zero and one.
+  final double? warningShare;
+
+  /// The ISO currency code the allocated amount is denominated in, or null
+  /// to follow the primary analytics currency.
+  final String? currency;
+
+  /// Sentinel for [copyWith] that distinguishes an omitted warning share from
+  /// an explicit reset to null.
+  static const Object _unsetWarningShare = Object();
+
+  /// Sentinel for [copyWith] that distinguishes an omitted currency from an
+  /// explicit reset to null.
+  static const Object _unsetCurrency = Object();
+
   /// Returns a copy with non-null fields replaced by the supplied values.
+  ///
+  /// Pass [warningShare] as null to clear a configured threshold back to the
+  /// app default.
   Budget copyWith({
     String? id,
     String? categoryId,
     int? allocatedAmountMinorUnits,
     BudgetPeriod? period,
     DateTime? startDate,
+    Object? warningShare = _unsetWarningShare,
+    Object? currency = _unsetCurrency,
   }) {
     return Budget(
       id: id ?? this.id,
@@ -71,6 +99,12 @@ class Budget {
           allocatedAmountMinorUnits ?? this.allocatedAmountMinorUnits,
       period: period ?? this.period,
       startDate: startDate ?? this.startDate,
+      warningShare: identical(warningShare, _unsetWarningShare)
+          ? this.warningShare
+          : warningShare as double?,
+      currency: identical(currency, _unsetCurrency)
+          ? this.currency
+          : currency as String?,
     );
   }
 
@@ -82,6 +116,8 @@ class Budget {
       'allocated_amount_minor_units': allocatedAmountMinorUnits,
       'period': period.name,
       'start_date': startDate.toUtc().millisecondsSinceEpoch,
+      'warning_share': warningShare,
+      'currency': currency,
     };
   }
 
@@ -94,11 +130,20 @@ class Budget {
             categoryId == other.categoryId &&
             allocatedAmountMinorUnits == other.allocatedAmountMinorUnits &&
             period == other.period &&
-            startDate == other.startDate;
+            startDate == other.startDate &&
+            warningShare == other.warningShare &&
+            currency == other.currency;
   }
 
   /// A hash code derived from every budget field.
   @override
-  int get hashCode =>
-      Object.hash(id, categoryId, allocatedAmountMinorUnits, period, startDate);
+  int get hashCode => Object.hash(
+    id,
+    categoryId,
+    allocatedAmountMinorUnits,
+    period,
+    startDate,
+    warningShare,
+    currency,
+  );
 }

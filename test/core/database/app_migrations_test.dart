@@ -19,6 +19,25 @@ const String _version1AccountsTable =
     ' FOREIGN KEY(linked_account_id) REFERENCES accounts(id)'
     ')';
 
+const String _version5BudgetsTable =
+    'CREATE TABLE budgets ('
+    ' id TEXT PRIMARY KEY,'
+    ' category_id TEXT NOT NULL,'
+    ' allocated_amount_minor_units INTEGER NOT NULL,'
+    ' period TEXT NOT NULL,'
+    ' start_date INTEGER NOT NULL'
+    ')';
+
+const String _version6BudgetsTable =
+    'CREATE TABLE budgets ('
+    ' id TEXT PRIMARY KEY,'
+    ' category_id TEXT NOT NULL,'
+    ' allocated_amount_minor_units INTEGER NOT NULL,'
+    ' period TEXT NOT NULL,'
+    ' start_date INTEGER NOT NULL,'
+    ' warning_share REAL'
+    ')';
+
 void main() {
   test('migrates a version 1 database to the archived column', () async {
     sqfliteFfiInit();
@@ -66,6 +85,77 @@ void main() {
       AppMigrations.migrate(fromVersion: 1, toVersion: 99, database: database),
       throwsArgumentError,
     );
+  });
+
+  test('migrates a version 5 database to the warning share column', () async {
+    sqfliteFfiInit();
+    final database = await databaseFactoryFfi.openDatabase(
+      inMemoryDatabasePath,
+      options: OpenDatabaseOptions(version: 5),
+    );
+    addTearDown(database.close);
+    await database.execute(_version5BudgetsTable);
+    await database.insert('budgets', <String, Object?>{
+      'id': 'budget-1',
+      'category_id': 'category-1',
+      'allocated_amount_minor_units': 10000,
+      'period': 'monthly',
+      'start_date': 1761993600000,
+    });
+
+    await AppMigrations.migrate(
+      database: database,
+      fromVersion: 5,
+      toVersion: 6,
+    );
+
+    final rows = await database.query('budgets');
+    expect(rows.single['warning_share'], isNull);
+
+    await database.update(
+      'budgets',
+      <String, Object?>{'warning_share': 0.9},
+      where: 'id = ?',
+      whereArgs: <Object>['budget-1'],
+    );
+    final updatedRows = await database.query('budgets');
+    expect(updatedRows.single['warning_share'], 0.9);
+  });
+
+  test('migrates a version 6 database to the currency column', () async {
+    sqfliteFfiInit();
+    final database = await databaseFactoryFfi.openDatabase(
+      inMemoryDatabasePath,
+      options: OpenDatabaseOptions(version: 6),
+    );
+    addTearDown(database.close);
+    await database.execute(_version6BudgetsTable);
+    await database.insert('budgets', <String, Object?>{
+      'id': 'budget-1',
+      'category_id': 'category-1',
+      'allocated_amount_minor_units': 10000,
+      'period': 'monthly',
+      'start_date': 1761993600000,
+      'warning_share': 0.9,
+    });
+
+    await AppMigrations.migrate(
+      database: database,
+      fromVersion: 6,
+      toVersion: 7,
+    );
+
+    final rows = await database.query('budgets');
+    expect(rows.single['currency'], isNull);
+
+    await database.update(
+      'budgets',
+      <String, Object?>{'currency': 'EGP'},
+      where: 'id = ?',
+      whereArgs: <Object>['budget-1'],
+    );
+    final updatedRows = await database.query('budgets');
+    expect(updatedRows.single['currency'], 'EGP');
   });
 }
 

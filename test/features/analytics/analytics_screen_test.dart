@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:finecho/app/theme/fin_echo_theme.dart';
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category_total.dart';
@@ -11,7 +12,6 @@ import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dar
 import 'package:finecho/features/analytics/view/widgets/category_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/insights_card.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -422,18 +422,21 @@ void main() {
           timestamp: DateTime.utc(2026, 8, 10),
           amountMinorUnits: 200000,
           categoryId: 'category-3',
+          payee: 'Landlord',
         ),
         'rent-september': testTransaction(
           id: 'rent-september',
           timestamp: DateTime.utc(2026, 9, 10),
           amountMinorUnits: 200000,
           categoryId: 'category-3',
+          payee: 'Landlord',
         ),
         'rent-october': testTransaction(
           id: 'rent-october',
           timestamp: DateTime.utc(2026, 10, 10),
           amountMinorUnits: 200000,
           categoryId: 'category-3',
+          payee: 'Landlord',
         ),
         'spend-october': testTransaction(
           id: 'spend-october',
@@ -459,7 +462,7 @@ void main() {
     expect(find.text('4917.24'), findsOneWidget);
     expect(find.text('Based on 15 of 31 days so far'), findsOneWidget);
     expect(find.text('Recurring charges'), findsOneWidget);
-    expect(find.text('Rent'), findsOneWidget);
+    expect(find.text('Landlord'), findsOneWidget);
     expect(find.text('3 months'), findsOneWidget);
     expect(find.text('2000.00'), findsOneWidget);
     expect(find.text('No recurring charges yet.'), findsNothing);

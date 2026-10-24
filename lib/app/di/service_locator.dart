@@ -176,6 +176,7 @@ Future<void> configureDependencies({
       () => InMemoryAnalyticsRepository(
         transactions: sl<TransactionRepository>(),
         categories: sl<CategoryRepository>(),
+        accounts: sl<AccountRepository>(),
       ),
     );
   } else {

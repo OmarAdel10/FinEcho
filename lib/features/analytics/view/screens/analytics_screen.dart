@@ -1,12 +1,12 @@
 import 'dart:async';
 
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view/widgets/account_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/analytics_summary_card.dart';
 import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dart';
 import 'package:finecho/features/analytics/view/widgets/category_breakdown_card.dart';
 import 'package:finecho/features/analytics/view/widgets/insights_card.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -147,12 +147,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             dashboard.totalExpenseMinorUnits,
                         netAmountMinorUnits: dashboard.netAmountMinorUnits,
                         expenseChangeRatio: dashboard.expenseChangeRatio,
+                        currency: dashboard.primaryCurrency,
                       ),
                       ...switch (_mode) {
                         _AnalyticsMode.spending => [
                           const SizedBox(height: 12),
                           CategoryBreakdownCard(
                             categoryTotals: dashboard.categoryTotals,
+                            currency: dashboard.primaryCurrency,
                           ),
                           const SizedBox(height: 12),
                           AccountBreakdownCard(
@@ -164,6 +166,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           CategoryBreakdownCard(
                             categoryTotals: dashboard.categoryIncomeTotals,
                             metric: CategoryBreakdownMetric.income,
+                            currency: dashboard.primaryCurrency,
                           ),
                           const SizedBox(height: 12),
                           AccountBreakdownCard(
@@ -177,6 +180,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             forecast: dashboard.forecast,
                             recurringCharges: dashboard.recurringCharges,
                             unusualSpikes: dashboard.unusualSpikes,
+                            currency: dashboard.primaryCurrency,
                           ),
                         ],
                       },
@@ -184,6 +188,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         const SizedBox(height: 12),
                         BudgetProgressCard(
                           budgetProgress: dashboard.budgetProgress,
+                          currency: dashboard.primaryCurrency,
                         ),
                       ],
                     ],

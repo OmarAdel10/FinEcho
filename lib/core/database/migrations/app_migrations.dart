@@ -28,6 +28,9 @@ abstract final class AppMigrations {
       ADD COLUMN biometrics_enabled INTEGER NOT NULL DEFAULT 0
       ''',
     ],
+    4: <String>['ALTER TABLE transactions ADD COLUMN payee TEXT'],
+    5: <String>['ALTER TABLE budgets ADD COLUMN warning_share REAL'],
+    6: <String>['ALTER TABLE budgets ADD COLUMN currency TEXT'],
   };
 
   /// Moves a database from [fromVersion] through [toVersion].

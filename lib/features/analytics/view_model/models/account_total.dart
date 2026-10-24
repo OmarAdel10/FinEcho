@@ -7,6 +7,7 @@ class AccountTotal {
   const new({
     required this.accountId,
     required this.name,
+    required this.currency,
     required this.incomeMinorUnits,
     required this.expenseMinorUnits,
   });
@@ -16,6 +17,9 @@ class AccountTotal {
 
   /// The display name of the account.
   final String name;
+
+  /// The ISO currency code the account's activity is denominated in.
+  final String currency;
 
   /// Total income in the account currency's minor units.
   final int incomeMinorUnits;
@@ -30,12 +34,18 @@ class AccountTotal {
         other is AccountTotal &&
             accountId == other.accountId &&
             name == other.name &&
+            currency == other.currency &&
             incomeMinorUnits == other.incomeMinorUnits &&
             expenseMinorUnits == other.expenseMinorUnits;
   }
 
   /// A hash code derived from every account total field.
   @override
-  int get hashCode =>
-      Object.hash(accountId, name, incomeMinorUnits, expenseMinorUnits);
+  int get hashCode => Object.hash(
+    accountId,
+    name,
+    currency,
+    incomeMinorUnits,
+    expenseMinorUnits,
+  );
 }

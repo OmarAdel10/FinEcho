@@ -33,12 +33,21 @@ void main() {
     expect(find.text('100.00'), findsOneWidget);
   });
 
-  testWidgets('renders non-positive amounts defensively', (tester) async {
-    final budget = testBudget(allocatedAmountMinorUnits: -1);
+  testWidgets('renders zero amounts as zero', (tester) async {
+    final budget = testBudget(allocatedAmountMinorUnits: 0);
 
     await tester.pumpWidget(_wrap(BudgetTile(budget: budget)));
 
     expect(find.text('0.00'), findsOneWidget);
+  });
+
+  testWidgets('renders a zero-decimal currency without cents', (tester) async {
+    final budget = testBudget(currency: 'JPY', allocatedAmountMinorUnits: 1234);
+
+    await tester.pumpWidget(_wrap(BudgetTile(budget: budget)));
+
+    expect(find.text('1234'), findsOneWidget);
+    expect(find.text('1234.00'), findsNothing);
   });
 
   testWidgets('notifies when the row is tapped', (tester) async {

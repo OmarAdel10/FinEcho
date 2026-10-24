@@ -1,7 +1,7 @@
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/features/analytics/view_model/models/account_total.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_dashboard.dart';
-import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
 import 'package:finecho/features/analytics/view_model/models/budget_progress.dart';
 import 'package:finecho/features/analytics/view_model/models/category_spike.dart';
@@ -37,18 +37,21 @@ void main() {
       const total = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
       const same = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
       const different = AccountTotal(
         accountId: 'account-2',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
@@ -230,12 +233,14 @@ void main() {
       const total = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
       const same = AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 5000,
       );
@@ -369,6 +374,7 @@ AnalyticsDashboard _dashboard() {
     period: AnalyticsPeriod.month,
     startUtc: DateTime.utc(2026, 10),
     endUtc: DateTime.utc(2026, 11),
+    primaryCurrency: 'EGP',
     totalIncomeMinorUnits: 200000,
     totalExpenseMinorUnits: 150000,
     netAmountMinorUnits: 50000,

@@ -35,7 +35,7 @@ class DatabaseOpener {
     final database = await openDatabase(
       path,
       password: password,
-      version: 4,
+      version: 7,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
@@ -82,6 +82,7 @@ class DatabaseOpener {
         amount INTEGER NOT NULL,
         type TEXT NOT NULL,
         note TEXT,
+        payee TEXT,
         timestamp INTEGER NOT NULL,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
@@ -96,6 +97,8 @@ class DatabaseOpener {
         amount INTEGER NOT NULL,
         period_start INTEGER NOT NULL,
         period_end INTEGER NOT NULL,
+        warning_share REAL,
+        currency TEXT,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id)
@@ -242,6 +245,17 @@ class DatabaseOpener {
         'ALTER TABLE security_state '
         'ADD COLUMN biometrics_enabled INTEGER NOT NULL DEFAULT 0',
       );
+    }
+    if (oldVersion < 5) {
+      await database.execute('ALTER TABLE transactions ADD COLUMN payee TEXT');
+    }
+    if (oldVersion < 6) {
+      await database.execute(
+        'ALTER TABLE budgets ADD COLUMN warning_share REAL',
+      );
+    }
+    if (oldVersion < 7) {
+      await database.execute('ALTER TABLE budgets ADD COLUMN currency TEXT');
     }
   }
 
