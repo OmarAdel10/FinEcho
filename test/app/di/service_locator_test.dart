@@ -12,8 +12,14 @@ import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/core/repositories/contracts/security_repository.dart';
 import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
+import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_account_repository.dart';
 import 'package:finecho/core/repositories/implementations/sqflite_analytics_repository.dart';
 import 'package:finecho/core/repositories/implementations/sqflite_budget_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_category_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_transaction_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_state.dart';
@@ -239,5 +245,23 @@ void main() {
     // Resolving the repository only constructs it; the database opens
     // lazily on the first query, so no platform channel is touched here.
     expect(sl<AnalyticsRepository>(), isA<SqfliteAnalyticsRepository>());
+  });
+
+  test('registers the in-memory financial trio when requested', () async {
+    await configureDependencies(useInMemoryStorage: true);
+
+    expect(sl<TransactionRepository>(), isA<InMemoryTransactionRepository>());
+    expect(sl<AccountRepository>(), isA<InMemoryAccountRepository>());
+    expect(sl<CategoryRepository>(), isA<InMemoryCategoryRepository>());
+  });
+
+  test('registers the SQLCipher financial trio by default', () async {
+    await configureDependencies();
+
+    // Resolving the repository only constructs it; the database opens
+    // lazily on the first query, so no platform channel is touched here.
+    expect(sl<TransactionRepository>(), isA<SqfliteTransactionRepository>());
+    expect(sl<AccountRepository>(), isA<SqfliteAccountRepository>());
+    expect(sl<CategoryRepository>(), isA<SqfliteCategoryRepository>());
   });
 }

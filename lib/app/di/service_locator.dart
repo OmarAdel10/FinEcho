@@ -11,8 +11,11 @@ import 'package:finecho/core/repositories/contracts/transaction_repository.dart'
 import 'package:finecho/core/repositories/implementations/in_memory_account_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_category_repository.dart';
 import 'package:finecho/core/repositories/implementations/in_memory_transaction_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_account_repository.dart';
 import 'package:finecho/core/repositories/implementations/sqflite_analytics_repository.dart';
 import 'package:finecho/core/repositories/implementations/sqflite_budget_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_category_repository.dart';
+import 'package:finecho/core/repositories/implementations/sqflite_transaction_repository.dart';
 import 'package:finecho/features/analytics/data/repositories/in_memory_analytics_repository.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
@@ -110,20 +113,32 @@ Future<void> configureDependencies({
   }
 
   // Register financial repositories (needed by the security reset).
-  // Budgets persist in the encrypted database in production; tests opt into
-  // the in-memory graph explicitly.
-  sl
-    ..registerLazySingleton<TransactionRepository>(
-      InMemoryTransactionRepository.new,
-    )
-    ..registerLazySingleton<AccountRepository>(InMemoryAccountRepository.new)
-    ..registerLazySingleton<CategoryRepository>(InMemoryCategoryRepository.new);
+  // Financial data persists in the encrypted database in production; tests
+  // opt into the in-memory graph explicitly.
   if (useInMemoryStorage) {
-    sl.registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
+    sl
+      ..registerLazySingleton<TransactionRepository>(
+        InMemoryTransactionRepository.new,
+      )
+      ..registerLazySingleton<AccountRepository>(InMemoryAccountRepository.new)
+      ..registerLazySingleton<CategoryRepository>(
+        InMemoryCategoryRepository.new,
+      )
+      ..registerLazySingleton<BudgetRepository>(InMemoryBudgetRepository.new);
   } else {
-    sl.registerLazySingleton<BudgetRepository>(
-      () => SqfliteBudgetRepository(opener: sl<DatabaseOpener>().open),
-    );
+    sl
+      ..registerLazySingleton<TransactionRepository>(
+        () => SqfliteTransactionRepository(opener: sl<DatabaseOpener>().open),
+      )
+      ..registerLazySingleton<AccountRepository>(
+        () => SqfliteAccountRepository(opener: sl<DatabaseOpener>().open),
+      )
+      ..registerLazySingleton<CategoryRepository>(
+        () => SqfliteCategoryRepository(opener: sl<DatabaseOpener>().open),
+      )
+      ..registerLazySingleton<BudgetRepository>(
+        () => SqfliteBudgetRepository(opener: sl<DatabaseOpener>().open),
+      );
   }
 
   // Register the platform biometric prompt, service, and cubit.
