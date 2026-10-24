@@ -1,4 +1,5 @@
 import 'package:finecho/core/models/budget.dart';
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/features/budget/view_model/budget_cubit.dart';
 import 'package:finecho/features/budget/view_model/models/budget_state.dart';
 import 'package:flutter/material.dart';
@@ -47,7 +48,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     _amountController = TextEditingController(
       text: initial == null
           ? ''
-          : _formatMinorUnits(initial.allocatedAmountMinorUnits),
+          : formatMinorUnits(initial.allocatedAmountMinorUnits, null),
     );
     _period = initial?.period.name ?? 'monthly';
     _startDate = _normalizeUtcDate(initial?.startDate ?? DateTime.now());
@@ -269,6 +270,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             period: _period,
             startDate: _startDate,
             warningShare: warningShare,
+            currency: initial.currency,
           );
     if (!mounted) {
       return;
@@ -322,12 +324,6 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     }
     final minorUnits = major * 100 + fraction;
     return minorUnits <= 0 ? null : minorUnits;
-  }
-
-  String _formatMinorUnits(int amountMinorUnits) {
-    final major = amountMinorUnits ~/ 100;
-    final fraction = (amountMinorUnits % 100).toString().padLeft(2, '0');
-    return '$major.$fraction';
   }
 
   String _formatDate(DateTime timestamp) {

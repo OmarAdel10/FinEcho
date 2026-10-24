@@ -186,6 +186,27 @@ void main() {
     expect(harness.budgetRepository.updatedIds, <String>[original.id]);
   });
 
+  testWidgets('preserves the budget currency when editing', (tester) async {
+    final original = testBudget(
+      currency: 'JPY',
+      allocatedAmountMinorUnits: 1234,
+    );
+    final harness = BudgetTestHarness(
+      initialBudgets: {original.id: original},
+      initialCategories: {'category-1': testCategory()},
+    );
+    final cubit = await _loadedCubit(harness);
+
+    await tester.pumpWidget(_wrap(cubit, AddBudgetSheet(initial: original)));
+    expect(find.text('12.34'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, '25');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(harness.budgetRepository.budgets[original.id]?.currency, 'JPY');
+  });
+
   testWidgets('pre-fills a configured threshold and can reset it', (
     tester,
   ) async {
