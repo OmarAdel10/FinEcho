@@ -35,7 +35,7 @@ class DatabaseOpener {
     final database = await openDatabase(
       path,
       password: password,
-      version: 4,
+      version: 5,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
@@ -82,6 +82,7 @@ class DatabaseOpener {
         amount INTEGER NOT NULL,
         type TEXT NOT NULL,
         note TEXT,
+        payee TEXT,
         timestamp INTEGER NOT NULL,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
@@ -242,6 +243,9 @@ class DatabaseOpener {
         'ALTER TABLE security_state '
         'ADD COLUMN biometrics_enabled INTEGER NOT NULL DEFAULT 0',
       );
+    }
+    if (oldVersion < 5) {
+      await database.execute('ALTER TABLE transactions ADD COLUMN payee TEXT');
     }
   }
 

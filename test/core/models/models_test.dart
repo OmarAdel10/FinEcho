@@ -65,6 +65,7 @@ void main() {
       type: TransactionType.expense,
       source: TransactionSource.sms,
       rawText: 'Payment received',
+      payee: 'Netflix',
     );
 
     test('round-trips through a SQLite row map', () {

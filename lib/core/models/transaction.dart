@@ -37,6 +37,7 @@ class Transaction {
     required this.source,
     this.categoryId,
     this.rawText,
+    this.payee,
   });
 
   /// Creates a transaction from a SQLite row map.
@@ -53,6 +54,7 @@ class Transaction {
       type: TransactionType.values.byName(map['type']! as String),
       source: TransactionSource.values.byName(map['source']! as String),
       rawText: map['raw_text'] as String?,
+      payee: map['payee'] as String?,
     );
   }
 
@@ -80,6 +82,9 @@ class Transaction {
   /// The original message text for automatically captured transactions.
   final String? rawText;
 
+  /// The counterparty of the transaction, such as a merchant.
+  final String? payee;
+
   /// Returns a copy with non-null fields replaced by the supplied values.
   Transaction copyWith({
     String? id,
@@ -90,6 +95,7 @@ class Transaction {
     TransactionType? type,
     TransactionSource? source,
     String? rawText,
+    String? payee,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -100,6 +106,7 @@ class Transaction {
       type: type ?? this.type,
       source: source ?? this.source,
       rawText: rawText ?? this.rawText,
+      payee: payee ?? this.payee,
     );
   }
 
@@ -114,6 +121,7 @@ class Transaction {
       'type': type.name,
       'source': source.name,
       'raw_text': rawText,
+      'payee': payee,
     };
   }
 
@@ -129,7 +137,8 @@ class Transaction {
             timestamp == other.timestamp &&
             type == other.type &&
             source == other.source &&
-            rawText == other.rawText;
+            rawText == other.rawText &&
+            payee == other.payee;
   }
 
   /// A hash code derived from every transaction field.
@@ -143,5 +152,6 @@ class Transaction {
     type,
     source,
     rawText,
+    payee,
   );
 }
