@@ -22,6 +22,7 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
   Future<AnalyticsSummary> summaryForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
@@ -30,17 +31,28 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
     }
     final database = await opener();
 
+    final accountJoin = currency == null
+        ? ''
+        : 'JOIN accounts AS a ON a.id = account_id';
+    final aliasedAccountJoin = currency == null
+        ? ''
+        : 'JOIN accounts AS a ON a.id = t.account_id';
+    final currencyPredicate = currency == null ? '' : 'AND a.currency = ?';
+    final currencyArgs = currency == null ? <Object?>[] : <Object?>[currency];
+
     final totalRows = await database.rawQuery(
       '''
       SELECT
         type,
         COALESCE(SUM(amount_minor_units), 0) AS total_minor_units
       FROM transactions
+      $accountJoin
       WHERE timestamp >= ? AND timestamp < ?
         AND type IN (?, ?)
+        $currencyPredicate
       GROUP BY type
       ''',
-      <Object?>[startMillis, endMillis, 'income', 'expense'],
+      <Object?>[startMillis, endMillis, 'income', 'expense', ...currencyArgs],
     );
 
     final categoryRows = await database.rawQuery(
@@ -50,13 +62,15 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
         c.name AS name,
         SUM(t.amount_minor_units) AS expense_minor_units
       FROM transactions AS t
+      $aliasedAccountJoin
       LEFT JOIN categories AS c ON c.id = t.category_id
       WHERE t.timestamp >= ? AND t.timestamp < ?
         AND t.type = ?
+        $currencyPredicate
       GROUP BY t.category_id, c.name
       ORDER BY expense_minor_units DESC, t.category_id IS NULL, t.category_id
       ''',
-      <Object?>[startMillis, endMillis, 'expense'],
+      <Object?>[startMillis, endMillis, 'expense', ...currencyArgs],
     );
 
     final categoryTotals = categoryRows
@@ -71,13 +85,15 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
         0 AS expense_minor_units,
         SUM(t.amount_minor_units) AS income_minor_units
       FROM transactions AS t
+      $aliasedAccountJoin
       LEFT JOIN categories AS c ON c.id = t.category_id
       WHERE t.timestamp >= ? AND t.timestamp < ?
         AND t.type = ?
+        $currencyPredicate
       GROUP BY t.category_id, c.name
       ORDER BY income_minor_units DESC, t.category_id IS NULL, t.category_id
       ''',
-      <Object?>[startMillis, endMillis, 'income'],
+      <Object?>[startMillis, endMillis, 'income', ...currencyArgs],
     );
 
     final categoryIncomeTotals = incomeRows
@@ -125,22 +141,26 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
     final rows = await database.rawQuery(
       '''
       SELECT
-        account_id,
-        type,
-        COALESCE(SUM(amount_minor_units), 0) AS total_minor_units
-      FROM transactions
-      WHERE timestamp >= ? AND timestamp < ?
-        AND type IN (?, ?)
-      GROUP BY account_id, type
+        t.account_id AS account_id,
+        a.currency AS currency,
+        t.type AS type,
+        COALESCE(SUM(t.amount_minor_units), 0) AS total_minor_units
+      FROM transactions AS t
+      JOIN accounts AS a ON a.id = t.account_id
+      WHERE t.timestamp >= ? AND t.timestamp < ?
+        AND t.type IN (?, ?)
+      GROUP BY t.account_id, a.currency, t.type
       ''',
       <Object?>[startMillis, endMillis, 'income', 'expense'],
     );
 
     final incomeByAccount = <String, int>{};
     final expenseByAccount = <String, int>{};
+    final accountCurrency = <String, String>{};
     for (final row in rows) {
       final accountId = row['account_id']! as String;
       final total = row['total_minor_units']! as int;
+      accountCurrency[accountId] = row['currency']! as String;
       if (row['type'] == 'income') {
         incomeByAccount[accountId] = total;
       } else {
@@ -154,6 +174,7 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
       })
         AnalyticsAccountTotal(
           accountId: accountId,
+          currency: accountCurrency[accountId]!,
           incomeMinorUnits: incomeByAccount[accountId] ?? 0,
           expenseMinorUnits: expenseByAccount[accountId] ?? 0,
         ),
@@ -164,6 +185,7 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
   Future<List<CategoryExpenseTotal>> expenseTotalsByCategoryForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
@@ -172,17 +194,25 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
     }
     final database = await opener();
 
+    final accountJoin = currency == null
+        ? ''
+        : 'JOIN accounts AS a ON a.id = account_id';
+    final currencyPredicate = currency == null ? '' : 'AND a.currency = ?';
+    final currencyArgs = currency == null ? <Object?>[] : <Object?>[currency];
+
     final rows = await database.rawQuery(
       '''
       SELECT
         category_id,
         COALESCE(SUM(amount_minor_units), 0) AS total_minor_units
       FROM transactions
+      $accountJoin
       WHERE timestamp >= ? AND timestamp < ?
         AND type = 'expense'
+        $currencyPredicate
       GROUP BY category_id
       ''',
-      <Object?>[startMillis, endMillis],
+      <Object?>[startMillis, endMillis, ...currencyArgs],
     );
 
     return [
@@ -198,6 +228,7 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
   Future<List<CategoryMonthlyExpense>> expenseMonthlyTotalsByCategory({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
@@ -205,6 +236,12 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
       throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
     }
     final database = await opener();
+
+    final accountJoin = currency == null
+        ? ''
+        : 'JOIN accounts AS a ON a.id = account_id';
+    final currencyPredicate = currency == null ? '' : 'AND a.currency = ?';
+    final currencyArgs = currency == null ? <Object?>[] : <Object?>[currency];
 
     final rows = await database.rawQuery(
       '''
@@ -215,11 +252,13 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
           AS month_utc,
         COALESCE(SUM(amount_minor_units), 0) AS total_minor_units
       FROM transactions
+      $accountJoin
       WHERE timestamp >= ? AND timestamp < ?
         AND type = 'expense'
+        $currencyPredicate
       GROUP BY category_id, month_utc
       ''',
-      <Object?>[startMillis, endMillis],
+      <Object?>[startMillis, endMillis, ...currencyArgs],
     );
 
     return [
@@ -236,6 +275,7 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
   Future<List<Transaction>> expenseTransactionsForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
@@ -244,11 +284,23 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
     }
     final database = await opener();
 
-    final rows = await database.query(
-      'transactions',
-      where: 'timestamp >= ? AND timestamp < ? AND type = ?',
-      whereArgs: <Object?>[startMillis, endMillis, 'expense'],
-      orderBy: 'timestamp',
+    final aliasedAccountJoin = currency == null
+        ? ''
+        : 'JOIN accounts AS a ON a.id = t.account_id';
+    final currencyPredicate = currency == null ? '' : 'AND a.currency = ?';
+    final currencyArgs = currency == null ? <Object?>[] : <Object?>[currency];
+
+    final rows = await database.rawQuery(
+      '''
+      SELECT t.*
+      FROM transactions AS t
+      $aliasedAccountJoin
+      WHERE t.timestamp >= ? AND t.timestamp < ?
+        AND t.type = ?
+        $currencyPredicate
+      ORDER BY t.timestamp
+      ''',
+      <Object?>[startMillis, endMillis, 'expense', ...currencyArgs],
     );
     return rows.map(Transaction.fromMap).toList();
   }

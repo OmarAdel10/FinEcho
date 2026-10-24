@@ -88,8 +88,9 @@ class AnalyticsService {
   /// UTC to match the stored transaction timestamps, so a user east of UTC
   /// does not see the previous month for the first hours of a new local
   /// month.
-  /// Aggregates assume every account shares one display currency; totals are
-  /// summed in minor units without conversion.
+  /// Aggregates are filtered to the primary currency: the most common
+  /// currency across the user's active accounts. Amounts in other currencies
+  /// are excluded rather than converted, so totals never mix minor units.
   Future<AnalyticsDashboard> loadDashboard({
     required AnalyticsPeriod period,
   }) async {
@@ -110,12 +111,24 @@ class AnalyticsService {
       previousStartUtc,
     );
 
-    final (summary, previousSummary, accounts, budgets, categories) = await (
-      _analytics.summaryForRange(startUtc: startUtc, endUtc: endUtc),
+    final (accounts, budgets, categories) = await (
+      _accounts.list(),
+      _budgets.list(),
+      _categories.list(),
+    ).wait;
+    final primaryCurrency = _primaryCurrency(accounts);
+
+    final (summary, previousSummary) = await (
+      _analytics.summaryForRange(
+        startUtc: startUtc,
+        endUtc: endUtc,
+        currency: primaryCurrency,
+      ),
       hasPreviousComparison
           ? _analytics.summaryForRange(
               startUtc: previousStartUtc,
               endUtc: previousComparisonEndUtc,
+              currency: primaryCurrency,
             )
           : Future<AnalyticsSummary>.value(
               AnalyticsSummary(
@@ -127,9 +140,6 @@ class AnalyticsService {
                 categoryIncomeTotals: const [],
               ),
             ),
-      _accounts.list(),
-      _budgets.list(),
-      _categories.list(),
     ).wait;
 
     final accountsById = <String, Account>{
@@ -163,14 +173,17 @@ class AnalyticsService {
       _analytics.expenseTransactionsForRange(
         startUtc: recurringWindowStartUtc,
         endUtc: monthEndUtc,
+        currency: primaryCurrency,
       ),
       _analytics.expenseMonthlyTotalsByCategory(
         startUtc: spikeBaselineStartUtc,
         endUtc: monthEndUtc,
+        currency: primaryCurrency,
       ),
       _analytics.expenseTotalsByCategoryForRange(
         startUtc: monthStartUtc,
         endUtc: monthEndUtc,
+        currency: primaryCurrency,
       ),
     ).wait;
 
@@ -178,12 +191,17 @@ class AnalyticsService {
       0,
       (total, entry) => total + entry.totalMinorUnits,
     );
-    final spentByBudgetId = await _spentByBudgetId(budgets, nowUtc);
+    final spentByBudgetId = await _spentByBudgetId(
+      budgets,
+      nowUtc,
+      primaryCurrency,
+    );
 
     return AnalyticsDashboard(
       period: period,
       startUtc: startUtc,
       endUtc: endUtc,
+      primaryCurrency: primaryCurrency,
       totalIncomeMinorUnits: summary.totalIncomeMinorUnits,
       totalExpenseMinorUnits: totalExpense,
       netAmountMinorUnits: summary.netAmountMinorUnits,
@@ -240,6 +258,34 @@ class AnalyticsService {
     return categoriesById[categoryId]?.name ?? _uncategorizedLabel;
   }
 
+  /// The primary currency: the most common currency across active accounts.
+  ///
+  /// Ties resolve alphabetically so the choice is deterministic. When the
+  /// user has no active accounts there is nothing to aggregate, so the
+  /// aggregations run unfiltered.
+  static String? _primaryCurrency(List<Account> accounts) {
+    final counts = <String, int>{};
+    for (final account in accounts) {
+      if (account.archived) {
+        continue;
+      }
+      counts[account.currency] = (counts[account.currency] ?? 0) + 1;
+    }
+    if (counts.isEmpty) {
+      return null;
+    }
+    var primary = counts.keys.first;
+    var bestCount = counts[primary]!;
+    for (final entry in counts.entries) {
+      if (entry.value > bestCount ||
+          (entry.value == bestCount && entry.key.compareTo(primary) < 0)) {
+        primary = entry.key;
+        bestCount = entry.value;
+      }
+    }
+    return primary;
+  }
+
   static List<AccountTotal> _accountTotals(
     List<AnalyticsAccountTotal> activityTotals,
     Map<String, Account> accountsById,
@@ -252,6 +298,7 @@ class AnalyticsService {
           name:
               accountsById[activityTotal.accountId]?.name ??
               _unknownAccountLabel,
+          currency: activityTotal.currency,
           incomeMinorUnits: activityTotal.incomeMinorUnits,
           expenseMinorUnits: activityTotal.expenseMinorUnits,
         ),
@@ -466,6 +513,7 @@ class AnalyticsService {
   Future<Map<String, int>> _spentByBudgetId(
     List<Budget> budgets,
     DateTime nowUtc,
+    String? currency,
   ) async {
     if (budgets.isEmpty) {
       return const <String, int>{};
@@ -479,6 +527,7 @@ class AnalyticsService {
       final categoryTotals = await _analytics.expenseTotalsByCategoryForRange(
         startUtc: window.$1,
         endUtc: window.$2,
+        currency: currency,
       );
       totalsByWindow[window] = {
         for (final entry in categoryTotals)

@@ -4,6 +4,7 @@ import 'package:finecho/core/models/category_expense_total.dart';
 import 'package:finecho/core/models/category_monthly_expense.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/core/models/transaction.dart';
+import 'package:finecho/core/repositories/contracts/account_repository.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
 import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
@@ -14,22 +15,25 @@ import 'package:finecho/core/repositories/contracts/transaction_repository.dart'
 /// Mirrors the semantics of the SQLCipher-backed implementation, including the
 /// half-open UTC range, transfer exclusion, and category total ordering.
 class InMemoryAnalyticsRepository implements AnalyticsRepository {
-  /// Creates an in-memory analytics repository backed by [transactions] and
-  /// [categories].
+  /// Creates an in-memory analytics repository backed by [transactions],
+  /// [categories], and [accounts].
   const new({
     required TransactionRepository transactions,
     required CategoryRepository categories,
-  }) : this._(transactions, categories);
+    required AccountRepository accounts,
+  }) : this._(transactions, categories, accounts);
 
-  const new _(this._transactions, this._categories);
+  const new _(this._transactions, this._categories, this._accounts);
 
   final TransactionRepository _transactions;
   final CategoryRepository _categories;
+  final AccountRepository _accounts;
 
   @override
   Future<AnalyticsSummary> summaryForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
@@ -37,6 +41,7 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
       throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
     }
 
+    final currencyByAccount = await _currencyByAccount();
     final transactions = await _transactions.list();
     final categories = await _categories.list();
 
@@ -53,6 +58,9 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
         continue;
       }
       if (transaction.type == TransactionType.transfer) {
+        continue;
+      }
+      if (!_matchesCurrency(transaction, currencyByAccount, currency)) {
         continue;
       }
       if (transaction.type == TransactionType.income) {
@@ -149,10 +157,16 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
+    final currencyByAccount = await _currencyByAccount();
     final incomeByAccount = <String, int>{};
     final expenseByAccount = <String, int>{};
     for (final transaction in await _transactions.list()) {
       if (!_isExpenseOrIncomeInWindow(transaction, startMillis, endMillis)) {
+        continue;
+      }
+      // Mirrors the SQL implementation, which joins the accounts table for
+      // the row currency: transactions without a known account are dropped.
+      if (!currencyByAccount.containsKey(transaction.accountId)) {
         continue;
       }
       final amount = transaction.amountMinorUnits;
@@ -179,6 +193,7 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
       for (final accountId in accountIds)
         AnalyticsAccountTotal(
           accountId: accountId,
+          currency: currencyByAccount[accountId]!,
           incomeMinorUnits: incomeByAccount[accountId] ?? 0,
           expenseMinorUnits: expenseByAccount[accountId] ?? 0,
         ),
@@ -189,13 +204,18 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
   Future<List<CategoryExpenseTotal>> expenseTotalsByCategoryForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
+    final currencyByAccount = await _currencyByAccount();
     final totalsByCategory = <String?, int>{};
     for (final transaction in await _transactions.list()) {
       if (transaction.type != TransactionType.expense ||
           !_isInWindow(transaction, startMillis, endMillis)) {
+        continue;
+      }
+      if (!_matchesCurrency(transaction, currencyByAccount, currency)) {
         continue;
       }
       totalsByCategory.update(
@@ -217,13 +237,18 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
   Future<List<CategoryMonthlyExpense>> expenseMonthlyTotalsByCategory({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
+    final currencyByAccount = await _currencyByAccount();
     final totalsByCategoryMonth = <String, int>{};
     for (final transaction in await _transactions.list()) {
       if (transaction.type != TransactionType.expense ||
           !_isInWindow(transaction, startMillis, endMillis)) {
+        continue;
+      }
+      if (!_matchesCurrency(transaction, currencyByAccount, currency)) {
         continue;
       }
       final timestamp = transaction.timestamp.toUtc();
@@ -251,15 +276,43 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
   Future<List<Transaction>> expenseTransactionsForRange({
     required DateTime startUtc,
     required DateTime endUtc,
+    String? currency,
   }) async {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
+    final currencyByAccount = await _currencyByAccount();
     return [
       for (final transaction in await _transactions.list())
         if (transaction.type == TransactionType.expense &&
-            _isInWindow(transaction, startMillis, endMillis))
+            _isInWindow(transaction, startMillis, endMillis) &&
+            _matchesCurrency(transaction, currencyByAccount, currency))
           transaction,
     ]..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+  }
+
+  /// Maps account ids to the ISO currency code each account is denominated
+  /// in.
+  Future<Map<String, String>> _currencyByAccount() async {
+    final accounts = await _accounts.list();
+    return <String, String>{
+      for (final account in accounts) account.id: account.currency,
+    };
+  }
+
+  /// Whether [transaction] is denominated in [currency].
+  ///
+  /// When [currency] is null every transaction matches, mirroring the SQL
+  /// implementation, which only joins the accounts table for a non-null
+  /// currency filter.
+  static bool _matchesCurrency(
+    Transaction transaction,
+    Map<String, String> currencyByAccount,
+    String? currency,
+  ) {
+    if (currency == null) {
+      return true;
+    }
+    return currencyByAccount[transaction.accountId] == currency;
   }
 
   static bool _isExpenseOrIncomeInWindow(

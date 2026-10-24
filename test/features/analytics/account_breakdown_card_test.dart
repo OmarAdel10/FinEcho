@@ -37,12 +37,14 @@ void main() {
       AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 10000,
       ),
       AccountTotal(
         accountId: 'account-2',
         name: 'Bank',
+        currency: 'EGP',
         incomeMinorUnits: 0,
         expenseMinorUnits: 4000,
       ),
@@ -78,6 +80,7 @@ void main() {
       AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 5000,
         expenseMinorUnits: 0,
       ),
@@ -97,12 +100,14 @@ void main() {
       AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 20000,
         expenseMinorUnits: 10000,
       ),
       AccountTotal(
         accountId: 'account-2',
         name: 'Bank',
+        currency: 'EGP',
         incomeMinorUnits: 0,
         expenseMinorUnits: 4000,
       ),
@@ -125,12 +130,14 @@ void main() {
       AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 1000,
         expenseMinorUnits: 5000,
       ),
       AccountTotal(
         accountId: 'account-2',
         name: 'Bank',
+        currency: 'EGP',
         incomeMinorUnits: 4000,
         expenseMinorUnits: 2000,
       ),
@@ -163,12 +170,14 @@ void main() {
       AccountTotal(
         accountId: 'account-1',
         name: 'Zeta',
+        currency: 'EGP',
         incomeMinorUnits: 500,
         expenseMinorUnits: 500,
       ),
       AccountTotal(
         accountId: 'account-2',
         name: 'Alpha',
+        currency: 'EGP',
         incomeMinorUnits: 500,
         expenseMinorUnits: 500,
       ),
@@ -185,6 +194,7 @@ void main() {
       AccountTotal(
         accountId: 'account-1',
         name: 'Cash',
+        currency: 'EGP',
         incomeMinorUnits: 0,
         expenseMinorUnits: 5,
       ),

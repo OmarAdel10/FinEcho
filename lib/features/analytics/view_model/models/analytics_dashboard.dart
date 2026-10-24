@@ -15,6 +15,7 @@ class AnalyticsDashboard {
     required this.period,
     required this.startUtc,
     required this.endUtc,
+    required this.primaryCurrency,
     required this.totalIncomeMinorUnits,
     required this.totalExpenseMinorUnits,
     required this.netAmountMinorUnits,
@@ -37,6 +38,13 @@ class AnalyticsDashboard {
 
   /// The exclusive UTC end of the summary range.
   final DateTime endUtc;
+
+  /// The ISO currency code the monetary totals are denominated in, or `null`
+  /// when the user has no active accounts.
+  ///
+  /// Totals only aggregate accounts that use this currency; amounts in other
+  /// currencies are excluded rather than converted.
+  final String? primaryCurrency;
 
   /// Total income in minor units.
   final int totalIncomeMinorUnits;

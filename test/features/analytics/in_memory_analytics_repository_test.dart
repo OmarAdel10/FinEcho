@@ -1,6 +1,8 @@
 // Test fixtures intentionally repeat constructor defaults for readability.
 // ignore_for_file: avoid_redundant_argument_values
 
+import 'package:finecho/core/models/account.dart';
+import 'package:finecho/core/models/analytics_account_total.dart';
 import 'package:finecho/core/models/category.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/core/models/transaction.dart';
@@ -396,12 +398,271 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    group('currency filtering', () {
+      final startUtc = DateTime.utc(2026, 10, 1);
+      final endUtc = DateTime.utc(2026, 11, 1);
+
+      test('filters the summary to the requested currency', () async {
+        final repository = _build(
+          transactions: <Transaction>[
+            _transaction(
+              'expense-egp',
+              amountMinorUnits: 1000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+            _transaction(
+              'expense-usd',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 6),
+              accountId: 'account-usd',
+            ),
+            _transaction(
+              'income-usd',
+              amountMinorUnits: 3000,
+              timestamp: DateTime.utc(2026, 10, 7),
+              type: TransactionType.income,
+              accountId: 'account-usd',
+            ),
+          ],
+          accounts: <Account>[
+            _account('account-1'),
+            _account('account-usd', currency: 'USD'),
+          ],
+        );
+
+        final summary = await repository.summaryForRange(
+          startUtc: startUtc,
+          endUtc: endUtc,
+          currency: 'EGP',
+        );
+
+        expect(summary.totalExpenseMinorUnits, 1000);
+        expect(summary.totalIncomeMinorUnits, 0);
+        expect(summary.categoryExpenseTotals, const [
+          CategoryTotal(categoryId: null, name: null, expenseMinorUnits: 1000),
+        ]);
+        expect(summary.categoryIncomeTotals, isEmpty);
+      });
+
+      test('sums every currency when no filter is set', () async {
+        final repository = _build(
+          transactions: <Transaction>[
+            _transaction(
+              'expense-egp',
+              amountMinorUnits: 1000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+            _transaction(
+              'expense-usd',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 6),
+              accountId: 'account-usd',
+            ),
+          ],
+          accounts: <Account>[_account('account-1')],
+        );
+
+        final summary = await repository.summaryForRange(
+          startUtc: startUtc,
+          endUtc: endUtc,
+        );
+
+        expect(summary.totalExpenseMinorUnits, 3000);
+      });
+
+      test(
+        'ignores transactions without a known account when filtering',
+        () async {
+          final repository = _build(
+            transactions: <Transaction>[
+              _transaction(
+                'expense-egp',
+                amountMinorUnits: 1000,
+                timestamp: DateTime.utc(2026, 10, 5),
+              ),
+              _transaction(
+                'expense-orphan',
+                amountMinorUnits: 4000,
+                timestamp: DateTime.utc(2026, 10, 8),
+                accountId: 'account-gone',
+              ),
+            ],
+            accounts: <Account>[_account('account-1')],
+          );
+
+          final summary = await repository.summaryForRange(
+            startUtc: startUtc,
+            endUtc: endUtc,
+            currency: 'EGP',
+          );
+
+          expect(summary.totalExpenseMinorUnits, 1000);
+        },
+      );
+
+      test('reports the account currency on account totals', () async {
+        final repository = _build(
+          transactions: <Transaction>[
+            _transaction(
+              'expense-egp',
+              amountMinorUnits: 1000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+            _transaction(
+              'expense-usd',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 6),
+              accountId: 'account-usd',
+            ),
+            _transaction(
+              'expense-orphan',
+              amountMinorUnits: 4000,
+              timestamp: DateTime.utc(2026, 10, 8),
+              accountId: 'account-gone',
+            ),
+          ],
+          accounts: <Account>[
+            _account('account-1'),
+            _account('account-usd', currency: 'USD'),
+          ],
+        );
+
+        final totals = await repository.accountTotalsForRange(
+          startUtc: startUtc,
+          endUtc: endUtc,
+        );
+
+        expect(totals, hasLength(2));
+        expect(
+          totals,
+          contains(
+            predicate<AnalyticsAccountTotal>(
+              (total) =>
+                  total.accountId == 'account-1' &&
+                  total.currency == 'EGP' &&
+                  total.expenseMinorUnits == 1000,
+            ),
+          ),
+        );
+        expect(
+          totals,
+          contains(
+            predicate<AnalyticsAccountTotal>(
+              (total) =>
+                  total.accountId == 'account-usd' &&
+                  total.currency == 'USD' &&
+                  total.expenseMinorUnits == 2000,
+            ),
+          ),
+        );
+      });
+
+      test('filters expense category totals by currency', () async {
+        final repository = _build(
+          transactions: <Transaction>[
+            _transaction(
+              'expense-egp',
+              amountMinorUnits: 1000,
+              timestamp: DateTime.utc(2026, 10, 5),
+              categoryId: 'category-1',
+            ),
+            _transaction(
+              'expense-usd',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 6),
+              categoryId: 'category-1',
+              accountId: 'account-usd',
+            ),
+          ],
+          accounts: <Account>[
+            _account('account-1'),
+            _account('account-usd', currency: 'USD'),
+          ],
+        );
+
+        final totals = await repository.expenseTotalsByCategoryForRange(
+          startUtc: startUtc,
+          endUtc: endUtc,
+          currency: 'EGP',
+        );
+
+        expect(totals, hasLength(1));
+        expect(totals.single.categoryId, 'category-1');
+        expect(totals.single.totalMinorUnits, 1000);
+      });
+
+      test('filters monthly expense totals by currency', () async {
+        final repository = _build(
+          transactions: <Transaction>[
+            _transaction(
+              'expense-egp',
+              amountMinorUnits: 1000,
+              timestamp: DateTime.utc(2026, 10, 5),
+              categoryId: 'category-1',
+            ),
+            _transaction(
+              'expense-usd',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 6),
+              categoryId: 'category-1',
+              accountId: 'account-usd',
+            ),
+          ],
+          accounts: <Account>[
+            _account('account-1'),
+            _account('account-usd', currency: 'USD'),
+          ],
+        );
+
+        final totals = await repository.expenseMonthlyTotalsByCategory(
+          startUtc: startUtc,
+          endUtc: endUtc,
+          currency: 'EGP',
+        );
+
+        expect(totals, hasLength(1));
+        expect(totals.single.totalMinorUnits, 1000);
+      });
+
+      test('filters expense transactions by currency', () async {
+        final repository = _build(
+          transactions: <Transaction>[
+            _transaction(
+              'expense-egp',
+              amountMinorUnits: 1000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+            _transaction(
+              'expense-usd',
+              amountMinorUnits: 2000,
+              timestamp: DateTime.utc(2026, 10, 6),
+              accountId: 'account-usd',
+            ),
+          ],
+          accounts: <Account>[
+            _account('account-1'),
+            _account('account-usd', currency: 'USD'),
+          ],
+        );
+
+        final transactions = await repository.expenseTransactionsForRange(
+          startUtc: startUtc,
+          endUtc: endUtc,
+          currency: 'USD',
+        );
+
+        expect(transactions, hasLength(1));
+        expect(transactions.single.id, 'expense-usd');
+      });
+    });
   });
 }
 
 InMemoryAnalyticsRepository _build({
   List<Transaction> transactions = const <Transaction>[],
   List<Category> categories = const <Category>[],
+  List<Account> accounts = const <Account>[],
 }) {
   return InMemoryAnalyticsRepository(
     transactions: FakeTransactionRepository(
@@ -414,6 +675,9 @@ InMemoryAnalyticsRepository _build({
         for (final category in categories) category.id: category,
       },
     ),
+    accounts: FakeAccountRepository(
+      initialAccounts: {for (final account in accounts) account.id: account},
+    ),
   );
 }
 
@@ -423,15 +687,26 @@ Transaction _transaction(
   required DateTime timestamp,
   TransactionType type = TransactionType.expense,
   String? categoryId,
+  String accountId = 'account-1',
 }) {
   return Transaction(
     id: id,
-    accountId: 'account-1',
+    accountId: accountId,
     categoryId: categoryId,
     amountMinorUnits: amountMinorUnits,
     timestamp: timestamp,
     type: type,
     source: TransactionSource.manual,
+  );
+}
+
+Account _account(String id, {String currency = 'EGP'}) {
+  return Account(
+    id: id,
+    name: 'Account $id',
+    type: AccountType.cash,
+    currency: currency,
+    balanceMinorUnits: 0,
   );
 }
 
