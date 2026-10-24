@@ -1,13 +1,14 @@
 import 'package:finecho/core/models/account.dart';
+import 'package:finecho/core/models/analytics_account_total.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category.dart';
+import 'package:finecho/core/models/category_monthly_expense.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/account_repository.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:finecho/core/repositories/contracts/budget_repository.dart';
 import 'package:finecho/core/repositories/contracts/category_repository.dart';
-import 'package:finecho/core/repositories/contracts/transaction_repository.dart';
 import 'package:finecho/features/analytics/view_model/models/account_total.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_dashboard.dart';
 import 'package:finecho/features/analytics/view_model/models/analytics_period.dart';
@@ -40,9 +41,11 @@ const String _unknownAccountLabel = 'Unknown account';
 /// Derives the statistics dashboard from persisted local history.
 class AnalyticsService {
   /// Creates an analytics service backed by the FinEcho repositories.
+  ///
+  /// All transaction-derived figures come from bounded aggregate queries on
+  /// [analytics]; the service never scans the full ledger.
   new({
     required AnalyticsRepository analytics,
-    required TransactionRepository transactions,
     required AccountRepository accounts,
     required BudgetRepository budgets,
     required CategoryRepository categories,
@@ -50,7 +53,6 @@ class AnalyticsService {
     Duration? localUtcOffset,
   }) : this._(
          analytics,
-         transactions,
          accounts,
          budgets,
          categories,
@@ -60,7 +62,6 @@ class AnalyticsService {
 
   new _(
     this._analytics,
-    this._transactions,
     this._accounts,
     this._budgets,
     this._categories,
@@ -69,7 +70,6 @@ class AnalyticsService {
   );
 
   final AnalyticsRepository _analytics;
-  final TransactionRepository _transactions;
   final AccountRepository _accounts;
   final BudgetRepository _budgets;
   final CategoryRepository _categories;
@@ -110,14 +110,7 @@ class AnalyticsService {
       previousStartUtc,
     );
 
-    final (
-      summary,
-      previousSummary,
-      transactions,
-      accounts,
-      budgets,
-      categories,
-    ) = await (
+    final (summary, previousSummary, accounts, budgets, categories) = await (
       _analytics.summaryForRange(startUtc: startUtc, endUtc: endUtc),
       hasPreviousComparison
           ? _analytics.summaryForRange(
@@ -134,7 +127,6 @@ class AnalyticsService {
                 categoryIncomeTotals: const [],
               ),
             ),
-      _transactions.list(),
       _accounts.list(),
       _budgets.list(),
       _categories.list(),
@@ -153,6 +145,41 @@ class AnalyticsService {
         ? (totalExpense - previousExpense) / previousExpense
         : null;
 
+    final monthStartUtc = DateTime.utc(nowUtc.year, nowUtc.month);
+    final monthEndUtc = DateTime.utc(nowUtc.year, nowUtc.month + 1);
+    final recurringWindowStartUtc = DateTime.utc(nowUtc.year, nowUtc.month - 2);
+    final spikeBaselineStartUtc = DateTime.utc(
+      nowUtc.year,
+      nowUtc.month - _spikeBaselineMonths,
+    );
+
+    final (
+      accountActivityTotals,
+      recurringWindowExpenses,
+      monthlyCategoryExpenses,
+      monthCategoryExpenses,
+    ) = await (
+      _analytics.accountTotalsForRange(startUtc: startUtc, endUtc: endUtc),
+      _analytics.expenseTransactionsForRange(
+        startUtc: recurringWindowStartUtc,
+        endUtc: monthEndUtc,
+      ),
+      _analytics.expenseMonthlyTotalsByCategory(
+        startUtc: spikeBaselineStartUtc,
+        endUtc: monthEndUtc,
+      ),
+      _analytics.expenseTotalsByCategoryForRange(
+        startUtc: monthStartUtc,
+        endUtc: monthEndUtc,
+      ),
+    ).wait;
+
+    final monthExpenseTotal = monthCategoryExpenses.fold<int>(
+      0,
+      (total, entry) => total + entry.totalMinorUnits,
+    );
+    final spentByBudgetId = await _spentByBudgetId(budgets, nowUtc);
+
     return AnalyticsDashboard(
       period: period,
       startUtc: startUtc,
@@ -164,21 +191,19 @@ class AnalyticsService {
       expenseChangeRatio: expenseChangeRatio,
       categoryTotals: summary.categoryExpenseTotals,
       categoryIncomeTotals: summary.categoryIncomeTotals,
-      accountTotals: _accountTotals(
-        transactions,
-        accountsById,
-        startUtc,
-        endUtc,
-      ),
-      recurringCharges: _recurringCharges(transactions, categoriesById, nowUtc),
-      unusualSpikes: _unusualSpikes(transactions, categoriesById, nowUtc),
-      forecast: _forecast(transactions, nowUtc),
-      budgetProgress: _budgetProgress(
-        transactions,
-        budgets,
+      accountTotals: _accountTotals(accountActivityTotals, accountsById),
+      recurringCharges: _recurringCharges(
+        recurringWindowExpenses,
         categoriesById,
         nowUtc,
       ),
+      unusualSpikes: _unusualSpikes(
+        monthlyCategoryExpenses,
+        categoriesById,
+        nowUtc,
+      ),
+      forecast: _forecast(monthExpenseTotal, nowUtc),
+      budgetProgress: _budgetProgress(budgets, categoriesById, spentByBudgetId),
     );
   }
 
@@ -258,15 +283,6 @@ class AnalyticsService {
     return date.subtract(Duration(days: date.weekday - DateTime.monday));
   }
 
-  static bool _isWithin(
-    Transaction transaction,
-    DateTime startUtc,
-    DateTime endUtc,
-  ) {
-    final timestamp = transaction.timestamp.toUtc();
-    return !timestamp.isBefore(startUtc) && timestamp.isBefore(endUtc);
-  }
-
   static String _categoryName(
     String? categoryId,
     Map<String, Category> categoriesById,
@@ -278,47 +294,19 @@ class AnalyticsService {
   }
 
   static List<AccountTotal> _accountTotals(
-    List<Transaction> transactions,
+    List<AnalyticsAccountTotal> activityTotals,
     Map<String, Account> accountsById,
-    DateTime startUtc,
-    DateTime endUtc,
   ) {
-    final incomeByAccount = <String, int>{};
-    final expenseByAccount = <String, int>{};
-    for (final transaction in transactions) {
-      if (!_isWithin(transaction, startUtc, endUtc)) {
-        continue;
-      }
-      switch (transaction.type) {
-        case TransactionType.income:
-          incomeByAccount.update(
-            transaction.accountId,
-            (value) => value + transaction.amountMinorUnits,
-            ifAbsent: () => transaction.amountMinorUnits,
-          );
-        case TransactionType.expense:
-          expenseByAccount.update(
-            transaction.accountId,
-            (value) => value + transaction.amountMinorUnits,
-            ifAbsent: () => transaction.amountMinorUnits,
-          );
-        case TransactionType.transfer:
-          break;
-      }
-    }
-
     final totals = <AccountTotal>[];
-    final accountIds = <String>{
-      ...incomeByAccount.keys,
-      ...expenseByAccount.keys,
-    };
-    for (final accountId in accountIds) {
+    for (final activityTotal in activityTotals) {
       totals.add(
         AccountTotal(
-          accountId: accountId,
-          name: accountsById[accountId]?.name ?? _unknownAccountLabel,
-          incomeMinorUnits: incomeByAccount[accountId] ?? 0,
-          expenseMinorUnits: expenseByAccount[accountId] ?? 0,
+          accountId: activityTotal.accountId,
+          name:
+              accountsById[activityTotal.accountId]?.name ??
+              _unknownAccountLabel,
+          incomeMinorUnits: activityTotal.incomeMinorUnits,
+          expenseMinorUnits: activityTotal.expenseMinorUnits,
         ),
       );
     }
@@ -340,20 +328,16 @@ class AnalyticsService {
     return totals;
   }
 
+  /// [expenses] are the bounded expense transactions of the recurrence
+  /// window, ordered or not; the repository guarantees the window and type.
   static List<RecurringCharge> _recurringCharges(
-    List<Transaction> transactions,
+    List<Transaction> expenses,
     Map<String, Category> categoriesById,
     DateTime nowUtc,
   ) {
-    final windowStart = DateTime.utc(nowUtc.year, nowUtc.month - 2);
-    final windowEnd = DateTime.utc(nowUtc.year, nowUtc.month + 1);
     final candidates =
-        transactions
-            .where(
-              (transaction) =>
-                  transaction.type == TransactionType.expense &&
-                  _isWithin(transaction, windowStart, windowEnd),
-            )
+        expenses
+            .where((transaction) => transaction.type == TransactionType.expense)
             .toList()
           ..sort((a, b) {
             final byTimestamp = a.timestamp.compareTo(b.timestamp);
@@ -441,40 +425,35 @@ class AnalyticsService {
   }
 
   static List<CategorySpike> _unusualSpikes(
-    List<Transaction> transactions,
+    List<CategoryMonthlyExpense> monthlyExpenses,
     Map<String, Category> categoriesById,
     DateTime nowUtc,
   ) {
-    final currentStart = DateTime.utc(nowUtc.year, nowUtc.month);
-    final currentEnd = DateTime.utc(nowUtc.year, nowUtc.month + 1);
-    final baselineStart = DateTime.utc(
-      nowUtc.year,
-      nowUtc.month - _spikeBaselineMonths,
-    );
+    final currentMonth = nowUtc.year * 12 + nowUtc.month;
+    final baselineStartMonth =
+        nowUtc.year * 12 + nowUtc.month - _spikeBaselineMonths;
 
     final currentTotals = <String?, int>{};
     final baselineTotals = <String?, int>{};
     final baselineMonths = <String?, Set<int>>{};
-    for (final transaction in transactions) {
-      if (transaction.type != TransactionType.expense) {
-        continue;
-      }
-      if (_isWithin(transaction, currentStart, currentEnd)) {
+    for (final monthlyExpense in monthlyExpenses) {
+      final categoryId = monthlyExpense.categoryId;
+      if (monthlyExpense.monthUtc == currentMonth) {
         currentTotals.update(
-          transaction.categoryId,
-          (value) => value + transaction.amountMinorUnits,
-          ifAbsent: () => transaction.amountMinorUnits,
+          categoryId,
+          (value) => value + monthlyExpense.totalMinorUnits,
+          ifAbsent: () => monthlyExpense.totalMinorUnits,
         );
-      } else if (_isWithin(transaction, baselineStart, currentStart)) {
+      } else if (monthlyExpense.monthUtc >= baselineStartMonth &&
+          monthlyExpense.monthUtc < currentMonth) {
         baselineTotals.update(
-          transaction.categoryId,
-          (value) => value + transaction.amountMinorUnits,
-          ifAbsent: () => transaction.amountMinorUnits,
+          categoryId,
+          (value) => value + monthlyExpense.totalMinorUnits,
+          ifAbsent: () => monthlyExpense.totalMinorUnits,
         );
-        final timestamp = transaction.timestamp.toUtc();
         baselineMonths
-            .putIfAbsent(transaction.categoryId, () => <int>{})
-            .add(timestamp.year * 12 + timestamp.month);
+            .putIfAbsent(categoryId, () => <int>{})
+            .add(monthlyExpense.monthUtc);
       }
     }
 
@@ -514,19 +493,11 @@ class AnalyticsService {
   }
 
   static MonthlyForecast _forecast(
-    List<Transaction> transactions,
+    int monthExpenseMinorUnits,
     DateTime nowUtc,
   ) {
     final monthStart = DateTime.utc(nowUtc.year, nowUtc.month);
-    final monthEnd = DateTime.utc(nowUtc.year, nowUtc.month + 1);
-    var expenseSoFar = 0;
-    for (final transaction in transactions) {
-      if (transaction.type != TransactionType.expense ||
-          !_isWithin(transaction, monthStart, monthEnd)) {
-        continue;
-      }
-      expenseSoFar += transaction.amountMinorUnits;
-    }
+    final expenseSoFar = monthExpenseMinorUnits;
     final elapsedDays = nowUtc.day;
     final daysInMonth = DateTime.utc(nowUtc.year, nowUtc.month + 1, 0).day;
     final elapsedFraction =
@@ -543,55 +514,53 @@ class AnalyticsService {
     );
   }
 
+  /// Summed spend per budget id from bounded per-window category queries.
+  ///
+  /// Budgets that share a window reuse the same query result, so the number
+  /// of queries follows distinct windows rather than budget count.
+  Future<Map<String, int>> _spentByBudgetId(
+    List<Budget> budgets,
+    DateTime nowUtc,
+  ) async {
+    if (budgets.isEmpty) {
+      return const <String, int>{};
+    }
+    final totalsByWindow = <(DateTime, DateTime), Map<String, int>>{};
+    for (final budget in budgets) {
+      final window = _budgetWindow(budget, nowUtc);
+      if (totalsByWindow.containsKey(window)) {
+        continue;
+      }
+      final categoryTotals = await _analytics.expenseTotalsByCategoryForRange(
+        startUtc: window.$1,
+        endUtc: window.$2,
+      );
+      totalsByWindow[window] = {
+        for (final entry in categoryTotals)
+          if (entry.categoryId != null)
+            entry.categoryId!: entry.totalMinorUnits,
+      };
+    }
+    return {
+      for (final budget in budgets)
+        budget.id:
+            totalsByWindow[_budgetWindow(budget, nowUtc)]![budget.categoryId] ??
+            0,
+    };
+  }
+
   static List<BudgetProgress> _budgetProgress(
-    List<Transaction> transactions,
     List<Budget> budgets,
     Map<String, Category> categoriesById,
-    DateTime nowUtc,
+    Map<String, int> spentByBudgetId,
   ) {
     if (budgets.isEmpty) {
       return const <BudgetProgress>[];
     }
 
-    final windows = [
-      for (final budget in budgets) _budgetWindow(budget, nowUtc),
-    ];
-    var windowStartUtc = windows.first.$1;
-    var windowEndUtc = windows.first.$2;
-    for (final (startUtc, endUtc) in windows.skip(1)) {
-      if (startUtc.isBefore(windowStartUtc)) {
-        windowStartUtc = startUtc;
-      }
-      if (endUtc.isAfter(windowEndUtc)) {
-        windowEndUtc = endUtc;
-      }
-    }
-
-    final expensesByCategory = <String, List<Transaction>>{};
-    for (final transaction in transactions) {
-      final categoryId = transaction.categoryId;
-      if (transaction.type != TransactionType.expense ||
-          categoryId == null ||
-          !_isWithin(transaction, windowStartUtc, windowEndUtc)) {
-        continue;
-      }
-      expensesByCategory
-          .putIfAbsent(categoryId, () => <Transaction>[])
-          .add(transaction);
-    }
-
     final progress = <BudgetProgress>[];
-    for (var index = 0; index < budgets.length; index++) {
-      final budget = budgets[index];
-      final (startUtc, endUtc) = windows[index];
-      var spent = 0;
-      for (final transaction
-          in expensesByCategory[budget.categoryId] ?? const <Transaction>[]) {
-        if (!_isWithin(transaction, startUtc, endUtc)) {
-          continue;
-        }
-        spent += transaction.amountMinorUnits;
-      }
+    for (final budget in budgets) {
+      final spent = spentByBudgetId[budget.id] ?? 0;
 
       final allocated = budget.allocatedAmountMinorUnits;
       final ratio = allocated > 0 ? spent / allocated : 0.0;

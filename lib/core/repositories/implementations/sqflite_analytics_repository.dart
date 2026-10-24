@@ -1,5 +1,9 @@
+import 'package:finecho/core/models/analytics_account_total.dart';
 import 'package:finecho/core/models/analytics_summary.dart';
+import 'package:finecho/core/models/category_expense_total.dart';
+import 'package:finecho/core/models/category_monthly_expense.dart';
 import 'package:finecho/core/models/category_total.dart';
+import 'package:finecho/core/models/transaction.dart';
 import 'package:finecho/core/repositories/contracts/analytics_repository.dart';
 import 'package:sqflite_sqlcipher/sqlite_api.dart' show Database;
 
@@ -104,5 +108,148 @@ class SqfliteAnalyticsRepository implements AnalyticsRepository {
       }
     }
     return 0;
+  }
+
+  @override
+  Future<List<AnalyticsAccountTotal>> accountTotalsForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    if (startMillis >= endMillis) {
+      throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
+    }
+    final database = await opener();
+
+    final rows = await database.rawQuery(
+      '''
+      SELECT
+        account_id,
+        type,
+        COALESCE(SUM(amount_minor_units), 0) AS total_minor_units
+      FROM transactions
+      WHERE timestamp >= ? AND timestamp < ?
+        AND type IN (?, ?)
+      GROUP BY account_id, type
+      ''',
+      <Object?>[startMillis, endMillis, 'income', 'expense'],
+    );
+
+    final incomeByAccount = <String, int>{};
+    final expenseByAccount = <String, int>{};
+    for (final row in rows) {
+      final accountId = row['account_id']! as String;
+      final total = row['total_minor_units']! as int;
+      if (row['type'] == 'income') {
+        incomeByAccount[accountId] = total;
+      } else {
+        expenseByAccount[accountId] = total;
+      }
+    }
+    return [
+      for (final accountId in <String>{
+        ...incomeByAccount.keys,
+        ...expenseByAccount.keys,
+      })
+        AnalyticsAccountTotal(
+          accountId: accountId,
+          incomeMinorUnits: incomeByAccount[accountId] ?? 0,
+          expenseMinorUnits: expenseByAccount[accountId] ?? 0,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<CategoryExpenseTotal>> expenseTotalsByCategoryForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    if (startMillis >= endMillis) {
+      throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
+    }
+    final database = await opener();
+
+    final rows = await database.rawQuery(
+      '''
+      SELECT
+        category_id,
+        COALESCE(SUM(amount_minor_units), 0) AS total_minor_units
+      FROM transactions
+      WHERE timestamp >= ? AND timestamp < ?
+        AND type = 'expense'
+      GROUP BY category_id
+      ''',
+      <Object?>[startMillis, endMillis],
+    );
+
+    return [
+      for (final row in rows)
+        CategoryExpenseTotal(
+          categoryId: row['category_id'] as String?,
+          totalMinorUnits: row['total_minor_units']! as int,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<CategoryMonthlyExpense>> expenseMonthlyTotalsByCategory({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    if (startMillis >= endMillis) {
+      throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
+    }
+    final database = await opener();
+
+    final rows = await database.rawQuery(
+      '''
+      SELECT
+        category_id,
+        CAST(strftime('%Y', timestamp / 1000, 'unixepoch') AS INTEGER) * 12
+          + CAST(strftime('%m', timestamp / 1000, 'unixepoch') AS INTEGER)
+          AS month_utc,
+        COALESCE(SUM(amount_minor_units), 0) AS total_minor_units
+      FROM transactions
+      WHERE timestamp >= ? AND timestamp < ?
+        AND type = 'expense'
+      GROUP BY category_id, month_utc
+      ''',
+      <Object?>[startMillis, endMillis],
+    );
+
+    return [
+      for (final row in rows)
+        CategoryMonthlyExpense(
+          categoryId: row['category_id'] as String?,
+          monthUtc: row['month_utc']! as int,
+          totalMinorUnits: row['total_minor_units']! as int,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<Transaction>> expenseTransactionsForRange({
+    required DateTime startUtc,
+    required DateTime endUtc,
+  }) async {
+    final startMillis = _utcMillis(startUtc, 'startUtc');
+    final endMillis = _utcMillis(endUtc, 'endUtc');
+    if (startMillis >= endMillis) {
+      throw ArgumentError.value(endUtc, 'endUtc', 'must be after startUtc');
+    }
+    final database = await opener();
+
+    final rows = await database.query(
+      'transactions',
+      where: 'timestamp >= ? AND timestamp < ? AND type = ?',
+      whereArgs: <Object?>[startMillis, endMillis, 'expense'],
+      orderBy: 'timestamp',
+    );
+    return rows.map(Transaction.fromMap).toList();
   }
 }

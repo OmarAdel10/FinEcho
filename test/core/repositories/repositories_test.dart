@@ -659,6 +659,196 @@ void main() {
         ),
       ]);
     });
+
+    test('aggregates account totals within a UTC range', () async {
+      await _seedAccount(accountRepository, 'account-1');
+      await _seedAccount(accountRepository, 'account-2');
+      await _seedTransaction(
+        transactionRepository,
+        id: 'income-1',
+        accountId: 'account-1',
+        amountMinorUnits: 120000,
+        timestamp: DateTime.utc(2026, 1, 10),
+        type: TransactionType.income,
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-1',
+        accountId: 'account-1',
+        amountMinorUnits: 40000,
+        timestamp: DateTime.utc(2026, 1, 15),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-2',
+        accountId: 'account-2',
+        amountMinorUnits: 20000,
+        timestamp: DateTime.utc(2026, 1, 20),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'transfer-ignored',
+        accountId: 'account-2',
+        amountMinorUnits: 100000,
+        timestamp: DateTime.utc(2026, 1, 25),
+        type: TransactionType.transfer,
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-outside',
+        accountId: 'account-1',
+        amountMinorUnits: 7000,
+        timestamp: DateTime.utc(2026, 2, 2),
+      );
+
+      final totals = await analyticsRepository.accountTotalsForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      totals.sort((a, b) => a.accountId.compareTo(b.accountId));
+      expect(totals, hasLength(2));
+      expect(totals[0].accountId, 'account-1');
+      expect(totals[0].incomeMinorUnits, 120000);
+      expect(totals[0].expenseMinorUnits, 40000);
+      expect(totals[1].accountId, 'account-2');
+      expect(totals[1].incomeMinorUnits, 0);
+      expect(totals[1].expenseMinorUnits, 20000);
+    });
+
+    test('aggregates expense totals by category within a UTC range', () async {
+      await _seedAccount(accountRepository, 'account-1');
+      final food = await _seedCategory(
+        categoryRepository,
+        'category-food',
+        name: 'Food',
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-food-1',
+        amountMinorUnits: 40000,
+        timestamp: DateTime.utc(2026, 1, 15),
+        categoryId: food.id,
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-food-2',
+        amountMinorUnits: 15000,
+        timestamp: DateTime.utc(2026, 1, 20),
+        categoryId: food.id,
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-uncategorized',
+        amountMinorUnits: 5000,
+        timestamp: DateTime.utc(2026, 1, 25),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'income-ignored',
+        amountMinorUnits: 90000,
+        timestamp: DateTime.utc(2026, 1, 10),
+        type: TransactionType.income,
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-outside',
+        amountMinorUnits: 7000,
+        timestamp: DateTime.utc(2026, 2, 2),
+      );
+
+      final totals = await analyticsRepository.expenseTotalsByCategoryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      final byCategory = {for (final total in totals) total.categoryId: total};
+      expect(byCategory[food.id]!.totalMinorUnits, 55000);
+      expect(byCategory[null]!.totalMinorUnits, 5000);
+      expect(totals, hasLength(2));
+    });
+
+    test('aggregates expense totals by category and month', () async {
+      await _seedAccount(accountRepository, 'account-1');
+      final food = await _seedCategory(
+        categoryRepository,
+        'category-food',
+        name: 'Food',
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-january',
+        amountMinorUnits: 40000,
+        timestamp: DateTime.utc(2026, 1, 15),
+        categoryId: food.id,
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-february',
+        amountMinorUnits: 25000,
+        timestamp: DateTime.utc(2026, 2, 10),
+        categoryId: food.id,
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-uncategorized-february',
+        amountMinorUnits: 5000,
+        timestamp: DateTime.utc(2026, 2, 20),
+      );
+
+      final totals = await analyticsRepository.expenseMonthlyTotalsByCategory(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 3, 1),
+      );
+
+      final entries = {
+        for (final total in totals)
+          '${total.categoryId ?? ''}|${total.monthUtc}': total,
+      };
+      expect(entries['${food.id}|${2026 * 12 + 1}']!.totalMinorUnits, 40000);
+      expect(entries['${food.id}|${2026 * 12 + 2}']!.totalMinorUnits, 25000);
+      expect(entries['|${2026 * 12 + 2}']!.totalMinorUnits, 5000);
+      expect(totals, hasLength(3));
+    });
+
+    test('returns bounded expense transactions for a UTC range', () async {
+      await _seedAccount(accountRepository, 'account-1');
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-1',
+        amountMinorUnits: 40000,
+        timestamp: DateTime.utc(2026, 1, 15),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-2',
+        amountMinorUnits: 25000,
+        timestamp: DateTime.utc(2026, 1, 20),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-outside',
+        amountMinorUnits: 7000,
+        timestamp: DateTime.utc(2026, 2, 2),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'income-ignored',
+        amountMinorUnits: 90000,
+        timestamp: DateTime.utc(2026, 1, 10),
+        type: TransactionType.income,
+      );
+
+      final expenses = await analyticsRepository.expenseTransactionsForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      expect(expenses.map((transaction) => transaction.id).toList(), <String>[
+        'expense-1',
+        'expense-2',
+      ]);
+    });
   });
 }
 
