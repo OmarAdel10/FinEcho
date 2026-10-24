@@ -310,7 +310,7 @@ void main() {
     test('gives up after repeated id collisions', () async {
       final harness = BudgetTestHarness(
         initialBudgets: {
-          'budget-1': testBudget(id: 'budget-1'),
+          'budget-1': testBudget(),
           'budget-1-1': testBudget(id: 'budget-1-1'),
           'budget-1-2': testBudget(id: 'budget-1-2'),
           'budget-1-3': testBudget(id: 'budget-1-3'),
