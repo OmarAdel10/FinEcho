@@ -59,7 +59,7 @@ class AnalyticsDashboard {
   /// Total expenses of the equivalent previous period in minor units.
   final int previousExpenseMinorUnits;
 
-  /// Whether the previous period range exists, even if it has no spending.
+  /// Whether the comparison window in the previous period is non-empty.
   final bool hasPreviousPeriod;
 
   /// The expense change versus the previous period, or `null` without history.

@@ -23,7 +23,7 @@ const String _spendingRingLabel = 'Spending ring by category';
 const String _incomeRingLabel = 'Income ring by category';
 const double _ringSize = 160;
 const double _ringStrokeWidth = 20;
-const List<Color> _slicePalette = [
+const List<Color> _lightSlicePalette = [
   FinEchoColors.deepGreen,
   Color(0xFF8A6D00),
   FinEchoColors.blue,
@@ -31,6 +31,22 @@ const List<Color> _slicePalette = [
   FinEchoColors.darkNavy,
   Color(0xFF6A4C93),
 ];
+const List<Color> _darkSlicePalette = [
+  Color(0xFF9FE3C9),
+  Color(0xFFE0C060),
+  Color(0xFF7FB2FF),
+  Color(0xFFFF9C7A),
+  Color(0xFFC7B2F0),
+  FinEchoColors.softStone,
+];
+
+/// Returns the slice colors for a breakdown ring rendered with [brightness].
+///
+/// Neighbouring entries stay distinguishable, and every color keeps at least
+/// a 3:1 contrast ratio against the card surface in the matching theme.
+@visibleForTesting
+List<Color> slicePaletteFor(Brightness brightness) =>
+    brightness == Brightness.dark ? _darkSlicePalette : _lightSlicePalette;
 
 /// A card that breaks the period's spending or income down by category.
 class CategoryBreakdownCard extends StatelessWidget {
@@ -57,6 +73,7 @@ class CategoryBreakdownCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final palette = slicePaletteFor(theme.brightness);
     final isSpending = metric == CategoryBreakdownMetric.spending;
     final totalMinorUnits = categoryTotals.fold<int>(
       0,
@@ -111,6 +128,7 @@ class CategoryBreakdownCard extends StatelessWidget {
                             else
                               0.0,
                         ],
+                        colors: palette,
                         trackColor: theme.colorScheme.outlineVariant,
                         strokeWidth: _ringStrokeWidth,
                       ),
@@ -123,7 +141,7 @@ class CategoryBreakdownCard extends StatelessWidget {
                 _LegendRow(
                   name: categoryTotals[index].name ?? _uncategorizedLabel,
                   amountMinorUnits: amounts[index],
-                  color: _slicePalette[index % _slicePalette.length],
+                  color: palette[index % palette.length],
                   percent: legendPercents[index],
                   currency: currency,
                 ),
@@ -191,12 +209,16 @@ class _LegendRow extends StatelessWidget {
 class _CategoryRingPainter extends CustomPainter {
   const new({
     required this.slices,
+    required this.colors,
     required this.trackColor,
     required this.strokeWidth,
   });
 
   /// The expense share of each category, in draw order.
   final List<double> slices;
+
+  /// The slice colors, applied in draw order and cycling when exhausted.
+  final List<Color> colors;
 
   /// The color of the unfilled ring track.
   final Color trackColor;
@@ -232,7 +254,7 @@ class _CategoryRingPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
-          ..color = _slicePalette[index % _slicePalette.length],
+          ..color = colors[index % colors.length],
       );
       startAngle += sweepAngle;
     }
@@ -242,11 +264,17 @@ class _CategoryRingPainter extends CustomPainter {
   bool shouldRepaint(covariant _CategoryRingPainter oldDelegate) {
     if (trackColor != oldDelegate.trackColor ||
         strokeWidth != oldDelegate.strokeWidth ||
-        slices.length != oldDelegate.slices.length) {
+        slices.length != oldDelegate.slices.length ||
+        colors.length != oldDelegate.colors.length) {
       return true;
     }
     for (var index = 0; index < slices.length; index++) {
       if (slices[index] != oldDelegate.slices[index]) {
+        return true;
+      }
+    }
+    for (var index = 0; index < colors.length; index++) {
+      if (colors[index] != oldDelegate.colors[index]) {
         return true;
       }
     }

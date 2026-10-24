@@ -1,3 +1,4 @@
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/core/models/transaction.dart';
 import 'package:flutter/material.dart';
 
@@ -52,16 +53,11 @@ class TransactionTile extends StatelessWidget {
   }
 
   String _amountLabel(Transaction transaction) {
-    final major = transaction.amountMinorUnits ~/ 100;
-    final fraction = (transaction.amountMinorUnits % 100).toString().padLeft(
-      2,
-      '0',
-    );
     final prefix = switch (transaction.type) {
       TransactionType.expense => '-',
       TransactionType.income => '+',
       TransactionType.transfer => '',
     };
-    return '$prefix$major.$fraction';
+    return '$prefix${formatMinorUnits(transaction.amountMinorUnits, null)}';
   }
 }

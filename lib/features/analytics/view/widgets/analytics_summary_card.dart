@@ -5,7 +5,8 @@ const String _incomeLabel = 'Income';
 const String _expensesLabel = 'Expenses';
 const String _netLabel = 'Net';
 const String _noPreviousPeriodMessage = 'No previous period to compare';
-const String _noPreviousSpendMessage = 'No spending in the previous period';
+const String _noPreviousSpendMessage =
+    'No spending in the same days of the previous period';
 
 /// A card that summarizes income, expenses, and net for one period.
 class AnalyticsSummaryCard extends StatelessWidget {
@@ -32,7 +33,7 @@ class AnalyticsSummaryCard extends StatelessWidget {
   /// The expense change versus the previous period, or `null` without history.
   final double? expenseChangeRatio;
 
-  /// Whether the previous period range exists, even if it has no spending.
+  /// Whether the comparison window in the previous period is non-empty.
   final bool hasPreviousPeriod;
 
   /// The ISO currency code the amounts are denominated in, or `null` when

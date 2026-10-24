@@ -21,10 +21,20 @@
 
 ## Analytics presentation
 
-- Extract the minor-unit amount formatter duplicated across the transactions,
-  budget, and analytics widget files.
-- Improve the category ring palette: colors repeat beyond three categories and
-  the soft stone slice has low contrast on light surfaces.
+Fixed on `fix/analytics-presentation`:
+
+- The transaction sheet, transaction tile, and period totals card reuse the
+  shared minor-unit formatter (FINECHO-5).
+- The category ring uses six contrast-checked colors per theme with a stable
+  cycling order (FINECHO-6).
+- Category legend percentages use largest-remainder rounding, so they sum to
+  100 whenever the period has spending (FINECHO-18).
+- The dashboard carries `hasPreviousPeriod`, so the summary card distinguishes
+  a comparison window without spending from a missing comparison window
+  (FINECHO-23).
+
+Still open:
+
 - Verify the in-memory analytics category tie-break matches the SQLite BINARY
   collation for non-ASCII category identifiers.
 

@@ -218,6 +218,7 @@ void main() {
       expect(dashboard.totalExpenseMinorUnits, 150000);
       expect(dashboard.netAmountMinorUnits, 50000);
       expect(dashboard.previousExpenseMinorUnits, 100000);
+      expect(dashboard.hasPreviousPeriod, isTrue);
       expect(dashboard.expenseChangeRatio, 0.5);
       expect(dashboard.categoryTotals, hasLength(1));
       expect(dashboard.accountTotals, isEmpty);

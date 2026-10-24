@@ -48,6 +48,7 @@ void main() {
         expect(dashboard.totalExpenseMinorUnits, 150000);
         expect(dashboard.netAmountMinorUnits, 50000);
         expect(dashboard.previousExpenseMinorUnits, 100000);
+        expect(dashboard.hasPreviousPeriod, isTrue);
         expect(dashboard.expenseChangeRatio, 0.5);
         expect(dashboard.categoryTotals, const [
           CategoryTotal(
@@ -56,6 +57,19 @@ void main() {
             expenseMinorUnits: 42000,
           ),
         ]);
+      });
+
+      test('keeps a previous comparison for week, month, and year', () async {
+        for (final period in AnalyticsPeriod.values) {
+          final harness = AnalyticsTestHarness(
+            onSummary: (startUtc, endUtc) =>
+                _summary(startUtc: startUtc, endUtc: endUtc, expense: 1000),
+          );
+
+          final dashboard = await harness.service.loadDashboard(period: period);
+
+          expect(dashboard.hasPreviousPeriod, isTrue, reason: '$period');
+        }
       });
 
       test('uses the local calendar for the month boundary', () async {
