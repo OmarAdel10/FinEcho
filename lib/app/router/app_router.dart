@@ -1,5 +1,6 @@
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/app/router/screens/placeholder_screen.dart';
+import 'package:finecho/app/router/widgets/home_shell.dart';
 import 'package:finecho/features/analytics/view/screens/analytics_screen.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/budget/view/screens/budget_screen.dart';
@@ -97,41 +98,55 @@ class AppRouter {
             child: const SecuritySetupScreen(),
           ),
         ),
-        GoRoute(
-          path: '/home',
-          name: 'home',
-          builder: (context, state) => _protected(
-            BlocProvider<TransactionsCubit>.value(
-              value: _transactionsCubit,
-              child: const TransactionsScreen(),
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) =>
+              _protected(HomeShell(navigationShell: navigationShell)),
+          branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/home',
+                  name: 'home',
+                  builder: (context, state) =>
+                      BlocProvider<TransactionsCubit>.value(
+                        value: _transactionsCubit,
+                        child: const TransactionsScreen(),
+                      ),
+                ),
+              ],
             ),
-          ),
-        ),
-        GoRoute(
-          path: '/budgets',
-          name: 'budgets',
-          builder: (context, state) => _protected(
-            BlocProvider<BudgetCubit>.value(
-              value: _budgetsCubit,
-              child: const BudgetScreen(),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/budgets',
+                  name: 'budgets',
+                  builder: (context, state) => BlocProvider<BudgetCubit>.value(
+                    value: _budgetsCubit,
+                    child: const BudgetScreen(),
+                  ),
+                ),
+              ],
             ),
-          ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/statistics',
+                  name: 'statistics',
+                  builder: (context, state) =>
+                      BlocProvider<AnalyticsCubit>.value(
+                        value: _analyticsCubit,
+                        child: const AnalyticsScreen(),
+                      ),
+                ),
+              ],
+            ),
+          ],
         ),
         GoRoute(
           path: '/accounts',
           name: 'accounts',
           builder: (context, state) =>
               _protected(const PlaceholderScreen(title: 'Accounts')),
-        ),
-        GoRoute(
-          path: '/statistics',
-          name: 'statistics',
-          builder: (context, state) => _protected(
-            BlocProvider<AnalyticsCubit>.value(
-              value: _analyticsCubit,
-              child: const AnalyticsScreen(),
-            ),
-          ),
         ),
         GoRoute(
           path: '/settings',

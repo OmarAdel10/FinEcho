@@ -11,11 +11,9 @@ import 'package:finecho/features/transactions/view_model/models/transactions_sta
 import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 const String _appBarTitle = 'FinEcho';
 const String _addTransactionLabel = 'Add transaction';
-const String _statisticsLabel = 'Statistics';
 const String _noAccountsTitle = 'No accounts yet';
 const String _noAccountsMessage =
     'Add an account to start tracking transactions.';
@@ -69,18 +67,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(_appBarTitle),
-        actions: [
-          IconButton(
-            tooltip: _statisticsLabel,
-            icon: const Icon(Icons.insights_outlined),
-            onPressed: () {
-              unawaited(context.push('/statistics'));
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text(_appBarTitle)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           unawaited(_showTransactionSheet());
