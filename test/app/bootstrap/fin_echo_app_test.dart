@@ -1,5 +1,7 @@
 import 'package:finecho/app/bootstrap/fin_echo_app.dart';
+import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/security_state.dart';
+import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/security/view/widgets/security_lifecycle_observer.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
@@ -7,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/analytics/fake_analytics_repositories.dart';
 import '../../features/security/fake_security_repositories.dart';
 
 void main() {
@@ -39,6 +42,35 @@ void main() {
 
     expect(cubit.state.status, SecurityAccessStatus.ready);
     expect(cubit.state.isLocked, isTrue);
+  });
+
+  testWidgets('clears cached analytics when the application is paused', (
+    tester,
+  ) async {
+    final securityCubit = await _unlockedCubit();
+    final analyticsHarness = AnalyticsTestHarness();
+    final analyticsCubit = AnalyticsCubit(analyticsHarness.service);
+    await analyticsCubit.load();
+    addTearDown(securityCubit.close);
+    addTearDown(analyticsCubit.close);
+    expect(analyticsCubit.state.dashboard, isNotNull);
+
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      FinEchoApp(
+        router: router,
+        securityCubit: securityCubit,
+        analyticsCubit: analyticsCubit,
+      ),
+    );
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(analyticsCubit.state.dashboard, isNull);
+    expect(analyticsCubit.state.period, AnalyticsPeriod.month);
   });
 }
 

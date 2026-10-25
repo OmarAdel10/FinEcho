@@ -54,6 +54,15 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
     await _load(period);
   }
 
+  /// Clears the cached dashboard and pending period selection.
+  ///
+  /// Called when the app lock engages, so any decrypted aggregates are
+  /// dropped from memory behind the lock screen.
+  void clearCachedDashboard() {
+    _pendingPeriod = null;
+    emit(const AnalyticsState());
+  }
+
   Future<void> _load(AnalyticsPeriod period) {
     if (_isLoading || isClosed) {
       return _inFlight ?? Future<void>.value();

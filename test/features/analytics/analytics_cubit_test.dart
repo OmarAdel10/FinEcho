@@ -198,6 +198,24 @@ void main() {
       expect(cubit.isClosed, isTrue);
     });
 
+    test('clears the cached dashboard and pending period selection', () async {
+      final harness = AnalyticsTestHarness();
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      await cubit.load();
+      await cubit.selectPeriod(AnalyticsPeriod.year);
+      expect(cubit.state.dashboard, isNotNull);
+      expect(cubit.state.period, AnalyticsPeriod.year);
+
+      cubit.clearCachedDashboard();
+
+      expect(cubit.state.status, AnalyticsStatus.loading);
+      expect(cubit.state.period, AnalyticsPeriod.month);
+      expect(cubit.state.dashboard, isNull);
+      expect(cubit.state.errorMessage, isNull);
+    });
+
     test('swallows a failure that finishes after close', () async {
       final harness = AnalyticsTestHarness();
       final gate = Completer<void>();

@@ -6,11 +6,15 @@ import 'package:flutter/material.dart';
 /// The observer lives at app scope, so the app relocks even when no protected
 /// screen is mounted and a single observer serves the whole app.
 class SecurityLifecycleObserver extends StatefulWidget {
-  /// Creates an observer that relocks [cubit] when the app is paused.
-  const new({required this.cubit, required this.child, super.key});
+  /// Creates an observer that relocks [cubit] when the app is paused
+  /// and runs [onLock] alongside the lock.
+  const new({required this.cubit, required this.child, this.onLock, super.key});
 
   /// The app-lock ViewModel.
   final SecurityCubit cubit;
+
+  /// Called whenever the lock engages from an app lifecycle pause.
+  final VoidCallback? onLock;
 
   /// The subtree that observes the app lifecycle.
   final Widget child;
@@ -32,6 +36,7 @@ class _SecurityLifecycleObserverState extends State<SecurityLifecycleObserver>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       widget.cubit.lock();
+      widget.onLock?.call();
     }
   }
 
