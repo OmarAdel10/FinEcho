@@ -1258,6 +1258,11 @@ void main() {
         expect(dashboard.forecast.projectedExpenseMinorUnits, 103333);
       });
 
+      // Projection formula: round(expenseSoFar * daysInMonth /
+      // elapsedFraction), where elapsedFraction is the fractional day
+      // count since the month start (minimum 1). The reported
+      // elapsedDays is the whole-day count and is not the denominator,
+      // so leap-day expectations can look counterintuitive.
       test('uses twenty-nine days on a leap February', () async {
         final harness = AnalyticsTestHarness(
           now: () => DateTime.utc(2028, 2, 29),

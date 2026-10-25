@@ -42,7 +42,11 @@ class _RecordingCanvas implements Canvas {
   }
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => null;
+  dynamic noSuchMethod(Invocation invocation) {
+    throw UnimplementedError(
+      'unexpected canvas call: ${invocation.memberName}',
+    );
+  }
 }
 
 Widget _wrap(Widget child) {
@@ -50,11 +54,14 @@ Widget _wrap(Widget child) {
 }
 
 CustomPainter _ringPainterOf(WidgetTester tester) {
+  // Material wraps the card in its own CustomPaint (null painter), so
+  // the ring is the only descendant CustomPaint that paints directly.
   final paintWidget = tester.widget<CustomPaint>(
-    find.byWidgetPredicate(
-      (widget) =>
-          widget is CustomPaint &&
-          widget.painter?.runtimeType.toString() == '_CategoryRingPainter',
+    find.descendant(
+      of: find.byType(CategoryBreakdownCard),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is CustomPaint && widget.painter != null,
+      ),
     ),
   );
   return paintWidget.painter!;
@@ -139,5 +146,37 @@ void main() {
 
     expect(canvas.arcs, isEmpty);
     expect(canvas.circles, hasLength(1));
+  });
+
+  testWidgets('keeps the palette slot of skipped zero slices', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        CategoryBreakdownCard(
+          categoryTotals: [
+            _totals(1).single,
+            const CategoryTotal(
+              categoryId: 'category-empty',
+              name: 'Empty',
+              expenseMinorUnits: 0,
+            ),
+            const CategoryTotal(
+              categoryId: 'category-2',
+              name: 'Category 2',
+              expenseMinorUnits: 1000,
+            ),
+          ],
+        ),
+      ),
+    );
+    final canvas = _RecordingCanvas();
+    _ringPainterOf(tester).paint(canvas, const Size(160, 160));
+
+    final palette = slicePaletteFor(Brightness.light);
+    expect(canvas.arcs, hasLength(2));
+    expect(canvas.arcs[0].paint.color.toARGB32(), palette[0].toARGB32());
+    expect(canvas.arcs[1].paint.color.toARGB32(), palette[2].toARGB32());
+    // The second visible arc starts where the zero slice's slot would
+    // have begun, so the legend colors and ring angles stay aligned.
+    expect(canvas.arcs[1].startAngle, closeTo(-math.pi / 2 + math.pi, 1e-9));
   });
 }

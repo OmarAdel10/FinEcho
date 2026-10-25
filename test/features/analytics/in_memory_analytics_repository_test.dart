@@ -215,6 +215,52 @@ void main() {
             timestamp: DateTime.utc(2026, 1, 6),
             categoryId: 'category-\uFFFD',
           ),
+          _transaction(
+            'expense-emoji-suffix',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 7),
+            categoryId: 'category-\u{1F600}x',
+          ),
+        ],
+        categories: [
+          _category('category-\u{1F600}', 'Emoji'),
+          _category('category-\uFFFD', 'Replacement'),
+          _category('category-\u{1F600}x', 'Emoji suffix'),
+        ],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      // SQLite orders ids by UTF-8 bytes (code points), so the
+      // replacement character (U+FFFD) sorts before the supplementary
+      // emoji id — unlike Dart's UTF-16 compareTo. When one id is a
+      // prefix of another, the shorter id sorts first.
+      expect(
+        [for (final total in summary.categoryExpenseTotals) total.categoryId],
+        ['category-\uFFFD', 'category-\u{1F600}', 'category-\u{1F600}x'],
+      );
+    });
+
+    test('orders tied income categories in SQLite binary order', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'income-emoji',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 5),
+            type: TransactionType.income,
+            categoryId: 'category-\u{1F600}',
+          ),
+          _transaction(
+            'income-replacement',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 6),
+            type: TransactionType.income,
+            categoryId: 'category-\uFFFD',
+          ),
         ],
         categories: [
           _category('category-\u{1F600}', 'Emoji'),
@@ -227,11 +273,8 @@ void main() {
         endUtc: DateTime.utc(2026, 2, 1),
       );
 
-      // SQLite orders ids by UTF-8 bytes (code points), so the
-      // replacement character (U+FFFD) sorts before the supplementary
-      // emoji id — unlike Dart's UTF-16 compareTo.
       expect(
-        [for (final total in summary.categoryExpenseTotals) total.categoryId],
+        [for (final total in summary.categoryIncomeTotals) total.categoryId],
         ['category-\uFFFD', 'category-\u{1F600}'],
       );
     });

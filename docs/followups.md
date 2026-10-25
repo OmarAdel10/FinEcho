@@ -32,11 +32,10 @@ Fixed on `fix/analytics-presentation`:
 - The dashboard carries `hasPreviousPeriod`, so the summary card distinguishes
   a comparison window without spending from a missing comparison window
   (FINECHO-23).
+- The in-memory analytics category tie-break sorts by Unicode code points, so
+  non-ASCII identifiers match SQLite's BINARY collation (FINECHO-7).
 
 Still open:
-
-- Verify the in-memory analytics category tie-break matches the SQLite BINARY
-  collation for non-ASCII category identifiers.
 
 - Prefill the transaction sheet amount using the selected account's currency;
   zero-decimal accounts (JPY) show 12.34 instead of 1234
@@ -58,6 +57,29 @@ Still open:
 
 - Track localization debt: hardcoded const English labels across analytics and
   transactions have no l10n migration path yet.
+
+- Cover the null-categoryId tie ordering branch in the analytics comparator
+  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:146-151).
+
+- Cover the ring painter's shortestSide radius guard for non-square sizes
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:232).
+
+- Cover income-metric ring slices in the breakdown card painter tests
+  (test/features/analytics/category_ring_painter_test.dart).
+
+- Pin the SnackBar auto-dismiss timer after a failed analytics refresh
+  (lib/features/analytics/view/screens/analytics_screen.dart:67-68).
+
+- Cover the non-leap February and zero-expense-month forecast edges
+  (test/features/analytics/analytics_service_test.dart forecast group).
+
+- Pin the real SQLite BINARY ordering with a sqflite_common_ffi test against
+  the SQLCipher repository, not only the in-memory mirror
+  (lib/features/analytics/data/repositories/sqflite_analytics_repository.dart:71).
+
+- Cover the painter shouldRepaint colors element-diff branch, unreachable
+  through the public widget API because a theme change also swaps the track
+  color (lib/features/analytics/view/widgets/category_breakdown_card.dart:279-283).
 
 ## Analytics review round 2
 
