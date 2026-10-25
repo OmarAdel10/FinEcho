@@ -63,13 +63,21 @@ Still open:
 
 - Remove the dead both-null arm in the analytics comparator; the pinned
   null-vs-categorized order is covered by 'orders null categories last at an
-  equal amount' (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:147-149).
+  equal amount'
+  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:147-149)
+  (FINECHO-66).
 
-- Cover the ring painter's shortestSide radius guard for non-square sizes
-  (lib/features/analytics/view/widgets/category_breakdown_card.dart:232).
+- Cover the ring painter's shortestSide radius behavior for non-square sizes
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:232)
+  (FINECHO-66).
 
 - Cover income-metric ring slices in the breakdown card painter tests
-  (test/features/analytics/category_ring_painter_test.dart).
+  (test/features/analytics/category_ring_painter_test.dart) (FINECHO-66).
+
+- Pin one painter test to the actually laid-out size so a layout-size
+  regression stops passing
+  (test/features/analytics/category_ring_painter_test.dart:93,107,132,158)
+  (FINECHO-66).
 
 - Pin the SnackBar auto-dismiss timer after a failed analytics refresh
   (lib/features/analytics/view/screens/analytics_screen.dart:67-68).
@@ -79,7 +87,8 @@ Still open:
 
 - Pin the real SQLite BINARY ordering with a sqflite_common_ffi test against
   the SQLCipher repository, not only the in-memory mirror
-  (lib/core/repositories/implementations/sqflite_analytics_repository.dart:71).
+  (lib/core/repositories/implementations/sqflite_analytics_repository.dart:71);
+  the ffi pin asserts `PRAGMA encoding` is UTF-8.
 
 - Cover the ring painter's slices.length mismatch repaint guard, reachable
   through the public widget API with differing category counts
@@ -131,7 +140,9 @@ Fixed:
 Deferred; tracked in Plane:
 
 - Convert analytics calendar boundaries from UTC to device-local (FINECHO-22).
-- Add ring painter output and golden tests (FINECHO-21).
+- Ring painter: the recording-canvas output tests shipped on
+  `chore/analytics-test-coverage`; golden snapshot tests remain open
+  (FINECHO-21).
 - Distinguish zero previous spend from no comparison (FINECHO-23).
 - The round-two items FINECHO-8, FINECHO-9, and FINECHO-20 remain open;
   model-equality isolation is covered by FINECHO-19.
@@ -157,6 +168,10 @@ changed units. A final approved batch fixed:
 
 Deferred; tracked in Plane:
 
+- Replace the pipe-split composite keys in the analytics repository; a
+  categoryId containing | truncates the key
+  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:274,284-287)
+  (FINECHO-65).
 - FINECHO-31 verify `FLAG_SECURE` on a device.
 - FINECHO-32 erase persisted financial data or require a device credential for
   recovery reset once the SQLCipher database is wired.
@@ -297,7 +312,3 @@ fails closed into the recovery screen instead of treating the missing values as
 a fresh install, and the deliberate `Erase app lock` action clears the lock so
 it can be set up again. The state codec still reads a payload written before
 the codec was versioned. No released version is affected.
-
-- Replace the pipe-split composite keys in the analytics repository; a
-  categoryId containing | truncates the key
-  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:274,284-287).

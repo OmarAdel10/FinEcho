@@ -53,6 +53,8 @@ Widget _wrap(Widget child) {
   return MaterialApp(home: Scaffold(body: child));
 }
 
+// The painter is matched by its private runtimeType name; renaming
+// _CategoryRingPainter must also update this string.
 CustomPainter _ringPainterOf(WidgetTester tester) {
   final paintWidget = tester.widget<CustomPaint>(
     find.descendant(

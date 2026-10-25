@@ -152,9 +152,10 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
     return _compareIds(aCategoryId, bCategoryId);
   }
 
-  /// Orders ids the way SQLite's BINARY collation does: by UTF-8 bytes,
-  /// which match Unicode code points. Dart's [String.compareTo] instead
-  /// compares UTF-16 code units and sorts surrogate pairs below U+E000.
+  /// Orders ids the way SQLite's BINARY collation does, assuming the
+  /// database uses the default UTF-8 encoding: it compares Unicode code
+  /// points, while Dart's [String.compareTo] compares UTF-16 code units and
+  /// sorts surrogate pairs below U+E000.
   static int _compareIds(String a, String b) {
     final aRunes = a.runes.toList(growable: false);
     final bRunes = b.runes.toList(growable: false);
