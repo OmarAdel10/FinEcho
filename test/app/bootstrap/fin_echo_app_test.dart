@@ -72,6 +72,64 @@ void main() {
     expect(analyticsCubit.state.dashboard, isNull);
     expect(analyticsCubit.state.period, AnalyticsPeriod.month);
   });
+
+  testWidgets('keeps cached analytics when pausing without a configured lock', (
+    tester,
+  ) async {
+    final securityCubit = await _unconfiguredCubit();
+    final analyticsHarness = AnalyticsTestHarness();
+    final analyticsCubit = AnalyticsCubit(analyticsHarness.service);
+    await analyticsCubit.load();
+    addTearDown(securityCubit.close);
+    addTearDown(analyticsCubit.close);
+    expect(analyticsCubit.state.dashboard, isNotNull);
+
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      FinEchoApp(
+        router: router,
+        securityCubit: securityCubit,
+        analyticsCubit: analyticsCubit,
+      ),
+    );
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(securityCubit.state.isLocked, isFalse);
+    expect(analyticsCubit.state.dashboard, isNotNull);
+    expect(analyticsCubit.state.period, AnalyticsPeriod.month);
+  });
+
+  testWidgets('keeps cached analytics when only the analytics cubit is wired', (
+    tester,
+  ) async {
+    final analyticsHarness = AnalyticsTestHarness();
+    final analyticsCubit = AnalyticsCubit(analyticsHarness.service);
+    await analyticsCubit.load();
+    addTearDown(analyticsCubit.close);
+    expect(analyticsCubit.state.dashboard, isNotNull);
+
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      FinEchoApp(router: router, analyticsCubit: analyticsCubit),
+    );
+    await tester.pump();
+
+    expect(find.byType(SecurityLifecycleObserver), findsNothing);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(analyticsCubit.state.dashboard, isNotNull);
+  });
 }
 
 Future<SecurityCubit> _unlockedCubit() async {
@@ -89,6 +147,22 @@ Future<SecurityCubit> _unlockedCubit() async {
   final cubit = SecurityCubit(harness.service);
   await cubit.load();
   await cubit.unlockWithPin('123456');
+  return cubit;
+}
+
+Future<SecurityCubit> _unconfiguredCubit() async {
+  final harness = SecurityTestHarness(
+    initialState: SecurityState(
+      appLockEnabled: false,
+      pinConfigured: false,
+      failedUnlockAttempts: 0,
+      secureKeyReady: true,
+      updatedAt: DateTime.utc(2026, 10, 15, 12),
+    ),
+    now: () => DateTime.utc(2026, 10, 15, 12),
+  );
+  final cubit = SecurityCubit(harness.service);
+  await cubit.load();
   return cubit;
 }
 

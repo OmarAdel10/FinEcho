@@ -1,6 +1,7 @@
 import 'package:finecho/app/bootstrap/app_startup.dart';
 import 'package:finecho/app/bootstrap/fin_echo_app.dart';
 import 'package:finecho/app/di/service_locator.dart';
+import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/models/onboarding_state.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
@@ -47,6 +48,8 @@ void main() {
 
     expect(widget.securityCubit, isNotNull);
     expect(widget.securityCubit, same(sl<SecurityCubit>()));
+    expect(widget.analyticsCubit, isNotNull);
+    expect(widget.analyticsCubit, same(sl<AnalyticsCubit>()));
   });
 
   test('mounts the application through the entrypoint', () async {

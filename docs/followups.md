@@ -319,3 +319,12 @@ fails closed into the recovery screen instead of treating the missing values as
 a fresh install, and the deliberate `Erase app lock` action clears the lock so
 it can be set up again. The state codec still reads a payload written before
 the codec was versioned. No released version is affected.
+
+## App lock data residency
+
+Still open:
+
+- Clear the in-memory transactions ledger when the app locks, mirroring the
+  analytics epoch-clear; the ledger retains payee details the aggregates do
+  not (lib/features/transactions/view_model/models/transactions_state.dart)
+  (FINECHO-69).
