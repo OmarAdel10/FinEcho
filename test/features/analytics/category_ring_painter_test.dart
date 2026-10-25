@@ -54,13 +54,13 @@ Widget _wrap(Widget child) {
 }
 
 CustomPainter _ringPainterOf(WidgetTester tester) {
-  // Material wraps the card in its own CustomPaint (null painter), so
-  // the ring is the only descendant CustomPaint that paints directly.
   final paintWidget = tester.widget<CustomPaint>(
     find.descendant(
       of: find.byType(CategoryBreakdownCard),
       matching: find.byWidgetPredicate(
-        (widget) => widget is CustomPaint && widget.painter != null,
+        (widget) =>
+            widget is CustomPaint &&
+            widget.painter?.runtimeType.toString() == '_CategoryRingPainter',
       ),
     ),
   );

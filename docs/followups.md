@@ -32,6 +32,9 @@ Fixed on `fix/analytics-presentation`:
 - The dashboard carries `hasPreviousPeriod`, so the summary card distinguishes
   a comparison window without spending from a missing comparison window
   (FINECHO-23).
+
+Fixed on `chore/analytics-test-coverage`:
+
 - The in-memory analytics category tie-break sorts by Unicode code points, so
   non-ASCII identifiers match SQLite's BINARY collation (FINECHO-7).
 
@@ -58,8 +61,9 @@ Still open:
 - Track localization debt: hardcoded const English labels across analytics and
   transactions have no l10n migration path yet.
 
-- Cover the null-categoryId tie ordering branch in the analytics comparator
-  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:146-151).
+- Remove the dead both-null arm in the analytics comparator; the pinned
+  null-vs-categorized order is covered by 'orders null categories last at an
+  equal amount' (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:147-149).
 
 - Cover the ring painter's shortestSide radius guard for non-square sizes
   (lib/features/analytics/view/widgets/category_breakdown_card.dart:232).
@@ -75,11 +79,17 @@ Still open:
 
 - Pin the real SQLite BINARY ordering with a sqflite_common_ffi test against
   the SQLCipher repository, not only the in-memory mirror
-  (lib/features/analytics/data/repositories/sqflite_analytics_repository.dart:71).
+  (lib/core/repositories/implementations/sqflite_analytics_repository.dart:71).
 
-- Cover the painter shouldRepaint colors element-diff branch, unreachable
-  through the public widget API because a theme change also swaps the track
-  color (lib/features/analytics/view/widgets/category_breakdown_card.dart:279-283).
+- Cover the ring painter's slices.length mismatch repaint guard, reachable
+  through the public widget API with differing category counts
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:267).
+
+- Align the remaining UTF-16 tie-breaks with SQLite BINARY parity when
+  non-ASCII ids or names can appear: the spike sorting and category id
+  fallback (lib/features/analytics/view_model/services/analytics_service.dart:394,483,308-322)
+  and the account breakdown ordering
+  (lib/features/analytics/view/widgets/account_breakdown_card.dart:46-56).
 
 ## Analytics review round 2
 
@@ -287,3 +297,7 @@ fails closed into the recovery screen instead of treating the missing values as
 a fresh install, and the deliberate `Erase app lock` action clears the lock so
 it can be set up again. The state codec still reads a payload written before
 the codec was versioned. No released version is affected.
+
+- Replace the pipe-split composite keys in the analytics repository; a
+  categoryId containing | truncates the key
+  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:274,284-287).

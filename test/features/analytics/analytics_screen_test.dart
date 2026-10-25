@@ -284,7 +284,11 @@ void main() {
     expect(harness.analyticsRepository.requestedRanges, hasLength(4));
   });
 
-  testWidgets('shows a snack bar when a refresh fails with stale data', (
+  // Covers the explicit cubit.load() reload path failing after a dashboard
+  // has settled; the period-switch failure path (also surfacing the error
+  // message under keep-alive data, without asserting Try again) is covered
+  // by 'keeps the dashboard and warns when a refresh fails' below.
+  testWidgets('warns with stale data when an explicit reload fails', (
     tester,
   ) async {
     _useTallSurface(tester);

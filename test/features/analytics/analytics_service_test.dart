@@ -1306,9 +1306,8 @@ void main() {
         expect(dashboard.forecast.projectedExpenseMinorUnits, 213793);
       });
 
-      test('projects the month expense from category totals', () async {
+      test('projects a small mid-month expense', () async {
         final harness = AnalyticsTestHarness(
-          now: () => DateTime.utc(2026, 10, 15, 12),
           initialTransactions: {
             'oct': testTransaction(
               id: 'oct',

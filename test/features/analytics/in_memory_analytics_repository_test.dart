@@ -279,6 +279,36 @@ void main() {
       );
     });
 
+    test('orders null categories last at an equal amount', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'expense-untied',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 5),
+          ),
+          _transaction(
+            'expense-tied',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 6),
+            categoryId: 'category-food',
+          ),
+        ],
+        categories: [_category('category-food', 'Food')],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      // SQLite's "category_id IS NULL" sorts uncategorized totals last.
+      expect(
+        [for (final total in summary.categoryExpenseTotals) total.categoryId],
+        ['category-food', null],
+      );
+    });
+
     test(
       'includes the start and excludes the end of the half-open range',
       () async {
