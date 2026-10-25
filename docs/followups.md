@@ -33,10 +33,12 @@ Fixed on `fix/analytics-presentation`:
   a comparison window without spending from a missing comparison window
   (FINECHO-23).
 
-Still open:
+Fixed on `chore/analytics-test-coverage`:
 
-- Verify the in-memory analytics category tie-break matches the SQLite BINARY
-  collation for non-ASCII category identifiers.
+- The in-memory analytics category tie-break sorts by Unicode code points, so
+  non-ASCII identifiers match SQLite's BINARY collation (FINECHO-7).
+
+Still open:
 
 - Prefill the transaction sheet amount using the selected account's currency;
   zero-decimal accounts (JPY) show 12.34 instead of 1234
@@ -58,6 +60,52 @@ Still open:
 
 - Track localization debt: hardcoded const English labels across analytics and
   transactions have no l10n migration path yet.
+
+- Remove the dead both-null arm in the analytics comparator; the pinned
+  null-vs-categorized order is covered by 'orders null categories last at an
+  equal amount'
+  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:147-149)
+  (FINECHO-66).
+
+- Cover the ring painter's shortestSide radius behavior for non-square sizes
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:232)
+  (FINECHO-66).
+
+- Cover income-metric ring slices in the breakdown card painter tests
+  (test/features/analytics/category_ring_painter_test.dart) (FINECHO-66).
+
+- Pin one painter test to the actually laid-out size so a layout-size
+  regression stops passing
+  (test/features/analytics/category_ring_painter_test.dart:91,127,147,174)
+  (FINECHO-66).
+
+- Pin the SnackBar auto-dismiss timer after a failed analytics refresh
+  (lib/features/analytics/view/screens/analytics_screen.dart:67-68)
+  (FINECHO-67).
+
+- Cover the non-leap February and zero-expense-month forecast edges
+  (test/features/analytics/analytics_service_test.dart forecast group).
+
+- Pin the real SQLite BINARY ordering with a sqflite_common_ffi test against
+  the SQLCipher repository, not only the in-memory mirror
+  (lib/core/repositories/implementations/sqflite_analytics_repository.dart:71);
+  the ffi pin asserts `PRAGMA encoding` is UTF-8.
+
+- Cover the ring painter's slices.length mismatch repaint guard, reachable
+  through the public widget API with differing category counts
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:267)
+  (FINECHO-63).
+
+- Cover the ring painter's trackColor/strokeWidth/colors.length repaint
+  guards, reachable through a theme change and a differing palette length
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:265-268)
+  (FINECHO-66).
+
+- Align the remaining UTF-16 tie-breaks with SQLite BINARY parity when
+  non-ASCII ids or names can appear: the spike sorting and category id
+  fallback (lib/features/analytics/view_model/services/analytics_service.dart:394,483,308-322)
+  and the account breakdown ordering
+  (lib/features/analytics/view/widgets/account_breakdown_card.dart:46-56).
 
 ## Analytics review round 2
 
@@ -99,7 +147,9 @@ Fixed:
 Deferred; tracked in Plane:
 
 - Convert analytics calendar boundaries from UTC to device-local (FINECHO-22).
-- Add ring painter output and golden tests (FINECHO-21).
+- Ring painter: the recording-canvas output tests shipped on
+  `chore/analytics-test-coverage`; golden snapshot tests remain open
+  (FINECHO-21).
 - Distinguish zero previous spend from no comparison (FINECHO-23).
 - The round-two items FINECHO-8, FINECHO-9, and FINECHO-20 remain open;
   model-equality isolation is covered by FINECHO-19.
@@ -125,6 +175,10 @@ changed units. A final approved batch fixed:
 
 Deferred; tracked in Plane:
 
+- Replace the pipe-split composite keys in the analytics repository; a
+  categoryId containing | truncates the key
+  (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:274,284-287)
+  (FINECHO-65).
 - FINECHO-31 verify `FLAG_SECURE` on a device.
 - FINECHO-32 erase persisted financial data or require a device credential for
   recovery reset once the SQLCipher database is wired.

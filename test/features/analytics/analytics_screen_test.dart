@@ -284,6 +284,34 @@ void main() {
     expect(harness.analyticsRepository.requestedRanges, hasLength(4));
   });
 
+  // Covers the explicit cubit.load() reload path failing after a dashboard
+  // has settled; the period-switch failure path (also surfacing the error
+  // message under keep-alive data, without asserting Try again) is covered
+  // by 'keeps the dashboard and warns when a refresh fails' below.
+  testWidgets('warns with stale data when an explicit reload fails', (
+    tester,
+  ) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    harness.analyticsRepository.error = Exception('boom');
+    await cubit.load();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(
+      find.text('Could not load your statistics. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.text('Spending by category'), findsOneWidget);
+    expect(find.text('Something went wrong'), findsNothing);
+  });
+
   testWidgets('switches period from the segmented control', (tester) async {
     _useTallSurface(tester);
     final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);

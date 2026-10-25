@@ -200,6 +200,115 @@ void main() {
       expect(summary.categoryExpenseTotals, isEmpty);
     });
 
+    test('orders tied categories in SQLite binary order', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'expense-emoji',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 5),
+            categoryId: 'category-\u{1F600}',
+          ),
+          _transaction(
+            'expense-replacement',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 6),
+            categoryId: 'category-\uFFFD',
+          ),
+          _transaction(
+            'expense-emoji-suffix',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 7),
+            categoryId: 'category-\u{1F600}x',
+          ),
+        ],
+        categories: [
+          _category('category-\u{1F600}', 'Emoji'),
+          _category('category-\uFFFD', 'Replacement'),
+          _category('category-\u{1F600}x', 'Emoji suffix'),
+        ],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      // SQLite orders ids by UTF-8 bytes (code points), so the
+      // replacement character (U+FFFD) sorts before the supplementary
+      // emoji id — unlike Dart's UTF-16 compareTo. When one id is a
+      // prefix of another, the shorter id sorts first.
+      expect(
+        [for (final total in summary.categoryExpenseTotals) total.categoryId],
+        ['category-\uFFFD', 'category-\u{1F600}', 'category-\u{1F600}x'],
+      );
+    });
+
+    test('orders tied income categories in SQLite binary order', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'income-emoji',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 5),
+            type: TransactionType.income,
+            categoryId: 'category-\u{1F600}',
+          ),
+          _transaction(
+            'income-replacement',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 6),
+            type: TransactionType.income,
+            categoryId: 'category-\uFFFD',
+          ),
+        ],
+        categories: [
+          _category('category-\u{1F600}', 'Emoji'),
+          _category('category-\uFFFD', 'Replacement'),
+        ],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      expect(
+        [for (final total in summary.categoryIncomeTotals) total.categoryId],
+        ['category-\uFFFD', 'category-\u{1F600}'],
+      );
+    });
+
+    test('orders null categories last at an equal amount', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'expense-untied',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 5),
+          ),
+          _transaction(
+            'expense-tied',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 6),
+            categoryId: 'category-food',
+          ),
+        ],
+        categories: [_category('category-food', 'Food')],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      // SQLite's "category_id IS NULL" sorts uncategorized totals last.
+      expect(
+        [for (final total in summary.categoryExpenseTotals) total.categoryId],
+        ['category-food', null],
+      );
+    });
+
     test(
       'includes the start and excludes the end of the half-open range',
       () async {
