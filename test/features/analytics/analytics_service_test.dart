@@ -1257,6 +1257,69 @@ void main() {
         expect(dashboard.forecast.elapsedDays, 31);
         expect(dashboard.forecast.projectedExpenseMinorUnits, 103333);
       });
+
+      test('uses twenty-nine days on a leap February', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2028, 2, 29),
+          initialTransactions: {
+            'feb': testTransaction(
+              id: 'feb',
+              amountMinorUnits: 100000,
+              timestamp: DateTime.utc(2028, 2, 5),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.forecast.elapsedDays, 29);
+        expect(dashboard.forecast.daysInMonth, 29);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 103571);
+      });
+
+      test('rolls the December window into the next year', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 12, 15, 12),
+          initialTransactions: {
+            'dec': testTransaction(
+              id: 'dec',
+              amountMinorUnits: 100000,
+              timestamp: DateTime.utc(2026, 12, 5),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.startUtc, DateTime.utc(2026, 12));
+        expect(dashboard.endUtc, DateTime.utc(2027));
+        expect(dashboard.forecast.daysInMonth, 31);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 213793);
+      });
+
+      test('projects the month expense from category totals', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 10, 15, 12),
+          initialTransactions: {
+            'oct': testTransaction(
+              id: 'oct',
+              amountMinorUnits: 5000,
+              timestamp: DateTime.utc(2026, 10, 5),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.forecast.expenseSoFarMinorUnits, 5000);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 10690);
+      });
     });
 
     group('budget progress', () {

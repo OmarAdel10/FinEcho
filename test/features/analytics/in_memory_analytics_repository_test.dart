@@ -200,6 +200,42 @@ void main() {
       expect(summary.categoryExpenseTotals, isEmpty);
     });
 
+    test('orders tied categories in SQLite binary order', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'expense-emoji',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 5),
+            categoryId: 'category-\u{1F600}',
+          ),
+          _transaction(
+            'expense-replacement',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 6),
+            categoryId: 'category-\uFFFD',
+          ),
+        ],
+        categories: [
+          _category('category-\u{1F600}', 'Emoji'),
+          _category('category-\uFFFD', 'Replacement'),
+        ],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      // SQLite orders ids by UTF-8 bytes (code points), so the
+      // replacement character (U+FFFD) sorts before the supplementary
+      // emoji id — unlike Dart's UTF-16 compareTo.
+      expect(
+        [for (final total in summary.categoryExpenseTotals) total.categoryId],
+        ['category-\uFFFD', 'category-\u{1F600}'],
+      );
+    });
+
     test(
       'includes the start and excludes the end of the half-open range',
       () async {

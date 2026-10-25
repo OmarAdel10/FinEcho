@@ -284,6 +284,26 @@ void main() {
     expect(harness.analyticsRepository.requestedRanges, hasLength(4));
   });
 
+  testWidgets('shows a snack bar when a refresh fails with stale data', (
+    tester,
+  ) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    harness.analyticsRepository.error = Exception('boom');
+    await cubit.load();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('Spending by category'), findsOneWidget);
+    expect(find.text('Something went wrong'), findsNothing);
+  });
+
   testWidgets('switches period from the segmented control', (tester) async {
     _useTallSurface(tester);
     final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
