@@ -76,11 +76,12 @@ Still open:
 
 - Pin one painter test to the actually laid-out size so a layout-size
   regression stops passing
-  (test/features/analytics/category_ring_painter_test.dart:93,107,132,158)
+  (test/features/analytics/category_ring_painter_test.dart:91,127,147,174)
   (FINECHO-66).
 
 - Pin the SnackBar auto-dismiss timer after a failed analytics refresh
-  (lib/features/analytics/view/screens/analytics_screen.dart:67-68).
+  (lib/features/analytics/view/screens/analytics_screen.dart:67-68)
+  (FINECHO-67).
 
 - Cover the non-leap February and zero-expense-month forecast edges
   (test/features/analytics/analytics_service_test.dart forecast group).
@@ -92,7 +93,13 @@ Still open:
 
 - Cover the ring painter's slices.length mismatch repaint guard, reachable
   through the public widget API with differing category counts
-  (lib/features/analytics/view/widgets/category_breakdown_card.dart:267).
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:267)
+  (FINECHO-63).
+
+- Cover the ring painter's trackColor/strokeWidth/colors.length repaint
+  guards, reachable through a theme change and a differing palette length
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:265-268)
+  (FINECHO-66).
 
 - Align the remaining UTF-16 tie-breaks with SQLite BINARY parity when
   non-ASCII ids or names can appear: the spike sorting and category id
