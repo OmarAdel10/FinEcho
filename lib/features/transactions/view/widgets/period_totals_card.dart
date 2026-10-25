@@ -1,4 +1,5 @@
 import 'package:finecho/core/models/analytics_period.dart';
+import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/features/transactions/view_model/models/period_totals.dart';
 import 'package:flutter/material.dart';
 
@@ -142,7 +143,7 @@ class _PeriodMetric extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          _formatMinorUnits(amountMinorUnits),
+          formatMinorUnits(amountMinorUnits, null),
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -150,11 +151,4 @@ class _PeriodMetric extends StatelessWidget {
       ],
     );
   }
-}
-
-String _formatMinorUnits(int amount) {
-  final sign = amount < 0 ? '-' : '';
-  final absolute = amount.abs();
-  final fraction = (absolute % 100).toString().padLeft(2, '0');
-  return '$sign${absolute ~/ 100}.$fraction';
 }

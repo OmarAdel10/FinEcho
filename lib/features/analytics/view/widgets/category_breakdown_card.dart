@@ -23,11 +23,30 @@ const String _spendingRingLabel = 'Spending ring by category';
 const String _incomeRingLabel = 'Income ring by category';
 const double _ringSize = 160;
 const double _ringStrokeWidth = 20;
-const List<Color> _slicePalette = [
+const List<Color> _lightSlicePalette = [
   FinEchoColors.deepGreen,
+  Color(0xFF8A6D00),
   FinEchoColors.blue,
+  Color(0xFFB4462B),
+  FinEchoColors.darkNavy,
+  Color(0xFF6A4C93),
+];
+const List<Color> _darkSlicePalette = [
+  Color(0xFF9FE3C9),
+  Color(0xFFE0C060),
+  Color(0xFF7FB2FF),
+  Color(0xFFFF9C7A),
+  Color(0xFFC7B2F0),
   FinEchoColors.softStone,
 ];
+
+/// Returns the slice colors for a breakdown ring rendered with [brightness].
+///
+/// Entries stay distinct, and every color keeps at least a 3:1 contrast ratio
+/// against the card surface in the matching theme.
+@visibleForTesting
+List<Color> slicePaletteFor(Brightness brightness) =>
+    brightness == Brightness.dark ? _darkSlicePalette : _lightSlicePalette;
 
 /// A card that breaks the period's spending or income down by category.
 class CategoryBreakdownCard extends StatelessWidget {
@@ -54,6 +73,7 @@ class CategoryBreakdownCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final palette = slicePaletteFor(theme.brightness);
     final isSpending = metric == CategoryBreakdownMetric.spending;
     final totalMinorUnits = categoryTotals.fold<int>(
       0,
@@ -63,6 +83,14 @@ class CategoryBreakdownCard extends StatelessWidget {
               ? categoryTotal.expenseMinorUnits
               : categoryTotal.incomeMinorUnits),
     );
+    final amounts = <int>[
+      for (final categoryTotal in categoryTotals)
+        if (isSpending)
+          categoryTotal.expenseMinorUnits
+        else
+          categoryTotal.incomeMinorUnits,
+    ];
+    final legendPercents = _legendPercents(amounts, totalMinorUnits);
     final ringSemanticsLabel = [
       if (isSpending) _spendingRingLabel else _incomeRingLabel,
       for (final categoryTotal in categoryTotals)
@@ -94,15 +122,13 @@ class CategoryBreakdownCard extends StatelessWidget {
                     child: CustomPaint(
                       painter: _CategoryRingPainter(
                         slices: [
-                          for (final categoryTotal in categoryTotals)
+                          for (final amount in amounts)
                             if (totalMinorUnits > 0)
-                              (isSpending
-                                      ? categoryTotal.expenseMinorUnits
-                                      : categoryTotal.incomeMinorUnits) /
-                                  totalMinorUnits
+                              amount / totalMinorUnits
                             else
                               0.0,
                         ],
+                        colors: palette,
                         trackColor: theme.colorScheme.outlineVariant,
                         strokeWidth: _ringStrokeWidth,
                       ),
@@ -114,18 +140,9 @@ class CategoryBreakdownCard extends StatelessWidget {
               for (var index = 0; index < categoryTotals.length; index++)
                 _LegendRow(
                   name: categoryTotals[index].name ?? _uncategorizedLabel,
-                  amountMinorUnits: isSpending
-                      ? categoryTotals[index].expenseMinorUnits
-                      : categoryTotals[index].incomeMinorUnits,
-                  color: _slicePalette[index % _slicePalette.length],
-                  percent: totalMinorUnits > 0
-                      ? ((isSpending
-                                    ? categoryTotals[index].expenseMinorUnits
-                                    : categoryTotals[index].incomeMinorUnits) *
-                                100 /
-                                totalMinorUnits)
-                            .round()
-                      : 0,
+                  amountMinorUnits: amounts[index],
+                  color: palette[index % palette.length],
+                  percent: legendPercents[index],
                   currency: currency,
                 ),
             ],
@@ -192,12 +209,16 @@ class _LegendRow extends StatelessWidget {
 class _CategoryRingPainter extends CustomPainter {
   const new({
     required this.slices,
+    required this.colors,
     required this.trackColor,
     required this.strokeWidth,
   });
 
   /// The expense share of each category, in draw order.
   final List<double> slices;
+
+  /// The slice colors, applied in draw order and cycling when exhausted.
+  final List<Color> colors;
 
   /// The color of the unfilled ring track.
   final Color trackColor;
@@ -233,7 +254,7 @@ class _CategoryRingPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
-          ..color = _slicePalette[index % _slicePalette.length],
+          ..color = colors[index % colors.length],
       );
       startAngle += sweepAngle;
     }
@@ -243,11 +264,17 @@ class _CategoryRingPainter extends CustomPainter {
   bool shouldRepaint(covariant _CategoryRingPainter oldDelegate) {
     if (trackColor != oldDelegate.trackColor ||
         strokeWidth != oldDelegate.strokeWidth ||
-        slices.length != oldDelegate.slices.length) {
+        slices.length != oldDelegate.slices.length ||
+        colors.length != oldDelegate.colors.length) {
       return true;
     }
     for (var index = 0; index < slices.length; index++) {
       if (slices[index] != oldDelegate.slices[index]) {
+        return true;
+      }
+    }
+    for (var index = 0; index < colors.length; index++) {
+      if (colors[index] != oldDelegate.colors[index]) {
         return true;
       }
     }
@@ -262,4 +289,27 @@ String _ringSliceLabel(CategoryTotal categoryTotal, String? currency) {
     currency,
   );
   return '$name $amount';
+}
+
+/// Splits 100 percent across [amounts] with the largest-remainder method so
+/// the legend always sums to exactly 100 when [total] is positive.
+List<int> _legendPercents(List<int> amounts, int total) {
+  if (total <= 0) {
+    return List<int>.filled(amounts.length, 0);
+  }
+  final exact = [for (final amount in amounts) amount / total * 100];
+  final result = [for (final value in exact) value.floor()];
+  final order = List<int>.generate(amounts.length, (index) => index)
+    ..sort((a, b) {
+      final remainderComparison = (exact[b] - result[b]).compareTo(
+        exact[a] - result[a],
+      );
+      return remainderComparison != 0 ? remainderComparison : a.compareTo(b);
+    });
+  var remainder = 100 - result.fold<int>(0, (sum, value) => sum + value);
+  for (var index = 0; index < order.length && remainder > 0; index++) {
+    result[order[index]]++;
+    remainder--;
+  }
+  return result;
 }

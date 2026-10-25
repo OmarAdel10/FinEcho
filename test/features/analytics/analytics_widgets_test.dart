@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:finecho/app/theme/fin_echo_theme.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/features/analytics/view/widgets/analytics_summary_card.dart';
 import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dart';
@@ -8,8 +11,11 @@ import 'package:finecho/features/analytics/view_model/models/monthly_forecast.da
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Widget _wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: child));
+Widget _wrap(Widget child, {ThemeData? theme}) {
+  return MaterialApp(
+    theme: theme,
+    home: Scaffold(body: child),
+  );
 }
 
 Finder _ringPainter() {
@@ -21,6 +27,14 @@ Finder _ringPainter() {
           widget.painter?.runtimeType.toString() == '_CategoryRingPainter',
     ),
   );
+}
+
+double _contrastRatio(Color foreground, Color background) {
+  final foregroundLuminance = foreground.computeLuminance();
+  final backgroundLuminance = background.computeLuminance();
+  final lighter = math.max(foregroundLuminance, backgroundLuminance);
+  final darker = math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 void main() {
@@ -35,6 +49,7 @@ void main() {
             totalExpenseMinorUnits: 124000,
             netAmountMinorUnits: 376000,
             expenseChangeRatio: 0.24,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -56,6 +71,7 @@ void main() {
             totalExpenseMinorUnits: 112000,
             netAmountMinorUnits: -12000,
             expenseChangeRatio: -0.12,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -72,6 +88,7 @@ void main() {
             totalExpenseMinorUnits: 100000,
             netAmountMinorUnits: 0,
             expenseChangeRatio: 0,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -88,11 +105,32 @@ void main() {
             totalExpenseMinorUnits: 100000,
             netAmountMinorUnits: 0,
             expenseChangeRatio: null,
+            hasPreviousPeriod: false,
           ),
         ),
       );
 
       expect(find.text('No previous period to compare'), findsOneWidget);
+    });
+
+    testWidgets('explains a previous period without spending', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AnalyticsSummaryCard(
+            totalIncomeMinorUnits: 100000,
+            totalExpenseMinorUnits: 100000,
+            netAmountMinorUnits: 0,
+            expenseChangeRatio: null,
+            hasPreviousPeriod: true,
+          ),
+        ),
+      );
+
+      expect(
+        find.text('No spending in the same days of the previous period'),
+        findsOneWidget,
+      );
+      expect(find.text('No previous period to compare'), findsNothing);
     });
 
     testWidgets('formats cents and negative cents', (tester) async {
@@ -103,6 +141,7 @@ void main() {
             totalExpenseMinorUnits: 5,
             netAmountMinorUnits: -12345,
             expenseChangeRatio: null,
+            hasPreviousPeriod: true,
           ),
         ),
       );
@@ -122,6 +161,7 @@ void main() {
             totalExpenseMinorUnits: 2,
             netAmountMinorUnits: 1232,
             expenseChangeRatio: null,
+            hasPreviousPeriod: true,
             currency: 'JPY',
           ),
         ),
@@ -143,6 +183,7 @@ void main() {
             totalExpenseMinorUnits: 500,
             netAmountMinorUnits: 122956,
             expenseChangeRatio: null,
+            hasPreviousPeriod: true,
             currency: 'BHD',
           ),
         ),
@@ -284,7 +325,23 @@ void main() {
         ]),
       );
       final before = tester.widget<CustomPaint>(_ringPainter()).painter!;
-      expect(before.shouldRepaint(before), isFalse);
+
+      await tester.pumpWidget(
+        card(const [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 7500,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 2500,
+          ),
+        ]),
+      );
+      final same = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      expect(same.shouldRepaint(before), isFalse);
 
       await tester.pumpWidget(
         card(const [
@@ -303,6 +360,412 @@ void main() {
       final after = tester.widget<CustomPaint>(_ringPainter()).painter!;
       expect(after.shouldRepaint(before), isTrue);
     });
+
+    testWidgets('repaints when the palette changes with the theme', (
+      tester,
+    ) async {
+      const card = CategoryBreakdownCard(
+        categoryTotals: [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 7500,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 2500,
+          ),
+        ],
+      );
+      // Pin the track color so a repaint decision can only come from the
+      // palette comparison, not the differing default outline variants.
+      ThemeData themed(Brightness brightness) {
+        final base = brightness == Brightness.dark
+            ? FinEchoTheme.dark()
+            : FinEchoTheme.light();
+        return base.copyWith(
+          colorScheme: base.colorScheme.copyWith(
+            outlineVariant: const Color(0xFF555555),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(_wrap(card, theme: themed(Brightness.light)));
+      await tester.pumpAndSettle();
+      final lightPainter = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      await tester.pumpWidget(_wrap(card, theme: themed(Brightness.dark)));
+      await tester.pumpAndSettle();
+      final darkPainter = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      expect(darkPainter.shouldRepaint(lightPainter), isTrue);
+
+      await tester.pumpWidget(_wrap(card, theme: themed(Brightness.light)));
+      await tester.pumpAndSettle();
+      final lightAgain = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      expect(lightAgain.shouldRepaint(lightPainter), isFalse);
+    });
+
+    testWidgets('rounds legend percentages so they sum to one hundred', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 1,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Transport',
+                expenseMinorUnits: 1,
+              ),
+              CategoryTotal(
+                categoryId: 'category-3',
+                name: 'Bills',
+                expenseMinorUnits: 1,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final percents = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .where((text) => text.endsWith('%'))
+          .map((text) => int.parse(text.substring(0, text.length - 1)))
+          .toList();
+
+      expect(percents, [34, 33, 33]);
+      expect(percents.fold<int>(0, (sum, value) => sum + value), 100);
+    });
+
+    testWidgets('awards remainder points by largest fraction', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 1,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Transport',
+                expenseMinorUnits: 2,
+              ),
+              CategoryTotal(
+                categoryId: 'category-3',
+                name: 'Bills',
+                expenseMinorUnits: 4,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final percents = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .where((text) => text.endsWith('%'))
+          .map((text) => int.parse(text.substring(0, text.length - 1)))
+          .toList();
+
+      expect(percents, [14, 29, 57]);
+      expect(percents.fold<int>(0, (sum, value) => sum + value), 100);
+
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 3,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Transport',
+                expenseMinorUnits: 3,
+              ),
+              CategoryTotal(
+                categoryId: 'category-3',
+                name: 'Bills',
+                expenseMinorUnits: 2,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final tiePercents = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .where((text) => text.endsWith('%'))
+          .map((text) => int.parse(text.substring(0, text.length - 1)))
+          .toList();
+
+      expect(tiePercents, [38, 37, 25]);
+    });
+
+    testWidgets('cycles the slice palette after six categories', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          CategoryBreakdownCard(
+            categoryTotals: [
+              for (var index = 0; index < 8; index++)
+                CategoryTotal(
+                  categoryId: 'category-$index',
+                  name: 'Category $index',
+                  expenseMinorUnits: 1000,
+                ),
+            ],
+          ),
+        ),
+      );
+
+      final colors = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Container),
+            ),
+          )
+          .map((container) => container.decoration)
+          .whereType<BoxDecoration>()
+          .where((decoration) => decoration.shape == BoxShape.circle)
+          .map((decoration) => decoration.color)
+          .toList();
+
+      expect(colors, hasLength(8));
+      expect(colors.take(6).toSet(), hasLength(6));
+      expect(colors[6], colors[0]);
+      expect(colors[7], colors[1]);
+    });
+
+    testWidgets('uses income amounts for income rings and percentages', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            metric: CategoryBreakdownMetric.income,
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Salary',
+                expenseMinorUnits: 0,
+                incomeMinorUnits: 5000,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Freelance',
+                expenseMinorUnits: 0,
+                incomeMinorUnits: 3000,
+              ),
+              CategoryTotal(
+                categoryId: 'category-3',
+                name: 'Bonus',
+                expenseMinorUnits: 0,
+                incomeMinorUnits: 2000,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('Income by category'), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
+      expect(find.text('30%'), findsOneWidget);
+      expect(find.text('20%'), findsOneWidget);
+    });
+
+    testWidgets('splits remainders without dropping categories', (
+      tester,
+    ) async {
+      Future<List<int>> render(List<int> amounts) async {
+        await tester.pumpWidget(
+          _wrap(
+            CategoryBreakdownCard(
+              categoryTotals: [
+                for (var index = 0; index < amounts.length; index++)
+                  CategoryTotal(
+                    categoryId: 'category-$index',
+                    name: 'Category $index',
+                    expenseMinorUnits: amounts[index],
+                  ),
+              ],
+            ),
+          ),
+        );
+        return tester
+            .widgetList<Text>(
+              find.descendant(
+                of: find.byType(CategoryBreakdownCard),
+                matching: find.byType(Text),
+              ),
+            )
+            .map((text) => text.data)
+            .whereType<String>()
+            .where((text) => text.endsWith('%'))
+            .map((text) => int.parse(text.substring(0, text.length - 1)))
+            .toList();
+      }
+
+      expect(await render([0, 1, 1, 1]), [0, 34, 33, 33]);
+      expect(await render([1, 1, 1, 1, 1, 1]), [17, 17, 17, 17, 16, 16]);
+      expect(await render([100, 0]), [100, 0]);
+      expect(await render([0, 0]), [0, 0]);
+    });
+
+    testWidgets('paints slices with the legend colors', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const CategoryBreakdownCard(
+            categoryTotals: [
+              CategoryTotal(
+                categoryId: 'category-1',
+                name: 'Food',
+                expenseMinorUnits: 7500,
+              ),
+              CategoryTotal(
+                categoryId: 'category-2',
+                name: 'Transport',
+                expenseMinorUnits: 2500,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final painter = tester.widget<CustomPaint>(_ringPainter()).painter!;
+      final painterColors = (painter as dynamic).colors as List<Color>;
+      final legendColors = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byType(CategoryBreakdownCard),
+              matching: find.byType(Container),
+            ),
+          )
+          .map((container) => container.decoration)
+          .whereType<BoxDecoration>()
+          .where((decoration) => decoration.shape == BoxShape.circle)
+          .map((decoration) => decoration.color)
+          .toList();
+
+      expect(painterColors.take(legendColors.length), legendColors);
+    });
+
+    testWidgets('threads the theme palette into the ring and legend', (
+      tester,
+    ) async {
+      const card = CategoryBreakdownCard(
+        categoryTotals: [
+          CategoryTotal(
+            categoryId: 'category-1',
+            name: 'Food',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-2',
+            name: 'Transport',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-3',
+            name: 'Bills',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-4',
+            name: 'Shopping',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-5',
+            name: 'Health',
+            expenseMinorUnits: 1000,
+          ),
+          CategoryTotal(
+            categoryId: 'category-6',
+            name: 'Fun',
+            expenseMinorUnits: 1000,
+          ),
+        ],
+      );
+
+      for (final theme in [FinEchoTheme.light(), FinEchoTheme.dark()]) {
+        await tester.pumpWidget(_wrap(card, theme: theme));
+        // MaterialApp animates theme switches; let the transition finish
+        // before reading the resolved palette.
+        await tester.pumpAndSettle();
+
+        final expected = slicePaletteFor(theme.brightness);
+        final legendColors = tester
+            .widgetList<Container>(
+              find.descendant(
+                of: find.byType(CategoryBreakdownCard),
+                matching: find.byType(Container),
+              ),
+            )
+            .map((container) => container.decoration)
+            .whereType<BoxDecoration>()
+            .where((decoration) => decoration.shape == BoxShape.circle)
+            .map((decoration) => decoration.color)
+            .toList();
+        final painter = tester.widget<CustomPaint>(_ringPainter()).painter!;
+        final painterColors = (painter as dynamic).colors as List<Color>;
+
+        expect(legendColors, expected, reason: 'Legend ${theme.brightness}');
+        expect(painterColors, expected, reason: 'Painter ${theme.brightness}');
+      }
+
+      expect(
+        slicePaletteFor(Brightness.light),
+        isNot(slicePaletteFor(Brightness.dark)),
+      );
+    });
+  });
+
+  test('keeps slice colors legible in both themes', () {
+    for (final theme in [FinEchoTheme.light(), FinEchoTheme.dark()]) {
+      final palette = slicePaletteFor(theme.brightness);
+      final surface = theme.colorScheme.surfaceContainerHighest;
+
+      expect(palette, hasLength(6));
+      expect(palette.toSet(), hasLength(palette.length));
+      for (final color in palette) {
+        expect(
+          _contrastRatio(color, surface),
+          greaterThanOrEqualTo(3),
+          reason: 'Slice color $color must contrast with $surface',
+        );
+      }
+    }
   });
 
   group('BudgetProgressCard', () {

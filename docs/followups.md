@@ -21,12 +21,43 @@
 
 ## Analytics presentation
 
-- Extract the minor-unit amount formatter duplicated across the transactions,
-  budget, and analytics widget files.
-- Improve the category ring palette: colors repeat beyond three categories and
-  the soft stone slice has low contrast on light surfaces.
+Fixed on `fix/analytics-presentation`:
+
+- The transaction sheet, transaction tile, and period totals card reuse the
+  shared minor-unit formatter (FINECHO-5).
+- The category ring uses six contrast-checked colors per theme with a stable
+  cycling order (FINECHO-6).
+- Category legend percentages use largest-remainder rounding, so they sum to
+  100 whenever the period has spending (FINECHO-18).
+- The dashboard carries `hasPreviousPeriod`, so the summary card distinguishes
+  a comparison window without spending from a missing comparison window
+  (FINECHO-23).
+
+Still open:
+
 - Verify the in-memory analytics category tie-break matches the SQLite BINARY
   collation for non-ASCII category identifiers.
+
+- Prefill the transaction sheet amount using the selected account's currency;
+  zero-decimal accounts (JPY) show 12.34 instead of 1234
+  (lib/features/transactions/view/widgets/add_transaction_sheet.dart:52-54).
+
+- Cover the transfer amount prefix on TransactionTile (empty sign branch),
+  lib/features/transactions/view/widgets/transaction_tile.dart:55-62.
+
+- Break the palette seam duplicate: with 7/13/19… categories the last and
+  first slices share palette[0] at the −π/2 seam; offset later cycles by half
+  the palette
+  (lib/features/analytics/view/widgets/category_breakdown_card.dart:144,257).
+
+- Render transaction amounts with the account's currency in the tile and
+  period totals, not only the edit sheet; zero-decimal accounts (JPY) show
+  scaled amounts
+  (lib/features/transactions/view/widgets/transaction_tile.dart:61,
+  lib/features/transactions/view/widgets/period_totals_card.dart:146).
+
+- Track localization debt: hardcoded const English labels across analytics and
+  transactions have no l10n migration path yet.
 
 ## Analytics review round 2
 

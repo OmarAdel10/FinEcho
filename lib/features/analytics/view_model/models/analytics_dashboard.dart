@@ -20,6 +20,7 @@ class AnalyticsDashboard {
     required this.totalExpenseMinorUnits,
     required this.netAmountMinorUnits,
     required this.previousExpenseMinorUnits,
+    required this.hasPreviousPeriod,
     required this.expenseChangeRatio,
     required this.categoryTotals,
     required this.categoryIncomeTotals,
@@ -57,6 +58,9 @@ class AnalyticsDashboard {
 
   /// Total expenses of the equivalent previous period in minor units.
   final int previousExpenseMinorUnits;
+
+  /// Whether the comparison window in the previous period is non-empty.
+  final bool hasPreviousPeriod;
 
   /// The expense change versus the previous period, or `null` without history.
   final double? expenseChangeRatio;

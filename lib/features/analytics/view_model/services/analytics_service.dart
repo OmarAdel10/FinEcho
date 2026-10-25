@@ -206,6 +206,7 @@ class AnalyticsService {
       totalExpenseMinorUnits: totalExpense,
       netAmountMinorUnits: summary.netAmountMinorUnits,
       previousExpenseMinorUnits: previousExpense,
+      hasPreviousPeriod: hasPreviousComparison,
       expenseChangeRatio: expenseChangeRatio,
       categoryTotals: summary.categoryExpenseTotals,
       categoryIncomeTotals: summary.categoryIncomeTotals,

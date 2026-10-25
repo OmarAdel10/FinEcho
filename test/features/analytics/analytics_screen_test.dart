@@ -226,6 +226,43 @@ void main() {
     expect(find.byType(BudgetProgressCard), findsNothing);
   });
 
+  testWidgets('explains a comparison window without spending', (tester) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(
+      onSummary: (startUtc, endUtc) => _summary(
+        startUtc: startUtc,
+        endUtc: endUtc,
+        expense: startUtc == DateTime.utc(2026, 10) ? 35000 : 0,
+      ),
+    );
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No spending in the same days of the previous period'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('explains a missing previous period', (tester) async {
+    _useTallSurface(tester);
+    final harness = AnalyticsTestHarness(
+      now: () => DateTime.utc(2026, 11),
+      onSummary: (startUtc, endUtc) =>
+          _summary(startUtc: startUtc, endUtc: endUtc, expense: 35000),
+    );
+    final cubit = AnalyticsCubit(harness.service);
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(_wrap(cubit));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No previous period to compare'), findsOneWidget);
+  });
+
   testWidgets('retries with Try again after a load failure', (tester) async {
     final harness = AnalyticsTestHarness();
     harness.analyticsRepository.error = Exception('boom');
