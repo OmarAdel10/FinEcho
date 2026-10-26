@@ -1324,6 +1324,42 @@ void main() {
         expect(dashboard.forecast.expenseSoFarMinorUnits, 5000);
         expect(dashboard.forecast.projectedExpenseMinorUnits, 10690);
       });
+
+      test('uses twenty-eight days on a non-leap February', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2027, 2, 14),
+          initialTransactions: {
+            'feb': testTransaction(
+              id: 'feb',
+              amountMinorUnits: 100000,
+              timestamp: DateTime.utc(2027, 2, 5),
+            ),
+          },
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.forecast.elapsedDays, 14);
+        expect(dashboard.forecast.daysInMonth, 28);
+        // elapsedFraction = 13.0 (Feb 1 00:00 to Feb 14 00:00 = 13 days)
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 215385);
+      });
+
+      test('projects zero when expense so far is zero', () async {
+        final harness = AnalyticsTestHarness(
+          now: () => DateTime.utc(2026, 10, 15, 12),
+          initialTransactions: {},
+        );
+
+        final dashboard = await harness.service.loadDashboard(
+          period: AnalyticsPeriod.month,
+        );
+
+        expect(dashboard.forecast.expenseSoFarMinorUnits, 0);
+        expect(dashboard.forecast.projectedExpenseMinorUnits, 0);
+      });
     });
 
     group('budget progress', () {
