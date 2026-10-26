@@ -10,6 +10,7 @@ class TransactionTile extends StatelessWidget {
   const new({
     required this.transaction,
     this.categoryName,
+    this.accountCurrency,
     this.onTap,
     super.key,
   });
@@ -19,6 +20,9 @@ class TransactionTile extends StatelessWidget {
 
   /// The resolved category name, or null when uncategorized.
   final String? categoryName;
+
+  /// The account's currency code for correct minor-unit formatting.
+  final String? accountCurrency;
 
   /// Called when the user selects the transaction.
   final VoidCallback? onTap;
@@ -58,6 +62,6 @@ class TransactionTile extends StatelessWidget {
       TransactionType.income => '+',
       TransactionType.transfer => '',
     };
-    return '$prefix${formatMinorUnits(transaction.amountMinorUnits, null)}';
+    return '$prefix${formatMinorUnits(transaction.amountMinorUnits, accountCurrency)}';
   }
 }
