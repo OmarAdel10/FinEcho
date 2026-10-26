@@ -5,9 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   Widget _wrap(Widget child) {
-    return MaterialApp(
-      home: Scaffold(body: child),
-    );
+    return MaterialApp(home: Scaffold(body: child));
   }
 
   group('TransactionTile', () {
@@ -67,10 +65,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(TransactionTile(
-          transaction: transaction,
-          accountCurrency: 'JPY',
-        )),
+        _wrap(
+          TransactionTile(transaction: transaction, accountCurrency: 'JPY'),
+        ),
       );
 
       expect(find.text('-1234'), findsOneWidget);

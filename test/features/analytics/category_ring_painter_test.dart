@@ -119,30 +119,31 @@ void main() {
     }
   });
 
-  testWidgets('cycles palette colors after six slices with half-palette offset', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(CategoryBreakdownCard(categoryTotals: _totals(8))),
-    );
-    final canvas = _RecordingCanvas();
-    _ringPainterOf(tester).paint(canvas, const Size(160, 160));
-
-    final palette = slicePaletteFor(Brightness.light);
-    expect(canvas.arcs, hasLength(8));
-    // Cycle 0 (indices 0-5): palette[0..5]
-    // Cycle 1 (indices 6-7): offset by 3 (palette.length ~/ 2)
-    //   index 6 -> (6 + 1*3) % 6 = 3 -> palette[3]
-    //   index 7 -> (7 + 1*3) % 6 = 4 -> palette[4]
-    final expectedIndices = [0, 1, 2, 3, 4, 5, 3, 4];
-    for (var index = 0; index < canvas.arcs.length; index++) {
-      expect(
-        canvas.arcs[index].paint.color.toARGB32(),
-        palette[expectedIndices[index]].toARGB32(),
+  testWidgets(
+    'cycles palette colors after six slices with half-palette offset',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(CategoryBreakdownCard(categoryTotals: _totals(8))),
       );
-      expect(canvas.arcs[index].sweepAngle, closeTo(2 * math.pi / 8, 1e-9));
-    }
-  });
+      final canvas = _RecordingCanvas();
+      _ringPainterOf(tester).paint(canvas, const Size(160, 160));
+
+      final palette = slicePaletteFor(Brightness.light);
+      expect(canvas.arcs, hasLength(8));
+      // Cycle 0 (indices 0-5): palette[0..5]
+      // Cycle 1 (indices 6-7): offset by 3 (palette.length ~/ 2)
+      //   index 6 -> (6 + 1*3) % 6 = 3 -> palette[3]
+      //   index 7 -> (7 + 1*3) % 6 = 4 -> palette[4]
+      final expectedIndices = [0, 1, 2, 3, 4, 5, 3, 4];
+      for (var index = 0; index < canvas.arcs.length; index++) {
+        expect(
+          canvas.arcs[index].paint.color.toARGB32(),
+          palette[expectedIndices[index]].toARGB32(),
+        );
+        expect(canvas.arcs[index].sweepAngle, closeTo(2 * math.pi / 8, 1e-9));
+      }
+    },
+  );
 
   testWidgets('skips zero-amount slices but keeps the track', (tester) async {
     await tester.pumpWidget(

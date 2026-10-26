@@ -312,9 +312,7 @@ void main() {
     expect(find.text('Something went wrong'), findsNothing);
   });
 
-  testWidgets('shows and can dismiss the error SnackBar', (
-    tester,
-  ) async {
+  testWidgets('shows and can dismiss the error SnackBar', (tester) async {
     _useTallSurface(tester);
     final harness = AnalyticsTestHarness(onSummary: _dashboardSummary);
     final cubit = AnalyticsCubit(harness.service);
