@@ -239,6 +239,25 @@ void main() {
       },
     );
 
+    test('stays cleared when a failing load settles after the clear', () async {
+      final harness = AnalyticsTestHarness();
+      harness.analyticsRepository.error = Exception('boom');
+      final gate = Completer<void>();
+      harness.analyticsRepository.gate = gate;
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      final load = cubit.load();
+      cubit.clearCachedDashboard();
+      gate.complete();
+      await load;
+
+      expect(cubit.state.status, AnalyticsStatus.loading);
+      expect(cubit.state.period, AnalyticsPeriod.month);
+      expect(cubit.state.dashboard, isNull);
+      expect(cubit.state.errorMessage, isNull);
+    });
+
     test('does not reload behind the lock when a queued load request settles '
         'after the clear', () async {
       final harness = AnalyticsTestHarness();

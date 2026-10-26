@@ -263,8 +263,10 @@ Foreign keys are enabled. Transaction timestamp, account, and category fields ar
 - Onboarding advances to the security-setup step explicitly before the security
   screen is opened, so the setup screen can complete onboarding after the PIN
   is stored.
-- An app-scoped lifecycle observer relocks the app when it is paused, and
-  Android applies
+- An app-scoped lifecycle observer relocks the app when it is paused and
+  clears the cached analytics aggregates through its lock hook, so decrypted
+  statistics do not sit in memory behind the lock screen; the clear re-fires
+  on every pause that leaves the lock engaged. Android applies
   `FLAG_SECURE` app-wide so screens are excluded from screenshots and recents
   previews. The relock observer lives at app scope, so the app locks again
   even when no protected screen is mounted, and one observer serves the whole
