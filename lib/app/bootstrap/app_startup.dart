@@ -6,6 +6,7 @@ import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 
 /// Builds the application widget with every dependency ready.
 ///
@@ -25,6 +26,7 @@ Future<FinEchoApp> buildApp({
     router: appRouter.router,
     securityCubit: sl<SecurityCubit>(),
     analyticsCubit: sl<AnalyticsCubit>(),
+    transactionsCubit: sl<TransactionsCubit>(),
   );
 }
 

@@ -174,6 +174,10 @@ changed units. A final approved batch fixed:
   totals with its seeded transactions (FINECHO-26).
 - The analytics cache is cleared on every pause that leaves the app lock
   engaged, and reloads fresh after unlock (FINECHO-15).
+- The in-memory transactions ledger is cleared on every pause that leaves
+  the app lock engaged, mirroring the analytics epoch-clear (FINECHO-69).
+- PIN validation now rejects negative and non-numeric inputs, requiring
+  exactly six digits (FINECHO-70).
 
 Deferred; tracked in Plane:
 
@@ -182,10 +186,6 @@ Deferred; tracked in Plane:
   (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:274,284-287)
   (FINECHO-65).
 - FINECHO-31 verify `FLAG_SECURE` on a device.
-- Validate that app-lock PINs are six digits; the length-only check accepts
-  negative or non-numeric PINs
-  (lib/features/security/view_model/security_cubit.dart:137,284)
-  (FINECHO-70).
 - FINECHO-32 erase persisted financial data or require a device credential for
   recovery reset once the SQLCipher database is wired.
 - FINECHO-33 tighten the remaining security test clarity gaps: derive the
@@ -324,12 +324,3 @@ fails closed into the recovery screen instead of treating the missing values as
 a fresh install, and the deliberate `Erase app lock` action clears the lock so
 it can be set up again. The state codec still reads a payload written before
 the codec was versioned. No released version is affected.
-
-## App lock data residency
-
-Still open:
-
-- Clear the in-memory transactions ledger when the app locks, mirroring the
-  analytics epoch-clear; the ledger retains payee details the aggregates do
-  not (lib/features/transactions/view_model/models/transactions_state.dart)
-  (FINECHO-69).

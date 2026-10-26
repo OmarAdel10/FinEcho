@@ -6,6 +6,7 @@ import 'package:finecho/features/onboarding/view_model/models/onboarding_state.d
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 import 'package:finecho/main.dart' as app;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -50,6 +51,8 @@ void main() {
     expect(widget.securityCubit, same(sl<SecurityCubit>()));
     expect(widget.analyticsCubit, isNotNull);
     expect(widget.analyticsCubit, same(sl<AnalyticsCubit>()));
+    expect(widget.transactionsCubit, isNotNull);
+    expect(widget.transactionsCubit, same(sl<TransactionsCubit>()));
   });
 
   test('mounts the application through the entrypoint', () async {

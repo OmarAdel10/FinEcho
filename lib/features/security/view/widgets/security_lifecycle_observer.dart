@@ -17,7 +17,9 @@ class SecurityLifecycleObserver extends StatefulWidget {
   final SecurityCubit cubit;
 
   /// Called on every app lifecycle pause that leaves the lock engaged;
-  /// repeated pauses re-run it by design.
+  /// repeated pauses re-run it by design. A lock that engaged on a prior
+  /// pause without a dashboard clear (e.g., PIN configured while cached)
+  /// is cleared on the next pause.
   final VoidCallback? onLock;
 
   /// The subtree that observes the app lifecycle.

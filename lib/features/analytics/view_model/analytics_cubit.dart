@@ -18,7 +18,8 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   bool _isLoading = false;
   AnalyticsPeriod? _pendingPeriod;
   Future<void>? _inFlight;
-  int _generation = 0;
+  int _generation =
+      0; // Practically never overflows (9e18 clears); no wrap handling.
 
   /// Loads the dashboard for the selected period.
   ///
