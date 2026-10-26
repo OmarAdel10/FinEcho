@@ -188,4 +188,62 @@ void main() {
     // have begun, so the legend colors and ring angles stay aligned.
     expect(canvas.arcs[1].startAngle, closeTo(-math.pi / 2 + math.pi, 1e-9));
   });
+
+  testWidgets('uses shortestSide for radius on non-square canvas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(CategoryBreakdownCard(categoryTotals: _totals(2))),
+    );
+    final canvas = _RecordingCanvas();
+    // Non-square: 200 wide, 120 tall -> shortestSide = 120
+    _ringPainterOf(tester).paint(canvas, const Size(200, 120));
+
+    // Radius should be (120 - 20) / 2 = 50
+    expect(canvas.circles.single.radius, closeTo(50, 1e-9));
+    // Center should be at (100, 60) = size/2
+    expect(canvas.circles.single.center, const Offset(100, 60));
+  });
+
+  testWidgets('paints income metric slices when metric is income', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        CategoryBreakdownCard(
+          categoryTotals: [
+            const CategoryTotal(
+              categoryId: 'cat-1',
+              name: 'Income Cat 1',
+              expenseMinorUnits: 0,
+              incomeMinorUnits: 2000,
+            ),
+            const CategoryTotal(
+              categoryId: 'cat-2',
+              name: 'Income Cat 2',
+              expenseMinorUnits: 0,
+              incomeMinorUnits: 1000,
+            ),
+          ],
+          metric: CategoryBreakdownMetric.income,
+        ),
+      ),
+    );
+    final canvas = _RecordingCanvas();
+    _ringPainterOf(tester).paint(canvas, const Size(160, 160));
+
+    final palette = slicePaletteFor(Brightness.light);
+    expect(canvas.arcs, hasLength(2));
+    // Total income = 3000
+    // cat-1: 2000/3000 * 2π = 4π/3
+    // cat-2: 1000/3000 * 2π = 2π/3
+    expect(canvas.arcs[0].sweepAngle, closeTo(4 * math.pi / 3, 1e-9));
+    expect(canvas.arcs[1].sweepAngle, closeTo(2 * math.pi / 3, 1e-9));
+    for (var index = 0; index < canvas.arcs.length; index++) {
+      expect(
+        canvas.arcs[index].paint.color.toARGB32(),
+        palette[index].toARGB32(),
+      );
+    }
+  });
 }
