@@ -43,6 +43,156 @@ void main() {
     expect(cubit.state.isLocked, isTrue);
   });
 
+  testWidgets('runs the lock hook when it is paused', (tester) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    final cubit = SecurityCubit(harness.service);
+    await cubit.load();
+    await cubit.unlockWithPin('123456');
+    addTearDown(cubit.close);
+
+    var lockHookCalls = 0;
+    await tester.pumpWidget(
+      SecurityLifecycleObserver(
+        cubit: cubit,
+        onLock: () => lockHookCalls++,
+        child: const MaterialApp(home: Text('App')),
+      ),
+    );
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(lockHookCalls, 1);
+  });
+
+  testWidgets('does not run the lock hook when the lock does not engage', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: false,
+        pinConfigured: false,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    final cubit = SecurityCubit(harness.service);
+    await cubit.load();
+    addTearDown(cubit.close);
+    expect(cubit.state.isLocked, isFalse);
+
+    var lockHookCalls = 0;
+    await tester.pumpWidget(
+      SecurityLifecycleObserver(
+        cubit: cubit,
+        onLock: () => lockHookCalls++,
+        child: const MaterialApp(home: Text('App')),
+      ),
+    );
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(lockHookCalls, 0);
+    expect(cubit.state.isLocked, isFalse);
+  });
+
+  testWidgets('runs the lock hook only when the pause locks the app', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    final cubit = SecurityCubit(harness.service);
+    await cubit.load();
+    await cubit.unlockWithPin('123456');
+    addTearDown(cubit.close);
+
+    var lockHookCalls = 0;
+    await tester.pumpWidget(
+      SecurityLifecycleObserver(
+        cubit: cubit,
+        onLock: () => lockHookCalls++,
+        child: const MaterialApp(home: Text('App')),
+      ),
+    );
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pump();
+    expect(lockHookCalls, 0);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(lockHookCalls, 1);
+    expect(cubit.state.isLocked, isTrue);
+  });
+
+  testWidgets('runs the lock hook on every pause that keeps the lock engaged', (
+    tester,
+  ) async {
+    final harness = SecurityTestHarness(
+      initialState: SecurityState(
+        appLockEnabled: true,
+        pinConfigured: true,
+        failedUnlockAttempts: 0,
+        secureKeyReady: true,
+        updatedAt: DateTime.utc(2026, 10, 15, 12),
+      ),
+      now: () => DateTime.utc(2026, 10, 15, 12),
+    );
+    await harness.credentialRepository.savePin('123456');
+    final cubit = SecurityCubit(harness.service);
+    await cubit.load();
+    await cubit.unlockWithPin('123456');
+    addTearDown(cubit.close);
+
+    var lockHookCalls = 0;
+    await tester.pumpWidget(
+      SecurityLifecycleObserver(
+        cubit: cubit,
+        onLock: () => lockHookCalls++,
+        child: const MaterialApp(home: Text('App')),
+      ),
+    );
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(lockHookCalls, 1);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(lockHookCalls, 2);
+    expect(cubit.state.isLocked, isTrue);
+  });
+
   testWidgets('stops relocking when the observer is disposed', (tester) async {
     final harness = SecurityTestHarness(
       initialState: SecurityState(

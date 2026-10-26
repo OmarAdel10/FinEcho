@@ -198,6 +198,132 @@ void main() {
       expect(cubit.isClosed, isTrue);
     });
 
+    test('clears the cached dashboard and pending period selection', () async {
+      final harness = AnalyticsTestHarness();
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      await cubit.load();
+      await cubit.selectPeriod(AnalyticsPeriod.year);
+      expect(cubit.state.dashboard, isNotNull);
+      expect(cubit.state.period, AnalyticsPeriod.year);
+
+      cubit.clearCachedDashboard();
+
+      expect(cubit.state.status, AnalyticsStatus.loading);
+      expect(cubit.state.period, AnalyticsPeriod.month);
+      expect(cubit.state.dashboard, isNull);
+      expect(cubit.state.errorMessage, isNull);
+    });
+
+    test(
+      'stays cleared when an in-flight load settles after the clear',
+      () async {
+        final harness = AnalyticsTestHarness();
+        final gate = Completer<void>();
+        harness.analyticsRepository.gate = gate;
+        final cubit = AnalyticsCubit(harness.service);
+        addTearDown(cubit.close);
+
+        final load = cubit.load();
+        final select = cubit.selectPeriod(AnalyticsPeriod.year);
+        cubit.clearCachedDashboard();
+        gate.complete();
+        await Future.wait([load, select]);
+
+        expect(cubit.state.status, AnalyticsStatus.loading);
+        expect(cubit.state.period, AnalyticsPeriod.month);
+        expect(cubit.state.dashboard, isNull);
+        expect(cubit.state.errorMessage, isNull);
+        expect(harness.analyticsRepository.requestedRanges, hasLength(2));
+      },
+    );
+
+    test('stays cleared when a failing load settles after the clear', () async {
+      final harness = AnalyticsTestHarness();
+      harness.analyticsRepository.error = Exception('boom');
+      final gate = Completer<void>();
+      harness.analyticsRepository.gate = gate;
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      final load = cubit.load();
+      cubit.clearCachedDashboard();
+      gate.complete();
+      await load;
+
+      expect(cubit.state.status, AnalyticsStatus.loading);
+      expect(cubit.state.period, AnalyticsPeriod.month);
+      expect(cubit.state.dashboard, isNull);
+      expect(cubit.state.errorMessage, isNull);
+    });
+
+    test('does not reload behind the lock when a queued load request settles '
+        'after the clear', () async {
+      final harness = AnalyticsTestHarness();
+      final gate = Completer<void>();
+      harness.analyticsRepository.gate = gate;
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      final firstLoad = cubit.load();
+      final queuedLoad = cubit.load();
+      cubit.clearCachedDashboard();
+      gate.complete();
+      await Future.wait([firstLoad, queuedLoad]);
+
+      expect(cubit.state.status, AnalyticsStatus.loading);
+      expect(cubit.state.dashboard, isNull);
+      expect(harness.analyticsRepository.requestedRanges, hasLength(2));
+    });
+
+    test('stays safe when a clear arrives after the cubit is closed', () async {
+      final harness = AnalyticsTestHarness();
+      final cubit = AnalyticsCubit(harness.service);
+
+      await cubit.load();
+      await cubit.close();
+
+      expect(cubit.clearCachedDashboard, returnsNormally);
+    });
+
+    test(
+      'drops the retained dashboard when a clear follows a failure',
+      () async {
+        final harness = AnalyticsTestHarness();
+        final cubit = AnalyticsCubit(harness.service);
+        addTearDown(cubit.close);
+
+        await cubit.load();
+        final dashboard = cubit.state.dashboard;
+
+        harness.analyticsRepository.error = Exception('boom');
+        await cubit.load();
+        expect(cubit.state.status, AnalyticsStatus.failure);
+        expect(cubit.state.dashboard, dashboard);
+
+        cubit.clearCachedDashboard();
+
+        expect(cubit.state.status, AnalyticsStatus.loading);
+        expect(cubit.state.dashboard, isNull);
+        expect(cubit.state.errorMessage, isNull);
+      },
+    );
+
+    test('reloads fresh data when requested after a clear', () async {
+      final harness = AnalyticsTestHarness();
+      final cubit = AnalyticsCubit(harness.service);
+      addTearDown(cubit.close);
+
+      await cubit.load();
+      cubit.clearCachedDashboard();
+      await cubit.load();
+
+      expect(cubit.state.status, AnalyticsStatus.ready);
+      expect(cubit.state.dashboard, isNotNull);
+      expect(harness.analyticsRepository.requestedRanges, hasLength(4));
+    });
+
     test('swallows a failure that finishes after close', () async {
       final harness = AnalyticsTestHarness();
       final gate = Completer<void>();

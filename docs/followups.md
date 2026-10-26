@@ -172,6 +172,12 @@ changed units. A final approved batch fixed:
   an inline spinner instead of a blank screen (FINECHO-26).
 - Added a 320 dp / 1.5x text-scale layout test and aligned the screen fixture
   totals with its seeded transactions (FINECHO-26).
+- The analytics cache is cleared on every pause that leaves the app lock
+  engaged, and reloads fresh after unlock (FINECHO-15).
+- The in-memory transactions ledger is cleared on every pause that leaves
+  the app lock engaged, mirroring the analytics epoch-clear (FINECHO-69).
+- PIN validation now rejects negative and non-numeric inputs, requiring
+  exactly six digits (FINECHO-70).
 
 Deferred; tracked in Plane:
 
@@ -198,7 +204,6 @@ Deferred; tracked in Plane:
 - FINECHO-42 tighten the security test realism gaps: the credential fake still
   compares plaintext, a few assertions compare a value with itself, and the
   lockout test depends on the wall clock.
-- FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
 

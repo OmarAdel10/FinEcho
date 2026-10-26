@@ -134,7 +134,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
       return false;
     }
     final lockEpoch = _lockEpoch;
-    if (pin.length != 6) {
+    if (!RegExp(r'^\d{6}$').hasMatch(pin)) {
       emit(
         state.copyWith(
           status: SecurityAccessStatus.failure,
@@ -281,7 +281,7 @@ class SecurityCubit extends Cubit<SecurityAccessState> {
     if (state.isSubmitting) {
       return false;
     }
-    if (pin.length != 6) {
+    if (!RegExp(r'^\d{6}$').hasMatch(pin)) {
       emit(
         state.copyWith(
           status: SecurityAccessStatus.failure,

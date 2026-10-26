@@ -10,6 +10,17 @@ class TransactionsCubit extends Cubit<TransactionsState> {
 
   final TransactionService _service;
 
+  /// Clears the cached transactions ledger and related state.
+  ///
+  /// Called when the app lock engages, so any decrypted transactions
+  /// are dropped from memory behind the lock screen.
+  void clearCachedLedger() {
+    if (isClosed) {
+      return;
+    }
+    emit(const TransactionsState());
+  }
+
   /// Loads transactions, accounts, and categories into state.
   Future<void> load() async {
     emit(state.copyWith(status: TransactionsStatus.loading));

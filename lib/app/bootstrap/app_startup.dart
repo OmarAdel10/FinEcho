@@ -3,8 +3,10 @@ import 'package:finecho/app/bootstrap/fin_echo_app.dart';
 import 'package:finecho/app/di/service_locator.dart';
 import 'package:finecho/app/environment/environment.dart';
 import 'package:finecho/app/router/app_router.dart';
+import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
 
 /// Builds the application widget with every dependency ready.
 ///
@@ -23,6 +25,8 @@ Future<FinEchoApp> buildApp({
   return FinEchoApp(
     router: appRouter.router,
     securityCubit: sl<SecurityCubit>(),
+    analyticsCubit: sl<AnalyticsCubit>(),
+    transactionsCubit: sl<TransactionsCubit>(),
   );
 }
 
