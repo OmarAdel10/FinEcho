@@ -17,11 +17,19 @@ void main() {
     tester,
   ) async {
     final cubit = await _unlockedCubit();
+    final analyticsCubit = await _readyAnalyticsCubit();
     final router = _router();
     addTearDown(router.dispose);
     addTearDown(cubit.close);
+    addTearDown(analyticsCubit.close);
 
-    await tester.pumpWidget(FinEchoApp(router: router, securityCubit: cubit));
+    await tester.pumpWidget(
+      FinEchoApp(
+        router: router,
+        securityCubit: cubit,
+        analyticsCubit: analyticsCubit,
+      ),
+    );
     await tester.pump();
 
     expect(find.byType(SecurityLifecycleObserver), findsOneWidget);
@@ -29,12 +37,20 @@ void main() {
 
   testWidgets('relocks the app when the application is paused', (tester) async {
     final cubit = await _unlockedCubit();
+    final analyticsCubit = await _readyAnalyticsCubit();
     final router = _router();
     addTearDown(router.dispose);
     addTearDown(cubit.close);
+    addTearDown(analyticsCubit.close);
     expect(cubit.state.isLocked, isFalse);
 
-    await tester.pumpWidget(FinEchoApp(router: router, securityCubit: cubit));
+    await tester.pumpWidget(
+      FinEchoApp(
+        router: router,
+        securityCubit: cubit,
+        analyticsCubit: analyticsCubit,
+      ),
+    );
     await tester.pump();
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -130,6 +146,27 @@ void main() {
 
     expect(analyticsCubit.state.dashboard, isNotNull);
   });
+
+  testWidgets('fails to wire the app lock without the analytics cubit', (
+    tester,
+  ) async {
+    final cubit = await _unlockedCubit();
+    final router = _router();
+    addTearDown(router.dispose);
+    addTearDown(cubit.close);
+
+    expect(
+      () => FinEchoApp(router: router, securityCubit: cubit),
+      throwsA(isA<AssertionError>()),
+    );
+  });
+}
+
+Future<AnalyticsCubit> _readyAnalyticsCubit() async {
+  final harness = AnalyticsTestHarness();
+  final cubit = AnalyticsCubit(harness.service);
+  await cubit.load();
+  return cubit;
 }
 
 Future<SecurityCubit> _unlockedCubit() async {

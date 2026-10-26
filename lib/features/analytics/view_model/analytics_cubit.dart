@@ -67,6 +67,9 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
   /// Called when the app lock engages, so any decrypted aggregates are
   /// dropped from memory behind the lock screen. Loads that started before
   /// the clear stop when they settle instead of repopulating the dashboard.
+  ///
+  /// The cubit holds the only derived-aggregate cache; AnalyticsService
+  /// recomputes from the repositories on every call.
   void clearCachedDashboard() {
     if (isClosed) {
       return;

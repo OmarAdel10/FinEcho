@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 /// Relocks the app when it is backgrounded.
 ///
 /// The observer lives at app scope, so the app relocks even when no protected
-/// screen is mounted and a single observer serves the whole app.
+/// screen is mounted and a single observer serves the whole app. The hook
+/// re-fires on every pause that leaves the lock engaged: clearing is
+/// idempotent, and a lock that engages without a pause is cleared by the
+/// next one.
 class SecurityLifecycleObserver extends StatefulWidget {
   /// Creates an observer that relocks [cubit] when the app is paused and
   /// runs [onLock] when the lock engages.
@@ -13,7 +16,8 @@ class SecurityLifecycleObserver extends StatefulWidget {
   /// The app-lock ViewModel.
   final SecurityCubit cubit;
 
-  /// Called whenever the lock engages from an app lifecycle pause.
+  /// Called on every app lifecycle pause that leaves the lock engaged;
+  /// repeated pauses re-run it by design.
   final VoidCallback? onLock;
 
   /// The subtree that observes the app lifecycle.
@@ -37,6 +41,9 @@ class _SecurityLifecycleObserverState extends State<SecurityLifecycleObserver>
     if (state == AppLifecycleState.paused) {
       widget.cubit.lock();
       if (widget.cubit.state.isLocked) {
+        // Re-fires on every locked pause on purpose: the clear is
+        // idempotent, and a lock that engaged without a pause (a PIN
+        // configured while a dashboard was cached) is cleared here.
         widget.onLock?.call();
       }
     }

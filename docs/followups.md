@@ -172,6 +172,8 @@ changed units. A final approved batch fixed:
   an inline spinner instead of a blank screen (FINECHO-26).
 - Added a 320 dp / 1.5x text-scale layout test and aligned the screen fixture
   totals with its seeded transactions (FINECHO-26).
+- The analytics cache is cleared on every pause that leaves the app lock
+  engaged, and reloads fresh after unlock (FINECHO-15).
 
 Deferred; tracked in Plane:
 
@@ -180,6 +182,10 @@ Deferred; tracked in Plane:
   (lib/features/analytics/data/repositories/in_memory_analytics_repository.dart:274,284-287)
   (FINECHO-65).
 - FINECHO-31 verify `FLAG_SECURE` on a device.
+- Validate that app-lock PINs are six digits; the length-only check accepts
+  negative or non-numeric PINs
+  (lib/features/security/view_model/security_cubit.dart:137,284)
+  (FINECHO-70).
 - FINECHO-32 erase persisted financial data or require a device credential for
   recovery reset once the SQLCipher database is wired.
 - FINECHO-33 tighten the remaining security test clarity gaps: derive the
@@ -198,7 +204,6 @@ Deferred; tracked in Plane:
 - FINECHO-42 tighten the security test realism gaps: the credential fake still
   compares plaintext, a few assertions compare a value with itself, and the
   lockout test depends on the wall clock.
-- FINECHO-15 clear cached analytics state on lock.
 
 ## Security hardening
 

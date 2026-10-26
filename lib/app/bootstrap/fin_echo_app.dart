@@ -13,7 +13,11 @@ class FinEchoApp extends StatelessWidget {
     this.securityCubit,
     this.analyticsCubit,
     super.key,
-  });
+  }) : assert(
+         securityCubit == null || analyticsCubit != null,
+         'FinEchoApp needs an analyticsCubit when a securityCubit is wired, '
+         'or cached aggregates would survive the lock.',
+       );
 
   /// The navigation configuration for the app.
   final GoRouter router;
