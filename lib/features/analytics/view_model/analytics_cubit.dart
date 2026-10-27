@@ -6,7 +6,8 @@ import 'package:finecho/features/analytics/view_model/models/analytics_state.dar
 import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
 import 'package:flutter/foundation.dart';
 
-const String _loadErrorMessage =
+/// Error message shown when analytics loading fails.
+const String loadErrorMessage =
     'Could not load your statistics. Please try again.';
 
 /// Coordinates statistics dashboard state for the analytics screen.
@@ -146,7 +147,7 @@ class AnalyticsCubit extends Cubit<AnalyticsState> {
           state.copyWith(
             status: AnalyticsStatus.failure,
             period: state.dashboard?.period ?? period,
-            errorMessage: _loadErrorMessage,
+            errorMessage: loadErrorMessage,
           ),
         );
       }
