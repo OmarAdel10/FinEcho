@@ -309,10 +309,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(
-      find.text(loadErrorMessage),
-      findsOneWidget,
-    );
+    expect(find.text(loadErrorMessage), findsOneWidget);
     expect(find.text('Spending by category'), findsOneWidget);
     expect(find.text('Something went wrong'), findsNothing);
   });
@@ -430,10 +427,7 @@ void main() {
 
     expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(
-      find.text(loadErrorMessage),
-      findsOneWidget,
-    );
+    expect(find.text(loadErrorMessage), findsOneWidget);
     expect(cubit.state.period, AnalyticsPeriod.month);
     expect(cubit.state.dashboard?.period, AnalyticsPeriod.month);
   });

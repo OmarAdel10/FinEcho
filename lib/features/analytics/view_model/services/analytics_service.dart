@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:finecho/core/models/account.dart';
 import 'package:finecho/core/models/analytics_account_total.dart';
 import 'package:finecho/core/models/analytics_period.dart';
