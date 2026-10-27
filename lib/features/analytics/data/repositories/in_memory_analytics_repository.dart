@@ -261,7 +261,7 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
     final startMillis = _utcMillis(startUtc, 'startUtc');
     final endMillis = _utcMillis(endUtc, 'endUtc');
     final currencyByAccount = await _currencyByAccount();
-    final totalsByCategoryMonth = <String, int>{};
+    final totalsByCategoryMonth = <(String?, int), int>{};
     for (final transaction in await _transactions.list()) {
       if (transaction.type != TransactionType.expense ||
           !_isInWindow(transaction, startMillis, endMillis)) {
@@ -272,7 +272,7 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
       }
       final timestamp = transaction.timestamp.toUtc();
       final monthUtc = timestamp.year * 12 + timestamp.month;
-      final key = '${transaction.categoryId ?? ''}|$monthUtc';
+      final key = (transaction.categoryId, monthUtc);
       totalsByCategoryMonth.update(
         key,
         (value) => value + transaction.amountMinorUnits,
@@ -282,10 +282,8 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
     return [
       for (final entry in totalsByCategoryMonth.entries)
         CategoryMonthlyExpense(
-          categoryId: entry.key.split('|').first.isEmpty
-              ? null
-              : entry.key.split('|').first,
-          monthUtc: int.parse(entry.key.split('|').last),
+          categoryId: entry.key.$1,
+          monthUtc: entry.key.$2,
           totalMinorUnits: entry.value,
         ),
     ];

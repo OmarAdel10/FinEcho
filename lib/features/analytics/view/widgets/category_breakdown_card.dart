@@ -246,6 +246,10 @@ class _CategoryRingPainter extends CustomPainter {
       if (sweepAngle <= 0) {
         continue;
       }
+      // Offset each full palette cycle by half the palette length to break
+      // the seam where the last and first slices would share the same color.
+      final cycle = index ~/ colors.length;
+      final colorIndex = (index + cycle * (colors.length ~/ 2)) % colors.length;
       canvas.drawArc(
         rect,
         startAngle,
@@ -254,7 +258,7 @@ class _CategoryRingPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
-          ..color = colors[index % colors.length],
+          ..color = colors[colorIndex],
       );
       startAngle += sweepAngle;
     }
