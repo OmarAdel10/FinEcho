@@ -310,7 +310,7 @@ void main() {
 
     expect(find.byType(SnackBar), findsOneWidget);
     expect(
-      find.text('Could not load your statistics. Please try again.'),
+      find.text(loadErrorMessage),
       findsOneWidget,
     );
     expect(find.text('Spending by category'), findsOneWidget);
@@ -431,7 +431,7 @@ void main() {
     expect(find.byType(AnalyticsSummaryCard), findsOneWidget);
     expect(find.byType(SnackBar), findsOneWidget);
     expect(
-      find.text('Could not load your statistics. Please try again.'),
+      find.text(loadErrorMessage),
       findsOneWidget,
     );
     expect(cubit.state.period, AnalyticsPeriod.month);
