@@ -854,23 +854,25 @@ void main() {
       ]);
     });
 
-    test('matches SQLite BINARY ordering for tied amounts with non-ASCII category IDs', () async {
+    test('matches SQLite BINARY ordering for tied amounts with non-ASCII '
+        'category IDs', () async {
       await _seedAccount(accountRepository, 'account-1');
       // Seed three categories with equal expense amounts but different IDs
-      // that test BINARY ordering: U+FFFD (replacement char), 😀 (emoji), 😀x (emoji + suffix)
+      // that test BINARY ordering: U+FFFD (replacement char),
+      // 😀 (emoji), 😀x (emoji + suffix)
       final catReplacement = await _seedCategory(
         categoryRepository,
-        'category-\\uFFFD',
+        r'category-\uFFFD',
         name: 'Replacement Char',
       );
       final catEmoji = await _seedCategory(
         categoryRepository,
-        'category-\\u{1F600}',
+        r'category-\u{1F600}',
         name: 'Emoji',
       );
       final catEmojiSuffix = await _seedCategory(
         categoryRepository,
-        'category-\\u{1F600}x',
+        r'category-\u{1F600}x',
         name: 'Emoji Suffix',
       );
       await _seedTransaction(
