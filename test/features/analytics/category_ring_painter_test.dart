@@ -211,15 +211,15 @@ void main() {
   ) async {
     await tester.pumpWidget(
       _wrap(
-        CategoryBreakdownCard(
+        const CategoryBreakdownCard(
           categoryTotals: [
-            const CategoryTotal(
+            CategoryTotal(
               categoryId: 'cat-1',
               name: 'Income Cat 1',
               expenseMinorUnits: 0,
               incomeMinorUnits: 2000,
             ),
-            const CategoryTotal(
+            CategoryTotal(
               categoryId: 'cat-2',
               name: 'Income Cat 2',
               expenseMinorUnits: 0,

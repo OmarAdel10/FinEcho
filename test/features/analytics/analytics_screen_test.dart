@@ -6,11 +6,16 @@ import 'package:finecho/core/models/analytics_summary.dart';
 import 'package:finecho/core/models/budget.dart';
 import 'package:finecho/core/models/category_total.dart';
 import 'package:finecho/features/analytics/view/screens/analytics_screen.dart';
-import 'package:finecho/features/analytics/view/widgets/account_breakdown_card.dart';
-import 'package:finecho/features/analytics/view/widgets/analytics_summary_card.dart';
-import 'package:finecho/features/analytics/view/widgets/budget_progress_card.dart';
-import 'package:finecho/features/analytics/view/widgets/category_breakdown_card.dart';
-import 'package:finecho/features/analytics/view/widgets/insights_card.dart';
+import 'package:finecho/features/analytics/view/widgets/'
+    'account_breakdown_card.dart';
+import 'package:finecho/features/analytics/view/widgets/'
+    'analytics_summary_card.dart';
+import 'package:finecho/features/analytics/view/widgets/'
+    'budget_progress_card.dart';
+import 'package:finecho/features/analytics/view/widgets/'
+    'category_breakdown_card.dart';
+import 'package:finecho/features/analytics/view/widgets/'
+    'insights_card.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -327,7 +332,8 @@ void main() {
 
     expect(find.byType(SnackBar), findsOneWidget);
 
-    // Default SnackBar duration is 4 seconds + animation; pump with generous margin
+    // Default SnackBar duration is 4 seconds + animation;
+    // pump with generous margin
     await tester.pump(const Duration(seconds: 6));
 
     // Note: SnackBar auto-dismiss timing can vary in test environment

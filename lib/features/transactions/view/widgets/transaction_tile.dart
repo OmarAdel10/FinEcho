@@ -62,6 +62,9 @@ class TransactionTile extends StatelessWidget {
       TransactionType.income => '+',
       TransactionType.transfer => '',
     };
+    // String interpolation with formatMinorUnits exceeds 80 chars.
+    // The line is kept as-is to preserve readability.
+    // ignore: lines_longer_than_80_chars
     return '$prefix${formatMinorUnits(transaction.amountMinorUnits, accountCurrency)}';
   }
 }

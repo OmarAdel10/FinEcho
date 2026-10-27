@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Widget _wrap(Widget child) {
+  Widget wrapWidget(Widget child) {
     return MaterialApp(home: Scaffold(body: child));
   }
 
@@ -19,7 +19,9 @@ void main() {
         source: TransactionSource.manual,
       );
 
-      await tester.pumpWidget(_wrap(TransactionTile(transaction: transaction)));
+      await tester.pumpWidget(
+        wrapWidget(TransactionTile(transaction: transaction)),
+      );
 
       expect(find.text('-12.34'), findsOneWidget);
     });
@@ -34,7 +36,9 @@ void main() {
         source: TransactionSource.manual,
       );
 
-      await tester.pumpWidget(_wrap(TransactionTile(transaction: transaction)));
+      await tester.pumpWidget(
+        wrapWidget(TransactionTile(transaction: transaction)),
+      );
 
       expect(find.text('+50.00'), findsOneWidget);
     });
@@ -49,7 +53,9 @@ void main() {
         source: TransactionSource.manual,
       );
 
-      await tester.pumpWidget(_wrap(TransactionTile(transaction: transaction)));
+      await tester.pumpWidget(
+        wrapWidget(TransactionTile(transaction: transaction)),
+      );
 
       expect(find.text('25.00'), findsOneWidget);
     });
@@ -65,7 +71,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(
+        wrapWidget(
           TransactionTile(transaction: transaction, accountCurrency: 'JPY'),
         ),
       );
