@@ -909,9 +909,9 @@ void main() {
       // So the order should be: category-￮, category-😀, category-😀x
       final expenseTotals = summary.categoryExpenseTotals;
       expect(expenseTotals, hasLength(3));
-      expect(expenseTotals[0].categoryId, catReplacement.id);  // U+FFFD first
-      expect(expenseTotals[1].categoryId, catEmoji.id);        // 😀 second
-      expect(expenseTotals[2].categoryId, catEmojiSuffix.id);  // 😀x third
+      expect(expenseTotals[0].categoryId, catReplacement.id); // U+FFFD first
+      expect(expenseTotals[1].categoryId, catEmoji.id); // 😀 second
+      expect(expenseTotals[2].categoryId, catEmojiSuffix.id); // 😀x third
       // All amounts should be equal
       for (final total in expenseTotals) {
         expect(total.expenseMinorUnits, 10000);

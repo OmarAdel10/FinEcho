@@ -243,7 +243,9 @@ void main() {
     }
   });
 
-  testWidgets('shouldRepaint returns true when slices.length changes', (tester) async {
+  testWidgets('shouldRepaint returns true when slices.length changes', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(CategoryBreakdownCard(categoryTotals: _totals(2))),
     );
@@ -257,7 +259,9 @@ void main() {
     expect(painter2.shouldRepaint(painter1), isTrue);
   });
 
-  testWidgets('shouldRepaint returns false when all properties equal', (tester) async {
+  testWidgets('shouldRepaint returns false when all properties equal', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(CategoryBreakdownCard(categoryTotals: _totals(2))),
     );
