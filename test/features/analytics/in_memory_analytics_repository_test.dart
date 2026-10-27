@@ -309,6 +309,38 @@ void main() {
       );
     });
 
+    test('orders null income categories last at an equal amount', () async {
+      final repository = _build(
+        transactions: [
+          _transaction(
+            'income-untied',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 5),
+            type: TransactionType.income,
+          ),
+          _transaction(
+            'income-tied',
+            amountMinorUnits: 1000,
+            timestamp: DateTime.utc(2026, 1, 6),
+            categoryId: 'category-salary',
+            type: TransactionType.income,
+          ),
+        ],
+        categories: [_category('category-salary', 'Salary')],
+      );
+
+      final summary = await repository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      // SQLite's "category_id IS NULL" sorts uncategorized income last.
+      expect(
+        [for (final total in summary.categoryIncomeTotals) total.categoryId],
+        ['category-salary', null],
+      );
+    });
+
     test(
       'includes the start and excludes the end of the half-open range',
       () async {
