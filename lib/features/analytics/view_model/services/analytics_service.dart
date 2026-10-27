@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:finecho/core/models/account.dart';
 import 'package:finecho/core/models/analytics_account_total.dart';
 import 'package:finecho/core/models/analytics_period.dart';
@@ -81,6 +82,21 @@ class AnalyticsService {
   /// back to UTC with this offset, so tests can pin the view while production
   /// follows the device zone.
   final Duration _localUtcOffset;
+
+  /// Compares two IDs using SQLite BINARY collation (UTF-8 byte order).
+  /// Matches the in-memory repository's ordering for consistency with SQLite.
+  static int compareIds(String a, String b) {
+    final aRunes = a.runes.toList(growable: false);
+    final bRunes = b.runes.toList(growable: false);
+    final shared = math.min(aRunes.length, bRunes.length);
+    for (var index = 0; index < shared; index++) {
+      final byRune = aRunes[index].compareTo(bRunes[index]);
+      if (byRune != 0) {
+        return byRune;
+      }
+    }
+    return aRunes.length.compareTo(bRunes.length);
+  }
 
   /// Derives the dashboard for [period] from current local history.
   ///
@@ -391,7 +407,7 @@ class AnalyticsService {
       if (byName != 0) {
         return byName;
       }
-      return (a.categoryId ?? '').compareTo(b.categoryId ?? '');
+      return compareIds(a.categoryId ?? '', b.categoryId ?? '');
     });
     return charges;
   }
@@ -480,7 +496,7 @@ class AnalyticsService {
       if (byCurrent != 0) {
         return byCurrent;
       }
-      return (a.categoryId ?? '').compareTo(b.categoryId ?? '');
+      return compareIds(a.categoryId ?? '', b.categoryId ?? '');
     });
     return spikes;
   }

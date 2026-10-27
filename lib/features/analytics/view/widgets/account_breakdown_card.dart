@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:finecho/core/models/currency_minor_units.dart';
 import 'package:finecho/features/analytics/view_model/models/account_total.dart';
+import 'package:finecho/features/analytics/view_model/services/analytics_service.dart';
 import 'package:flutter/material.dart';
 
 const String _title = 'By account';
@@ -52,7 +53,7 @@ class AccountBreakdownCard extends StatelessWidget {
           if (byName != 0) {
             return byName;
           }
-          return a.accountId.compareTo(b.accountId);
+          return AnalyticsService.compareIds(a.accountId, b.accountId);
         });
     final maxAmount = sorted.fold(
       0,
