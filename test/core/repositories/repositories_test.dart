@@ -853,6 +853,72 @@ void main() {
         'expense-2',
       ]);
     });
+
+    test('matches SQLite BINARY ordering for tied amounts with non-ASCII '
+        'category IDs', () async {
+      await _seedAccount(accountRepository, 'account-1');
+      // Seed three categories with equal expense amounts but different IDs
+      // that test BINARY ordering: U+FFFD (replacement char),
+      // 😀 (emoji), 😀x (emoji + suffix)
+      final catReplacement = await _seedCategory(
+        categoryRepository,
+        r'category-\uFFFD',
+        name: 'Replacement Char',
+      );
+      final catEmoji = await _seedCategory(
+        categoryRepository,
+        r'category-\u{1F600}',
+        name: 'Emoji',
+      );
+      final catEmojiSuffix = await _seedCategory(
+        categoryRepository,
+        r'category-\u{1F600}x',
+        name: 'Emoji Suffix',
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-replacement',
+        categoryId: catReplacement.id,
+        amountMinorUnits: 10000,
+        timestamp: DateTime.utc(2026, 1, 5),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-emoji',
+        categoryId: catEmoji.id,
+        amountMinorUnits: 10000,
+        timestamp: DateTime.utc(2026, 1, 10),
+      );
+      await _seedTransaction(
+        transactionRepository,
+        id: 'expense-emoji-suffix',
+        categoryId: catEmojiSuffix.id,
+        amountMinorUnits: 10000,
+        timestamp: DateTime.utc(2026, 1, 15),
+      );
+
+      final summary = await analyticsRepository.summaryForRange(
+        startUtc: DateTime.utc(2026, 1, 1),
+        endUtc: DateTime.utc(2026, 2, 1),
+      );
+
+      // Verify PRAGMA encoding is UTF-8
+      final encodingRows = await database.rawQuery('PRAGMA encoding');
+      expect(encodingRows.first['encoding'], 'UTF-8');
+
+      // The in-memory comparator orders by Unicode code point (BINARY):
+      // U+FFFD (65533) < U+1F600 (128512) < U+1F600 + 'x'
+      // So the order should be: category-￮, category-😀, category-😀x
+      final expenseTotals = summary.categoryExpenseTotals;
+      expect(expenseTotals, hasLength(3));
+      expect(expenseTotals[0].categoryId, catReplacement.id); // U+FFFD first
+      expect(expenseTotals[1].categoryId, catEmoji.id); // 😀 second
+      expect(expenseTotals[2].categoryId, catEmojiSuffix.id); // 😀x third
+      // All amounts should be equal
+      for (final total in expenseTotals) {
+        expect(total.expenseMinorUnits, 10000);
+      }
+    });
   });
 }
 

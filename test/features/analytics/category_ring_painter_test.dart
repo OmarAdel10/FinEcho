@@ -49,8 +49,11 @@ class _RecordingCanvas implements Canvas {
   }
 }
 
-Widget _wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: child));
+Widget _wrap(Widget child, {ThemeData? theme}) {
+  return MaterialApp(
+    theme: theme,
+    home: Scaffold(body: child),
+  );
 }
 
 // The painter is matched by its private runtimeType name; renaming
@@ -246,5 +249,37 @@ void main() {
         palette[index].toARGB32(),
       );
     }
+  });
+
+  testWidgets('shouldRepaint returns true when slices.length changes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(CategoryBreakdownCard(categoryTotals: _totals(2))),
+    );
+    final painter1 = _ringPainterOf(tester);
+
+    await tester.pumpWidget(
+      _wrap(CategoryBreakdownCard(categoryTotals: _totals(3))),
+    );
+    final painter2 = _ringPainterOf(tester);
+
+    expect(painter2.shouldRepaint(painter1), isTrue);
+  });
+
+  testWidgets('shouldRepaint returns false when all properties equal', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(CategoryBreakdownCard(categoryTotals: _totals(2))),
+    );
+    final painter1 = _ringPainterOf(tester);
+
+    await tester.pumpWidget(
+      _wrap(CategoryBreakdownCard(categoryTotals: _totals(2))),
+    );
+    final painter2 = _ringPainterOf(tester);
+
+    expect(painter2.shouldRepaint(painter1), isFalse);
   });
 }
