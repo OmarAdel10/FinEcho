@@ -310,7 +310,7 @@ The user correction updates future local rules or training examples only after e
 
 ## Startup sequence
 
-1. Initialize Flutter bindings, resolve the active build flavor, and build the dependency-injection container.
+1. Initialize Flutter bindings, resolve the build environment from the compiled build mode, and build the dependency-injection container.
 2. Obtain or create the protected database key.
 3. Open and migrate the SQLCipher database.
 4. Initialize notification channels, timezone data, and the deep-link handler.
@@ -320,15 +320,14 @@ The user correction updates future local rules or training examples only after e
 
 ## Environment configuration
 
-FinEcho resolves one of three build flavors at startup: `development`, `staging`, or `production`. The flavor is stored in immutable `EnvironmentState` and injected through `EnvironmentConfig` before feature services and BLoCs/Cubits are created.
+FinEcho derives its build environment from the compiled build mode instead of a Gradle flavor: `debug` and `profile` builds resolve to `development`, `release` builds resolve to `production`. `EnvironmentConfig.fromBuildMode` is registered in the dependency-injection container before feature services and BLoCs/Cubits are created.
 
-| Flavor | Behavior |
-|---|---|
-| `development` | Enables verbose diagnostics, sample data, and fake platform adapters during local development. |
-| `staging` | Mirrors production behavior while keeping isolated data and a visible non-production indicator. |
-| `production` | Uses release behavior with no sample data, verbose diagnostics, or raw SMS/sensitive logging. |
+| Environment | Source modes | Behavior |
+|---|---|---|
+| `development` | `debug`, `profile` | Enables verbose diagnostics, sample data, and fake platform adapters. |
+| `production` | `release` | Uses release behavior with no sample data, verbose diagnostics, or raw SMS/sensitive logging. |
 
-Views render immutable environment state, ViewModels expose it, and Services consume injected dependencies. The active flavor is an architectural input, not a runtime user setting.
+Views render immutable environment state, ViewModels expose it, and Services consume injected dependencies. The environment is an architectural input, not a runtime user setting.
 
 ## Testing strategy
 

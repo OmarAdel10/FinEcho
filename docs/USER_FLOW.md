@@ -21,10 +21,10 @@ Notification -> Lock (if needed) -> Accounts Card Link or Budget Detail
 
 ## Environment indicator flow
 
-1. Startup resolves the active flavor—`development`, `staging`, or `production`—and an app-level ViewModel exposes immutable `EnvironmentState`.
-2. Development and staging builds render a persistent badge in the global app chrome.
+1. Startup derives the environment from the compiled build mode—`development` for `debug` and `profile`, `production` for `release`—and an app-level ViewModel exposes immutable `EnvironmentState`.
+2. Non-release builds render a persistent `DEVELOPMENT` badge in the global app chrome.
 3. Tapping the badge opens a concise explanation of that environment’s data and diagnostics.
-4. Production renders no badge.
+4. Release builds render no badge.
 
 ## Manual and voice transaction entry
 

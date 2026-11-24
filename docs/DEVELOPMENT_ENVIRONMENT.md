@@ -53,67 +53,43 @@ Use `screen.png` as the visual source of truth and `code.html` only as a layout 
 
 The current export is incomplete: the `screen.png` files for `04_onboarding_automation`, `06_home_ledger`, `08_accounts_vaults`, `09_statistics_analytics`, and `10_settings_system` are placeholder text rather than images. Re-export those five screens before implementation. Until then, `docs/DESIGN_PROMPT.md` is the canonical design specification and `editorial_ledger/DESIGN.md` is reference-only.
 
-## Build flavors
+## Build modes
 
-FinEcho uses three product flavors: `development`, `staging`, and `production`. Configure matching Android `productFlavors` and iOS schemes, and keep the flavor names and environment values centralized so the same names are used by Flutter, Gradle, Xcode, VS Code, and CI.
+FinEcho ships one Android application (`com.example.finecho`). It defines no Gradle product flavors, so any command that adds `--flavor` fails because Gradle has no matching `assemble*` task. The build environment is derived from the compiled build mode instead:
 
-| Flavor          | Purpose                                                                          | Example command                                                                          |
-| --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `development` | Local iteration, verbose diagnostics, and sample data.                           | `flutter run --flavor development --dart-define=ENVIRONMENT=development`               |
-| `staging`     | Release-like behavior with isolated data and a visible non-production indicator. | `flutter run --flavor staging --dart-define=ENVIRONMENT=staging`                       |
-| `production`  | Final release behavior with no diagnostics or sample data.                       | `flutter build apk --release --flavor production --dart-define=ENVIRONMENT=production` |
+| Mode      | Purpose                                               | Command                       | Environment   |
+| --------- | ----------------------------------------------------- | ----------------------------- | ------------- |
+| `debug`   | Local iteration, verbose diagnostics, and sample data. | `flutter run`                 | `development` |
+| `profile` | Repeatable performance baselines.                      | `flutter run --profile`       | `development` |
+| `release` | Target-device acceptance and store builds.             | `flutter build apk --release` | `production`  |
 
-For iOS release builds, use `flutter build ipa --release --flavor production --dart-define=ENVIRONMENT=production`.
+`profile` mode is disabled on emulators; run it on a physical device. `EnvironmentConfig.fromBuildMode` maps `kReleaseMode` to `production` and every other mode to `development`. There is no `staging` build and no `--dart-define=ENVIRONMENT` switch: the environment is a compiled input, not a runtime setting.
 
 ### VS Code launch configurations
 
-Keep `.vscode/launch.json` aligned with these three flavors so they can be started directly from the editor with the Flutter and Dart extension:
+`.vscode/launch.json` provides debug and release configurations. Neither passes `--flavor` nor `--dart-define`. Start `profile` runs from the CLI because they require a physical device.
 
 ```json
 {
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "FinEcho (development)",
+      "name": "FinEcho (debug)",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "args": [
-        "--flavor",
-        "development",
-        "--dart-define=ENVIRONMENT=development"
-      ],
       "flutterMode": "debug"
     },
     {
-      "name": "FinEcho (staging)",
+      "name": "FinEcho (release)",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",
-      "args": [
-        "--flavor",
-        "staging",
-        "--dart-define=ENVIRONMENT=staging"
-      ],
-      "flutterMode": "debug"
-    },
-    {
-      "name": "FinEcho (production)",
-      "type": "dart",
-      "request": "launch",
-      "program": "lib/main.dart",
-      "args": [
-        "--flavor",
-        "production",
-        "--dart-define=ENVIRONMENT=production"
-      ],
       "flutterMode": "release"
     }
   ]
 }
 ```
-
-If `launch.json` already exists, add these configurations alongside the existing ones rather than replacing unrelated debugger entries.
 
 ## App icon and splash assets
 
@@ -127,7 +103,7 @@ The production icon package is stored under `assets/icon/`. These files are the 
 | `assets/icon/monochrome_1024.png`          | Android 13+ themed/monochrome icon layer. |
 | `assets/icon/splash_mark_1024.png`         | Native splash mark.                       |
 
-Use the same icon package for all three flavors. If a flavor later needs a distinct launcher treatment, add flavor-specific generated outputs through Android `productFlavors` or iOS schemes rather than replacing the shared source assets.
+Use the same icon package for every build mode. If a build variant later needs a distinct launcher treatment, add flavor-specific generated outputs through Android `productFlavors` or iOS schemes rather than replacing the shared source assets.
 
 ## Localization
 
@@ -261,7 +237,7 @@ The same `data`, `view`, and `view_model` structure applies to `security` and an
 
 ## CI/CD
 
-GitHub Actions should run `flutter pub get`, `dart format --set-exit-if-changed lib test`, `flutter analyze`, and `flutter test --coverage` for pushes and pull requests. Add separate build jobs for the `development`, `staging`, and `production` flavors once platform signing and scheme setup are complete. Use Shorebird for over-the-air updates to bypass store review for critical patches.
+GitHub Actions should run `flutter pub get`, `dart format --set-exit-if-changed lib test`, `flutter analyze`, and `flutter test --coverage` for pushes and pull requests. Add separate build jobs per build mode once platform signing and release credentials are configured. Use Shorebird for over-the-air updates to bypass store review for critical patches.
 
 ## Platform permission notes
 

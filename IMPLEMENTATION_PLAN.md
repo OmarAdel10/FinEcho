@@ -2,7 +2,6 @@
 
 > **Status**: Ready for execution
 > **Architecture**: MVVM/BLoC with Repository Pattern
-> **Flavors**: development, staging, production
 > **Localization**: English (default), Arabic
 > **CI/CD**: GitHub Actions + Shorebird OTA
 > **Tracking**: Plane.so via `planecli`
@@ -69,7 +68,7 @@ Initial core infrastructure for FinEcho: dependency injection, routing, theming,
 
 ## Changes
 - **DI**: GetIt service locator with all repositories, services, BLoCs registered
-- **Routing**: GoRouter with auth guards, deep-link handling, flavor-aware routes
+- **Routing**: GoRouter with auth guards and deep-link handling
 - **Theming**: Light/dark themes per DESIGN.md tokens (Space Grotesk, Inter, color palette)
 - **Database**: SQLCipher schema + versioned migrations + secure key storage
 - **Repositories**: 10 contracts (Account, Transaction, Budget, Category, Analytics, Speech, SMS, Notification, Settings, Security) with implementations

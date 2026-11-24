@@ -55,9 +55,9 @@
 
 Use Flutter DevTools, Android Studio profiler, integration tests, and repeatable device test scripts to establish actual numeric baselines before release.
 
-## Flavor measurement policy
+## Build mode measurement policy
 
-- Use the `development` flavor for correctness checks and DevTools smoke inspection only.
-- Use the `staging` flavor in `profile` or `release` mode for repeatable baselines and regression tracking.
-- Use the `production` release flavor for target-device acceptance.
+- Use `debug` builds for correctness checks and DevTools smoke inspection only.
+- Use `profile` or `release` builds on a physical device for repeatable baselines and regression tracking.
+- Use `release` builds for target-device acceptance.
 - Never report debug-mode frame timing or memory as the release baseline.

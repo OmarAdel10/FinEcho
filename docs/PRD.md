@@ -122,8 +122,8 @@ Motion should remain simple, short, accessible, and interruptible. Respect reduc
 
 ### Environment indicators
 
-- Development and staging builds display a persistent, non-blocking environment indicator.
-- Production builds display no environment indicator.
+- Non-release builds (`debug` and `profile`) display a persistent, non-blocking environment indicator.
+- Release builds display no environment indicator.
 - The indicator must never obscure financial data or primary actions.
 
 ## Platform constraints
@@ -133,7 +133,7 @@ Motion should remain simple, short, accessible, and interruptible. Respect reduc
   - ViewModels own feature state with `Bloc`/`Cubit`.
   - Services own feature business rules and call repository contracts.
   - Repositories in `core` are the only path to the encrypted local database.
-- The app provides three build flavors—`development`, `staging`, and `production`—with matching VS Code launch configurations.
+- The app ships a single Android build with no Gradle product flavors; build behavior is selected by the Flutter build mode (`debug`, `profile`, or `release`).
 - SMS reading and automatic SMS ingestion are Android-only. iOS does not provide a general SMS inbox API; the iOS app provides manual entry, voice entry, budgets, analytics, notifications, and local data tools.
 - Offline STT model quality and download size must be selected for the target devices and languages.
 - Permission denial must leave manual tracking fully usable.
