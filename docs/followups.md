@@ -329,7 +329,7 @@ the codec was versioned. No released version is affected.
 
 - Environment badge is specified but never rendered: `EnvironmentConfig.shouldShowBadge`
   has no consumer (`docs/PRD.md`, `docs/DESIGN_PROMPT.md`). Implement the badge in the
-  global app chrome, or record the deferral in the PRD.
+  global app chrome; the deferral is already recorded in `docs/PRD.md`.
 - CI covers pull requests and pushes to `development` only
   (`.github/workflows/ci.yml`); the global contract expects CI on every branch.
 - Release builds are signed with the debug key (`android/app/build.gradle.kts`,
@@ -345,3 +345,11 @@ the codec was versioned. No released version is affected.
   build and publish so only the release step receives a write token.
 - Workflow actions in `.github/workflows/ci.yml` and `cd.yml` use mutable version tags;
   pin them to reviewed commit SHAs for supply-chain hardening.
+- `v*` tag pushes can publish a release without verified ancestry or CI
+  (`.github/workflows/cd.yml`); protect the tags, require release approval, and verify
+  ancestry from `master` before publication.
+- `buildApp()` cannot be widget-tested against its default secure-storage and
+  SQLCipher graph: the test VM has no `sqflite_sqlcipher` implementation, so
+  `getDatabasesPath` throws `MissingPluginException`. Default DI registration is
+  covered by the service-locator tests; add a database fake before asserting the
+  full default startup path.
