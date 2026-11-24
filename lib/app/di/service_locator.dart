@@ -40,6 +40,7 @@ import 'package:finecho/features/security/view_model/security_cubit.dart';
 import 'package:finecho/features/security/view_model/services/security_service.dart';
 import 'package:finecho/features/transactions/view_model/services/transaction_service.dart';
 import 'package:finecho/features/transactions/view_model/transactions_cubit.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 
 /// The application service locator.
@@ -50,12 +51,11 @@ final GetIt sl = GetIt.instance;
 /// Secure storage is the default so a new entry point cannot silently fall
 /// back to a non-persistent app lock. Tests opt into the in-memory graph
 /// explicitly.
-Future<void> configureDependencies({
-  Environment environment = Environment.development,
-  bool useInMemoryStorage = false,
-}) async {
-  // Register environment config
-  sl.registerSingleton<EnvironmentConfig>(EnvironmentConfig(environment));
+Future<void> configureDependencies({bool useInMemoryStorage = false}) async {
+  // Register environment config derived from the compiled build mode.
+  sl.registerSingleton<EnvironmentConfig>(
+    EnvironmentConfig.fromBuildMode(isReleaseMode: kReleaseMode),
+  );
 
   // Register database components
   sl.registerLazySingleton<DatabaseKeyStore>(

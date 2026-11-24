@@ -1,13 +1,12 @@
 /// The build environments supported by FinEcho.
-/// The build environments supported by FinEcho.
+///
+/// The environment is a function of the compiled build mode: `debug` and
+/// `profile` builds behave as development, `release` builds as production.
 enum Environment {
-  /// Local development build.
+  /// Non-release build (`debug` or `profile`).
   development,
 
-  /// Staging build that mirrors production behavior.
-  staging,
-
-  /// Production release build.
+  /// Release build.
   production,
 }
 
@@ -15,6 +14,13 @@ enum Environment {
 class EnvironmentConfig {
   /// Creates an environment configuration.
   const new(this.environment);
+
+  /// Resolves the environment from the compiled build mode.
+  factory fromBuildMode({required bool isReleaseMode}) {
+    return EnvironmentConfig(
+      isReleaseMode ? Environment.production : Environment.development,
+    );
+  }
 
   /// The active environment.
   final Environment environment;

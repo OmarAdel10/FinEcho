@@ -1,7 +1,6 @@
 import 'package:finecho/app/bootstrap/app_bootstrap.dart';
 import 'package:finecho/app/bootstrap/fin_echo_app.dart';
 import 'package:finecho/app/di/service_locator.dart';
-import 'package:finecho/app/environment/environment.dart';
 import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/features/analytics/view_model/analytics_cubit.dart';
 import 'package:finecho/features/onboarding/view_model/onboarding_cubit.dart';
@@ -13,14 +12,8 @@ import 'package:finecho/features/transactions/view_model/transactions_cubit.dart
 /// The persisted onboarding and app-lock state are loaded before the router
 /// chooses its first route, so the first frame already shows the correct
 /// screen.
-Future<FinEchoApp> buildApp({
-  Environment environment = Environment.development,
-  bool useInMemoryStorage = false,
-}) async {
-  await AppBootstrap.ensureInitialized(
-    environment: environment,
-    useInMemoryStorage: useInMemoryStorage,
-  );
+Future<FinEchoApp> buildApp({bool useInMemoryStorage = false}) async {
+  await AppBootstrap.ensureInitialized(useInMemoryStorage: useInMemoryStorage);
   final appRouter = await startAppRouter();
   return FinEchoApp(
     router: appRouter.router,
