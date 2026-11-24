@@ -2,16 +2,6 @@ name: FinEcho Release Build
 
 on:
   workflow_dispatch:
-    inputs:
-      target:
-        description: 'Deployment target (flavor builds are deferred)'
-        required: true
-        default: staging
-        type: choice
-        options:
-          - production
-          - staging
-          - development
   push:
     tags:
       - 'v*'
@@ -53,15 +43,12 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build standard release APK
-        run: |
-          echo "Requested target: ${{ inputs.target }}"
-          echo "Android flavors are not configured yet; building the standard release APK."
-          flutter build apk --release
+        run: flutter build apk --release
 
       - name: Upload standard release APK
         uses: actions/upload-artifact@v4
         with:
-          name: finecho-standard-release-apk-${{ inputs.target }}-${{ github.sha }}
+          name: finecho-standard-release-apk-${{ github.sha }}
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 7
