@@ -1,6 +1,7 @@
 import 'package:finecho/app/bootstrap/app_bootstrap.dart';
 import 'package:finecho/app/bootstrap/app_startup.dart';
 import 'package:finecho/app/di/service_locator.dart';
+import 'package:finecho/app/environment/environment.dart';
 import 'package:finecho/app/router/app_router.dart';
 import 'package:finecho/core/models/analytics_period.dart';
 import 'package:finecho/core/models/category.dart';
@@ -38,6 +39,7 @@ import 'package:finecho/features/security/data/repositories/security_credential_
 import 'package:finecho/features/security/view/screens/lock_screen.dart';
 import 'package:finecho/features/security/view_model/models/security_access_state.dart';
 import 'package:finecho/features/security/view_model/security_cubit.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -45,6 +47,18 @@ import 'package:get_it/get_it.dart';
 void main() {
   setUp(() => GetIt.instance.reset());
   tearDown(() => GetIt.instance.reset());
+
+  test('registers environment derived from the compiled build mode', () async {
+    await configureDependencies(useInMemoryStorage: true);
+
+    final config = sl<EnvironmentConfig>();
+    expect(
+      config.environment,
+      kReleaseMode ? Environment.production : Environment.development,
+    );
+    expect(config.isProduction, kReleaseMode);
+    expect(config.shouldShowBadge, !kReleaseMode);
+  });
 
   test('registers the budget dependency graph', () async {
     await configureDependencies(useInMemoryStorage: true);
