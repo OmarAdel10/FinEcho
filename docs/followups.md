@@ -340,7 +340,10 @@ the codec was versioned. No released version is affected.
 - Release-runtime DI composition is untested: `EnvironmentConfig.fromBuildMode` and the
   registered `sl<EnvironmentConfig>()` are asserted in debug-mode tests only. Add a
   device-backed release smoke assertion for `Environment.production`, or record the
-  deferral in the release checklist.
+  deferral in the release checklist. The user explicitly accepted this as a review-gate
+  exception on 2026-11-24 (FINECHO-77): `flutter test` exposes no `--release` or
+  `--profile` mode, `integration_test` is not yet a dependency, and profile mode does not
+  run on emulators, so the evidence needs a device-backed harness rather than unit tests.
 - `.github/workflows/cd.yml` grants `contents: write` to the whole build job; split
   build and publish so only the release step receives a write token.
 - Workflow actions in `.github/workflows/ci.yml` and `cd.yml` use mutable version tags;
