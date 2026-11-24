@@ -58,6 +58,8 @@ Current export status: `04_onboarding_automation`, `06_home_ledger`, `08_account
 
 ## Environment indicator
 
+Deferred until the badge widget lands; see `docs/followups.md`.
+
 - Render `DEVELOPMENT` as a compact mono badge in the global app chrome for non-release builds; omit the badge in release builds.
 - Keep it high contrast, 8pt-aligned, and never overlapping balances, CTAs, or chart labels.
 - Use the same badge treatment in light and dark surfaces so the active environment remains obvious without interrupting the finance task.

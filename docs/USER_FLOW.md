@@ -21,10 +21,11 @@ Notification -> Lock (if needed) -> Accounts Card Link or Budget Detail
 
 ## Environment indicator flow
 
-1. Startup derives the environment from the compiled build mode—`development` for `debug` and `profile`, `production` for `release`—and an app-level ViewModel exposes immutable `EnvironmentState`.
-2. Non-release builds render a persistent `DEVELOPMENT` badge in the global app chrome.
-3. Tapping the badge opens a concise explanation of that environment’s data and diagnostics.
-4. Release builds render no badge.
+**Status: deferred.** Startup registers an immutable `EnvironmentConfig` derived from the compiled build mode—`development` for `debug` and `profile`, `production` for `release`—through the dependency-injection container. No ViewModel exposes it and no badge is rendered yet; the steps below are the target flow tracked in `docs/followups.md`.
+
+1. Non-release builds render a persistent `DEVELOPMENT` badge in the global app chrome.
+2. Tapping the badge opens a concise explanation of that environment’s data and diagnostics.
+3. Release builds render no badge.
 
 ## Manual and voice transaction entry
 

@@ -122,7 +122,7 @@ Motion should remain simple, short, accessible, and interruptible. Respect reduc
 
 ### Environment indicators
 
-- Non-release builds (`debug` and `profile`) display a persistent, non-blocking environment indicator.
+- Non-release builds (`debug` and `profile`) display a persistent, non-blocking environment indicator. The badge is not implemented yet and is tracked in `docs/followups.md`.
 - Release builds display no environment indicator.
 - The indicator must never obscure financial data or primary actions.
 

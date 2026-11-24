@@ -322,12 +322,14 @@ The user correction updates future local rules or training examples only after e
 
 FinEcho derives its build environment from the compiled build mode instead of a Gradle flavor: `debug` and `profile` builds resolve to `development`, `release` builds resolve to `production`. `EnvironmentConfig.fromBuildMode` is registered in the dependency-injection container before feature services and BLoCs/Cubits are created.
 
-| Environment | Source modes | Behavior |
+| Environment | Source modes | Derived state |
 |---|---|---|
-| `development` | `debug`, `profile` | Enables verbose diagnostics, sample data, and fake platform adapters. |
-| `production` | `release` | Uses release behavior with no sample data, verbose diagnostics, or raw SMS/sensitive logging. |
+| `development` | `debug`, `profile` | `isProduction == false`, `shouldShowBadge == true` |
+| `production` | `release` | `isProduction == true`, `shouldShowBadge == false` |
 
-Views render immutable environment state, ViewModels expose it, and Services consume injected dependencies. The environment is an architectural input, not a runtime user setting.
+The configuration is immutable and registered once in the service locator. Repository selection is independent of the environment: `configureDependencies(useInMemoryStorage: true)` swaps in in-memory repositories for tests, while every other caller gets secure storage and SQL-backed repositories in debug and release alike. No diagnostics, sample-data, or fake-adapter behavior is wired to the environment yet, and no ViewModel exposes it. The non-production badge is deferred to `docs/followups.md`.
+
+The environment is an architectural input, not a runtime user setting.
 
 ## Testing strategy
 

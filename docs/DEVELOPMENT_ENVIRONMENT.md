@@ -59,7 +59,7 @@ FinEcho ships one Android application (`com.example.finecho`). It defines no Gra
 
 | Mode      | Purpose                                               | Command                       | Environment   |
 | --------- | ----------------------------------------------------- | ----------------------------- | ------------- |
-| `debug`   | Local iteration, verbose diagnostics, and sample data. | `flutter run`                 | `development` |
+| `debug`   | Local iteration and on-device debugging.               | `flutter run`                 | `development` |
 | `profile` | Repeatable performance baselines.                      | `flutter run --profile`       | `development` |
 | `release` | Target-device acceptance and release-candidate builds. | `flutter build apk --release` | `production`  |
 
