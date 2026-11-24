@@ -61,9 +61,9 @@ FinEcho ships one Android application (`com.example.finecho`). It defines no Gra
 | --------- | ----------------------------------------------------- | ----------------------------- | ------------- |
 | `debug`   | Local iteration, verbose diagnostics, and sample data. | `flutter run`                 | `development` |
 | `profile` | Repeatable performance baselines.                      | `flutter run --profile`       | `development` |
-| `release` | Target-device acceptance and store builds.             | `flutter build apk --release` | `production`  |
+| `release` | Target-device acceptance and release-candidate builds. | `flutter build apk --release` | `production`  |
 
-`profile` mode is disabled on emulators; run it on a physical device. `EnvironmentConfig.fromBuildMode` maps `kReleaseMode` to `production` and every other mode to `development`. There is no `staging` build and no `--dart-define=ENVIRONMENT` switch: the environment is a compiled input, not a runtime setting.
+`profile` mode is disabled on emulators; run it on a physical device. `EnvironmentConfig.fromBuildMode` maps `kReleaseMode` to `production` and every other mode to `development`. There is no `staging` build and no `--dart-define=ENVIRONMENT` switch: the environment is a compiled input, not a runtime setting. Release builds remain debug-signed; a store upload requires a production signing configuration.
 
 ### VS Code launch configurations
 

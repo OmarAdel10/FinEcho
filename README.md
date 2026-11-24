@@ -82,8 +82,8 @@ and budget progress, all computed on device.
 
 GitHub Actions provides a FAST gate for formatting, code generation, static
 analysis, and tests with coverage, followed by a FULL Android build gate. A
-dispatch-only release workflow builds a debug-signed standard APK. Pull
-requests are labeled from a repository-managed configuration.
+manually dispatched and tag-triggered release workflow builds a debug-signed
+standard APK. Pull requests are labeled from a repository-managed configuration.
 
 ## Getting Started
 
