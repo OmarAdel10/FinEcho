@@ -337,3 +337,11 @@ the codec was versioned. No released version is affected.
 - `docs/DEVELOPMENT_ENVIRONMENT.md` still states the repository is specification-only
   and forbids application code; the project is far past that phase.
 - No `ios/` platform folder exists while the specs describe iOS builds and schemes.
+- Release-runtime DI composition is untested: `EnvironmentConfig.fromBuildMode` and the
+  registered `sl<EnvironmentConfig>()` are asserted in debug-mode tests only. Add a
+  device-backed release smoke assertion for `Environment.production`, or record the
+  deferral in the release checklist.
+- `.github/workflows/cd.yml` grants `contents: write` to the whole build job; split
+  build and publish so only the release step receives a write token.
+- Workflow actions in `.github/workflows/ci.yml` and `cd.yml` use mutable version tags;
+  pin them to reviewed commit SHAs for supply-chain hardening.
