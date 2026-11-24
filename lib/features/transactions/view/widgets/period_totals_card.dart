@@ -34,6 +34,7 @@ class PeriodTotalsCard extends StatelessWidget {
     required this.selectedPeriod,
     required this.onPeriodSelected,
     required this.localUtcOffset,
+    this.currency,
     super.key,
   });
 
@@ -48,6 +49,9 @@ class PeriodTotalsCard extends StatelessWidget {
 
   /// The local UTC offset used to caption the period boundaries.
   final Duration localUtcOffset;
+
+  /// The currency code for correct minor-unit formatting.
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -86,18 +90,21 @@ class PeriodTotalsCard extends StatelessWidget {
                   child: _PeriodMetric(
                     label: _incomeLabel,
                     amountMinorUnits: totals.incomeMinorUnits,
+                    currency: currency,
                   ),
                 ),
                 Expanded(
                   child: _PeriodMetric(
                     label: _expensesLabel,
                     amountMinorUnits: totals.expenseMinorUnits,
+                    currency: currency,
                   ),
                 ),
                 Expanded(
                   child: _PeriodMetric(
                     label: _netLabel,
                     amountMinorUnits: totals.netMinorUnits,
+                    currency: currency,
                   ),
                 ),
               ],
@@ -124,10 +131,15 @@ class PeriodTotalsCard extends StatelessWidget {
 }
 
 class _PeriodMetric extends StatelessWidget {
-  const new({required this.label, required this.amountMinorUnits});
+  const new({
+    required this.label,
+    required this.amountMinorUnits,
+    this.currency,
+  });
 
   final String label;
   final int amountMinorUnits;
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +155,7 @@ class _PeriodMetric extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          formatMinorUnits(amountMinorUnits, null),
+          formatMinorUnits(amountMinorUnits, currency),
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),

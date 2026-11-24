@@ -118,6 +118,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             localUtcOffset: resolvedOffset,
           );
 
+          // Determine primary currency from the first account
+          final primaryCurrency = state.accounts.isNotEmpty
+              ? state.accounts.first.currency
+              : null;
+
           return SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -131,6 +136,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       setState(() => _selectedPeriod = period);
                     },
                     localUtcOffset: resolvedOffset,
+                    currency: primaryCurrency,
                   ),
                 ),
                 Expanded(
