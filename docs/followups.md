@@ -324,3 +324,16 @@ fails closed into the recovery screen instead of treating the missing values as
 a fresh install, and the deliberate `Erase app lock` action clears the lock so
 it can be set up again. The state codec still reads a payload written before
 the codec was versioned. No released version is affected.
+
+## Build and release
+
+- Environment badge is specified but never rendered: `EnvironmentConfig.shouldShowBadge`
+  has no consumer (`docs/PRD.md`, `docs/DESIGN_PROMPT.md`). Implement the badge in the
+  global app chrome, or record the deferral in the PRD.
+- CI covers pull requests and pushes to `development` only
+  (`.github/workflows/ci.yml`); the global contract expects CI on every branch.
+- Release builds are signed with the debug key (`android/app/build.gradle.kts`,
+  `buildTypes.release`); configure a real signing config before any store upload.
+- `docs/DEVELOPMENT_ENVIRONMENT.md` still states the repository is specification-only
+  and forbids application code; the project is far past that phase.
+- No `ios/` platform folder exists while the specs describe iOS builds and schemes.
